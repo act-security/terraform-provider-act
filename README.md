@@ -20,7 +20,7 @@ provider "act" {}
 data "act_current_identity" "this" {}
 ```
 
-Create an API key in the Act console under Settings → API keys and set `ACT_CLIENT_ID` and `ACT_CLIENT_SECRET` from it. The provider learns the tenant from the key and asks the Act STS which regional API serves it, so there is no tenant ID or endpoint to configure.
+Create an API key in the Act console under Settings → API keys and set `ACT_CLIENT_ID` and `ACT_CLIENT_SECRET` from it. The provider learns the tenant from the key and asks the Act STS which regional API serves it, so there is no tenant ID, region or endpoint to configure.
 
 ## Development
 

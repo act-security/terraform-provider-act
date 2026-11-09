@@ -18,7 +18,6 @@ type Config struct {
 	TenantID     string
 	ClientID     string
 	ClientSecret string
-	Region       string
 	HTTPClient   *http.Client
 	UserAgent    string
 	Now          func() time.Time
@@ -79,9 +78,6 @@ func NewSession(ctx context.Context, cfg Config) (*Session, error) {
 	}
 	if !cfg.Endpoint.apiOriginAllowed(apiOrigin) {
 		return nil, fmt.Errorf("the STS returned public API URL %q, which this build does not accept", apiOrigin)
-	}
-	if cfg.Region != "" && d.Region != cfg.Region {
-		return nil, fmt.Errorf("tenant %s lives in region %q, but the provider sets region %q", tenantID, d.Region, cfg.Region)
 	}
 
 	token, err := sts.mint(ctx, apiOrigin)

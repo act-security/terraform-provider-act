@@ -33,7 +33,7 @@ func newSession(t *testing.T, s *fakeapi.Servers, mutate func(*auth.Config)) (*a
 
 func TestSessionDiscoversTheAPIAndMintsForIt(t *testing.T) {
 	s := fakeapi.Start(t)
-	session, err := newSession(t, s, func(c *auth.Config) { c.Region = fakeapi.DefaultRegion })
+	session, err := newSession(t, s, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -66,7 +66,6 @@ func TestSessionErrors(t *testing.T) {
 		{name: "wrong secret", mutate: func(c *auth.Config) { c.ClientSecret = "wrong" }, wantErr: auth.ErrInvalidClient},
 		{name: "tenant the key is not bound to", mutate: func(c *auth.Config) { c.TenantID = "00000000-0000-4000-8000-000000000002" }, wantErr: auth.ErrTenantNotFound},
 		{name: "cell without a public API", opts: []fakeapi.Option{fakeapi.WithPublicAPIUnavailable()}, wantErr: auth.ErrPublicAPIUnavailable},
-		{name: "region mismatch", mutate: func(c *auth.Config) { c.Region = "eu1" }, wantMsg: `lives in region "us1"`},
 		{name: "loopback API without the unsafe flag", mutate: func(c *auth.Config) { c.Endpoint.Unsafe = false }, wantMsg: "does not accept"},
 	}
 	for _, tt := range tests {
