@@ -1,0 +1,34 @@
+---
+page_title: "Provider: Act"
+description: |-
+  Manage Act Security deployments as code.
+---
+
+# Act Provider
+
+{{ .Description | trimspace }}
+
+## Authentication
+
+Create an API key in the Act console under Settings → API keys, then give the provider its client ID and secret. Keep the secret out of the configuration by setting `ACT_CLIENT_SECRET`.
+
+The provider learns the tenant from the key's token and asks the Act STS at `auth.act.security` which regional public API serves it, so you never set a tenant ID or an API URL. Setting `tenant_id` or `region` only adds a check that the key belongs to the tenant, or the tenant lives in the region, you expect.
+
+| Setting | Environment variable | Required |
+|---|---|---|
+| `client_id` | `ACT_CLIENT_ID` | yes |
+| `client_secret` | `ACT_CLIENT_SECRET` | yes |
+| `tenant_id` | `ACT_TENANT_ID` | no |
+| `region` | `ACT_REGION` | no |
+
+## Retries
+
+The provider retries a request up to 4 times when the Act STS or API answers `429`, `502`, `503` or `504`, when the API marks an error as retryable, or when the connection fails. It waits with exponential backoff and honours `Retry-After` up to 30 seconds. Certificate errors and requests the server rejected are never retried.
+
+When the API answers `401`, the provider gets a new token once and repeats the request.
+
+## Example Usage
+
+{{ tffile "examples/provider/provider.tf" }}
+
+{{ .SchemaMarkdown | trimspace }}

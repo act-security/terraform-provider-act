@@ -1,0 +1,72 @@
+name: Bug report
+description: Something in the provider does not work as documented.
+labels:
+  - bug
+  - triage
+body:
+  - type: markdown
+    attributes:
+      value: "Security issues: do not open an issue. Use private vulnerability reporting, see SECURITY.md."
+  - type: input
+    id: provider-version
+    attributes:
+      label: Provider version
+      placeholder: 0.1.0
+    validations:
+      required: true
+  - type: dropdown
+    id: cli
+    attributes:
+      label: CLI
+      options:
+        - Terraform
+        - OpenTofu
+    validations:
+      required: true
+  - type: input
+    id: cli-version
+    attributes:
+      label: CLI version
+    validations:
+      required: true
+  - type: dropdown
+    id: region
+    attributes:
+      label: Act region
+      options:
+        - us1
+        - eu1
+  - type: textarea
+    id: config
+    attributes:
+      label: Minimal configuration
+      render: hcl
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+  - type: textarea
+    id: debug
+    attributes:
+      label: Debug output
+      description: "Run with TF_LOG_PROVIDER=DEBUG. Method, path and status are enough."
+      render: shell
+  - type: checkboxes
+    id: secrets
+    attributes:
+      label: Secrets
+      options:
+        - label: I removed client secrets, tokens and private keys from everything above.
+          required: true

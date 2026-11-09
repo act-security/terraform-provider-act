@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Report a vulnerability
+    url: https://github.com/act-security/terraform-provider-act/security/advisories/new
+    about: Report security issues privately.
+  - name: Provider documentation
+    url: https://registry.terraform.io/providers/act-security/act/latest/docs
+    about: Usage, attributes and examples.

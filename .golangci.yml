@@ -1,0 +1,130 @@
+version: "2"
+
+run:
+  timeout: 5m
+  tests: true
+
+linters:
+  default: none
+  enable:
+    - errcheck
+    - govet
+    - staticcheck
+    - ineffassign
+    - unused
+    - errorlint
+    - nilerr
+    - durationcheck
+    - exhaustive
+    - unconvert
+    - predeclared
+    - copyloopvar
+    - bodyclose
+    - noctx
+    - gosec
+    - bidichk
+    - forbidigo
+    - depguard
+    - revive
+    - misspell
+    - usetesting
+    - nolintlint
+
+  settings:
+    errcheck:
+      check-type-assertions: true
+      check-blank: true
+
+    govet:
+      enable-all: true
+      disable:
+        - fieldalignment
+
+    misspell:
+      locale: US
+
+    exhaustive:
+      default-signifies-exhaustive: true
+
+    nolintlint:
+      require-explanation: true
+      require-specific: true
+      allow-unused: false
+
+    forbidigo:
+      forbid:
+        - pattern: ^fmt\.Print(f|ln)?$
+          msg: Terraform plugins must not write to stdout; it carries the gRPC handshake. Use tflog instead.
+        - pattern: ^print(ln)?$
+          msg: Terraform plugins must not write to stdout; it carries the gRPC handshake. Use tflog instead.
+
+    depguard:
+      rules:
+        all:
+          files:
+            - $all
+          deny:
+            - pkg: io/ioutil
+              desc: Deprecated since Go 1.16. Use io and os.
+            - pkg: github.com/pkg/errors
+              desc: Use the standard library errors package with %w wrapping.
+            - pkg: math/rand
+              desc: Use math/rand/v2, or crypto/rand where the value must be unpredictable.
+            - pkg: github.com/hashicorp/terraform-plugin-sdk/v2
+              desc: Use terraform-plugin-framework; sdk/v2 must not be imported.
+
+    revive:
+      severity: error
+      rules:
+        - name: blank-imports
+        - name: context-as-argument
+        - name: context-keys-type
+        - name: dot-imports
+        - name: early-return
+        - name: empty-block
+        - name: error-naming
+        - name: error-return
+        - name: error-strings
+        - name: errorf
+        - name: increment-decrement
+        - name: indent-error-flow
+        - name: range
+        - name: receiver-naming
+        - name: redefines-builtin-id
+        - name: superfluous-else
+        - name: time-naming
+        - name: unexported-return
+        - name: unreachable-code
+        - name: use-any
+        - name: var-declaration
+        - name: var-naming
+
+  exclusions:
+    generated: lax
+    paths:
+      - internal/apigen
+      - internal/fakeapi/gen
+    rules:
+      - path: _test\.go
+        linters:
+          - gosec
+
+formatters:
+  enable:
+    - gofumpt
+    - goimports
+  settings:
+    gofumpt:
+      extra:
+        group-params: true
+    goimports:
+      local-prefixes:
+        - github.com/act-security/terraform-provider-act
+  exclusions:
+    paths:
+      - internal/apigen
+      - internal/fakeapi/gen
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0

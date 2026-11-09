@@ -1,0 +1,269 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+
+permissions: {}
+
+jobs:
+  release-please:
+    name: Release pull request
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    environment: release-please
+    permissions: {}
+    outputs:
+      release_created: ${{ steps.release.outputs.release_created }}
+      tag_name: ${{ steps.release.outputs.tag_name }}
+      version: ${{ steps.release.outputs.version }}
+    steps:
+      - name: Generate the release App token
+        id: app
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          app-id: ${{ secrets.RELEASE_APP_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+          owner: act-security
+          repositories: terraform-provider-act
+          permission-contents: write
+          permission-pull-requests: write
+
+      - name: Update the release pull request or tag the release
+        id: release
+        uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
+        with:
+          token: ${{ steps.app.outputs.token }}
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+
+  publish:
+    name: Build, sign and attest the draft
+    needs: release-please
+    if: needs.release-please.outputs.release_created == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    environment: release
+    concurrency:
+      group: release-publish
+      cancel-in-progress: false
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    env:
+      TAG: ${{ needs.release-please.outputs.tag_name }}
+    steps:
+      - name: Checkout the release tag
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.release-please.outputs.tag_name }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Install the locked release toolchain
+        uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0
+        with:
+          version: 2026.10.3
+          sha256: 8d48bc510b7d844fad0bc7156c0855c2a1e7230c51e498a7f6b63b021f8b57c5
+          install_args: go goreleaser
+          cache: false
+          experimental: true
+
+      - name: Require the release guard's forbidden strings
+        env:
+          RELEASE_GUARD_FORBIDDEN: ${{ secrets.RELEASE_GUARD_FORBIDDEN }}
+        run: test -n "$RELEASE_GUARD_FORBIDDEN"
+
+      - name: Import the signing key
+        id: gpg
+        uses: crazy-max/ghaction-import-gpg@e89d40939c28e39f97cf32126055eeae86ba74ec # v6.3.0
+        with:
+          gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
+          passphrase: ${{ secrets.GPG_PASSPHRASE }}
+
+      - name: Build, guard, sign and upload to the draft release
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GPG_FINGERPRINT: ${{ steps.gpg.outputs.fingerprint }}
+          RELEASE_GUARD_FORBIDDEN: ${{ secrets.RELEASE_GUARD_FORBIDDEN }}
+        run: goreleaser release --clean
+
+      - name: Verify the checksum signature
+        run: gpg --verify "dist/terraform-provider-act_${TAG#v}_SHA256SUMS.sig" "dist/terraform-provider-act_${TAG#v}_SHA256SUMS"
+
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: |
+            dist/*.zip
+            dist/*_SHA256SUMS
+
+      - name: Check the draft carries every asset
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: test "$(gh release view "$TAG" --json assets --jq '.assets | length')" -eq 9
+
+      - name: Hand the signed artifacts to the end-to-end suite
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: release
+          path: |
+            dist/*.zip
+            dist/*_SHA256SUMS
+            dist/*_SHA256SUMS.sig
+            dist/*_manifest.json
+            dist/metadata.json
+          if-no-files-found: error
+          retention-days: 30
+
+  verify-linux:
+    name: End to end on the release (linux, ${{ matrix.label }})
+    needs:
+      - release-please
+      - publish
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: terraform 1.5.7
+            tool: terraform@1.5.7
+            bin: terraform
+          - label: terraform pinned
+            tool: terraform
+            bin: terraform
+          - label: opentofu pinned
+            tool: opentofu
+            bin: tofu
+    steps:
+      - name: Checkout the release tag
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.release-please.outputs.tag_name }}
+          persist-credentials: false
+
+      - name: Install pinned toolchain
+        uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0
+        with:
+          install_args: go terraform opentofu
+          cache: false
+          experimental: true
+
+      - name: Download the signed artifacts
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: release
+          path: dist
+
+      - name: Check the zips against the signed checksums
+        working-directory: dist
+        run: sha256sum --check --ignore-missing ./*_SHA256SUMS
+
+      - name: Run the end-to-end suite against the signed artifacts
+        env:
+          TOOL: ${{ matrix.tool }}
+          E2E_TF: ${{ matrix.bin }}
+          E2E_DIST: ${{ github.workspace }}/dist
+        run: mise exec "$TOOL" -- go test -tags e2e -count=1 -v ./e2e/
+
+  verify-platforms:
+    name: End to end on the release (${{ matrix.os }}, ${{ matrix.label }})
+    needs:
+      - release-please
+      - publish
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - macos-15
+          - windows-2025
+        label:
+          - terraform pinned
+          - opentofu pinned
+        include:
+          - label: terraform pinned
+            tool: terraform
+            bin: terraform
+          - label: opentofu pinned
+            tool: opentofu
+            bin: tofu
+    steps:
+      - name: Checkout the release tag
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.release-please.outputs.tag_name }}
+          persist-credentials: false
+
+      - name: Install pinned toolchain
+        uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0
+        with:
+          install_args: go terraform opentofu
+          cache: false
+          experimental: true
+
+      - name: Download the signed artifacts
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: release
+          path: dist
+
+      - name: Run the end-to-end suite against the signed artifacts
+        shell: bash
+        env:
+          TOOL: ${{ matrix.tool }}
+          E2E_TF: ${{ matrix.bin }}
+          E2E_DIST: ${{ github.workspace }}/dist
+        run: mise exec "$TOOL" -- go test -tags e2e -count=1 -v ./e2e/
+
+  promote:
+    name: Publish the tested release
+    needs:
+      - release-please
+      - verify-linux
+      - verify-platforms
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    env:
+      TAG: ${{ needs.release-please.outputs.tag_name }}
+    steps:
+      - name: Download the tested artifacts
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: release
+          path: tested
+
+      - name: Check the draft holds the tested artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          gh release download "$TAG" -R "$REPO" -p '*_SHA256SUMS' -D draft
+          cmp tested/*_SHA256SUMS draft/*_SHA256SUMS
+
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: gh release edit "$TAG" -R "$REPO" --draft=false --latest
+
+  install:
+    name: Install from both registries
+    needs:
+      - release-please
+      - promote
+    permissions:
+      contents: read
+    uses: ./.github/workflows/release-install.yaml
+    with:
+      version: ${{ needs.release-please.outputs.version }}

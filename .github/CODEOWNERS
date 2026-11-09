@@ -1,0 +1,8 @@
+* @act-security/infra-maintainers
+/.github/ @act-security/infra-maintainers
+/scripts/ @act-security/infra-maintainers
+/Makefile @act-security/infra-maintainers
+/mise.toml @act-security/infra-maintainers
+/.goreleaser.yaml @act-security/infra-maintainers
+/internal/auth/ @act-security/infra-maintainers
+/api/ @act-security/rd-maintainers

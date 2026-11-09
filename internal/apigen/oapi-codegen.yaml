@@ -1,0 +1,14 @@
+package: apigen
+output: internal/apigen/apigen.gen.go
+generate:
+  models: true
+  client: true
+compatibility:
+  always-prefix-enum-values: true
+output-options:
+  name-normalizer: ToCamelCaseWithInitialisms
+  type-mapping:
+    string:
+      formats:
+        uuid:
+          type: string

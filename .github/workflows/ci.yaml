@@ -1,0 +1,294 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions: {}
+
+env:
+  CGO_ENABLED: "0"
+
+jobs:
+  origin:
+    name: Pull request source
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Refuse pull requests from forks
+        env:
+          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name || github.repository }}
+          REPO: ${{ github.repository }}
+        run: |
+          if [ "$HEAD_REPO" != "$REPO" ]; then
+            echo "::error::CI does not run on pull requests from forks. A maintainer pushes the change to a branch in $REPO and opens the pull request from there."
+            exit 1
+          fi
+
+  quality:
+    name: Format, lint and test
+    needs: origin
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install pinned toolchain
+        uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0
+        with:
+          cache: true
+          experimental: true
+
+      - name: Check go.mod and go.sum are tidy
+        run: make tidy-check
+
+      - name: Check formatting
+        run: make fmt-check
+
+      - name: Lint
+        run: make lint
+
+      - name: Check generated code
+        run: make generate-check
+
+      - name: Test
+        run: make test
+
+      - name: Build
+        run: make build
+
+      - name: Check registry docs
+        run: make docs-check
+
+      - name: Check the release configuration
+        run: make release-check
+
+      - name: Lint workflows
+        run: make workflow-lint
+
+  security:
+    name: Security scan
+    needs: origin
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install pinned toolchain
+        uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0
+        with:
+          cache: true
+          experimental: true
+
+      - name: gosec
+        run: make gosec
+
+      - name: govulncheck
+        run: make vulncheck
+
+  compat:
+    name: Compatibility (${{ matrix.cli }} ${{ matrix.label }})
+    needs: origin
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    continue-on-error: ${{ matrix.experimental }}
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - cli: terraform
+            label: "1.5.7"
+            tool: terraform@1.5.7
+            bin: terraform
+            host: registry.terraform.io
+            experimental: false
+          - cli: terraform
+            label: pinned
+            tool: terraform
+            bin: terraform
+            host: registry.terraform.io
+            experimental: false
+          - cli: opentofu
+            label: pinned
+            tool: opentofu
+            bin: tofu
+            host: registry.opentofu.org
+            experimental: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install pinned toolchain
+        uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0
+        with:
+          cache: true
+          experimental: true
+
+      - name: Select the CLI under test
+        env:
+          TOOL: ${{ matrix.tool }}
+          BIN: ${{ matrix.bin }}
+        run: echo "TF_ACC_TERRAFORM_PATH=$(mise exec "$TOOL" -- sh -c "command -v $BIN")" >> "$GITHUB_ENV"
+
+      - name: Show the CLI version
+        run: '"$TF_ACC_TERRAFORM_PATH" version'
+
+      - name: Test
+        env:
+          TF_ACC_PROVIDER_HOST: ${{ matrix.host }}
+          TF_ACC_PROVIDER_NAMESPACE: act-security
+        run: make test
+
+  release-candidate:
+    name: Release candidate
+    needs: origin
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install pinned toolchain
+        uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0
+        with:
+          install_args: go goreleaser
+          cache: true
+          experimental: true
+
+      - name: Build the release candidate
+        run: make rc
+
+      - name: Upload the release candidate
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: release-candidate
+          path: |
+            dist/*.zip
+            dist/*_SHA256SUMS
+            dist/*_manifest.json
+            dist/metadata.json
+          if-no-files-found: error
+          retention-days: 14
+
+  e2e:
+    name: End to end (linux, ${{ matrix.label }})
+    needs: release-candidate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: terraform 1.5.7
+            tool: terraform@1.5.7
+            bin: terraform
+          - label: terraform pinned
+            tool: terraform
+            bin: terraform
+          - label: opentofu pinned
+            tool: opentofu
+            bin: tofu
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install pinned toolchain
+        uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0
+        with:
+          install_args: go terraform opentofu
+          cache: true
+          experimental: true
+
+      - name: Download the release candidate
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: release-candidate
+          path: dist
+
+      - name: Run the end-to-end suite against the release candidate
+        shell: bash
+        env:
+          TOOL: ${{ matrix.tool }}
+          E2E_TF: ${{ matrix.bin }}
+          E2E_DIST: ${{ github.workspace }}/dist
+        run: mise exec "$TOOL" -- go test -tags e2e -count=1 -v ./e2e/
+
+  e2e-platforms:
+    name: End to end (${{ matrix.os }}, ${{ matrix.label }})
+    needs: release-candidate
+    if: github.event_name != 'pull_request' || startsWith(github.head_ref, 'release-please--')
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - macos-15
+          - windows-2025
+        label:
+          - terraform pinned
+          - opentofu pinned
+        include:
+          - label: terraform pinned
+            tool: terraform
+            bin: terraform
+          - label: opentofu pinned
+            tool: opentofu
+            bin: tofu
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install pinned toolchain
+        uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0
+        with:
+          install_args: go terraform opentofu
+          cache: true
+          experimental: true
+
+      - name: Download the release candidate
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: release-candidate
+          path: dist
+
+      - name: Run the end-to-end suite against the release candidate
+        shell: bash
+        env:
+          TOOL: ${{ matrix.tool }}
+          E2E_TF: ${{ matrix.bin }}
+          E2E_DIST: ${{ github.workspace }}/dist
+        run: mise exec "$TOOL" -- go test -tags e2e -count=1 -v ./e2e/

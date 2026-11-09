@@ -1,0 +1,26 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:best-practices", ":semanticCommits", "helpers:pinGitHubActionDigestsToSemver"],
+  "labels": ["dependencies"],
+  "timezone": "Asia/Jerusalem",
+  "schedule": ["before 6am on monday"],
+  "minimumReleaseAge": "7 days",
+  "internalChecksFilter": "strict",
+  "prConcurrentLimit": 5,
+  "postUpdateOptions": ["gomodTidy", "gomodUpdateImportPaths"],
+  "osvVulnerabilityAlerts": true,
+  "vulnerabilityAlerts": {
+    "labels": ["security"],
+    "schedule": ["at any time"],
+    "minimumReleaseAge": null
+  },
+  "packageRules": [
+    { "matchManagers": ["gomod"], "matchDepTypes": ["golang"], "enabled": false },
+    { "matchManagers": ["gomod"], "semanticCommitType": "fix", "semanticCommitScope": "deps" },
+    { "matchManagers": ["gomod"], "matchUpdateTypes": ["minor", "patch", "digest"], "groupName": "go modules" },
+    { "matchManagers": ["github-actions"], "groupName": "github actions", "semanticCommitType": "ci", "semanticCommitScope": "deps" },
+    { "matchManagers": ["mise"], "groupName": "toolchain", "semanticCommitType": "chore", "semanticCommitScope": "deps" },
+    { "matchManagers": ["mise"], "matchPackageNames": ["go"], "groupName": null, "semanticCommitType": "fix", "semanticCommitScope": "deps" },
+    { "matchManagers": ["mise"], "matchPackageNames": ["terraform", "opentofu"], "groupName": null, "dependencyDashboardApproval": true }
+  ]
+}

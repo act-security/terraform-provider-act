@@ -1,0 +1,31 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Provider: debug (export the printed TF_REATTACH_PROVIDERS, then make dev-plan)",
+      "type": "go",
+      "request": "launch",
+      "mode": "debug",
+      "program": "${workspaceFolder}",
+      "buildFlags": "-tags=actinternal",
+      "args": ["-debug", "-address", "registry.terraform.io/act-security/act"],
+      "env": {
+        "TF_LOG": "DEBUG",
+        "ACT_ENDPOINT": "http://127.0.0.1:8787",
+        "ACT_ALLOW_UNSAFE_ENDPOINT": "1"
+      }
+    },
+    {
+      "name": "Test: TestCurrentIdentity (provider runs in-process against the fake)",
+      "type": "go",
+      "request": "launch",
+      "mode": "test",
+      "program": "${workspaceFolder}/internal/provider",
+      "buildFlags": "-tags=actinternal",
+      "args": ["-test.run", "^TestCurrentIdentity$", "-test.v"],
+      "env": {
+        "TF_ACC_PROVIDER_NAMESPACE": "act-security"
+      }
+    }
+  ]
+}

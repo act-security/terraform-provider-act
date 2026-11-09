@@ -1,0 +1,18 @@
+{
+  "GET /v1/whoami": [
+    {
+      "status": 503,
+      "headers": {
+        "Retry-After": "1"
+      },
+      "body": {
+        "error": {
+          "code": "unavailable",
+          "message": "Scripted outage.",
+          "requestId": "req_scripted",
+          "retryable": true
+        }
+      }
+    }
+  ]
+}
