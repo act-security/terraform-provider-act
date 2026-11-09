@@ -878,7 +878,7 @@ type ClientInterface interface {
 	// Corresponds with GET /v1/integration-types (the `ListIntegrationTypes` operationId).
 	ListIntegrationTypes(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	// ListIntegrations List the integrations installed in the calling tenant, one page at a time
+	// ListIntegrations List the integrations installed in the calling tenant, the Act-owned email integration included, one page at a time
 	//
 	// Corresponds with GET /v1/integrations (the `ListIntegrations` operationId).
 	ListIntegrations(ctx context.Context, params *ListIntegrationsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -1017,7 +1017,7 @@ func (c *Client) ListIntegrationTypes(ctx context.Context, reqEditors ...Request
 	return c.Client.Do(req)
 }
 
-// ListIntegrations List the integrations installed in the calling tenant, one page at a time
+// ListIntegrations List the integrations installed in the calling tenant, the Act-owned email integration included, one page at a time
 //
 // Corresponds with GET /v1/integrations (the `ListIntegrations` operationId).
 func (c *Client) ListIntegrations(ctx context.Context, params *ListIntegrationsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
@@ -1919,7 +1919,7 @@ type ClientWithResponsesInterface interface {
 	// Corresponds with GET /v1/integration-types (the `ListIntegrationTypes` operationId).
 	ListIntegrationTypesWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*ListIntegrationTypesResponse, error)
 
-	// ListIntegrationsWithResponse List the integrations installed in the calling tenant, one page at a time
+	// ListIntegrationsWithResponse List the integrations installed in the calling tenant, the Act-owned email integration included, one page at a time
 	//
 	// Returns a wrapper object for the known response body format(s).
 	//
@@ -3735,7 +3735,7 @@ func (c *ClientWithResponses) ListIntegrationTypesWithResponse(ctx context.Conte
 	return ParseListIntegrationTypesResponse(rsp)
 }
 
-// ListIntegrationsWithResponse List the integrations installed in the calling tenant, one page at a time
+// ListIntegrationsWithResponse List the integrations installed in the calling tenant, the Act-owned email integration included, one page at a time
 //
 // Returns a wrapper object for the known response body format(s).
 //

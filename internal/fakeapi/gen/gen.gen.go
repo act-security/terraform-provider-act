@@ -796,7 +796,7 @@ type ServerInterface interface {
 	// ListIntegrationTypes List the integration types this tenant may install, their fields and which of them are secret
 	// (GET /v1/integration-types)
 	ListIntegrationTypes(w http.ResponseWriter, r *http.Request)
-	// ListIntegrations List the integrations installed in the calling tenant, one page at a time
+	// ListIntegrations List the integrations installed in the calling tenant, the Act-owned email integration included, one page at a time
 	// (GET /v1/integrations)
 	ListIntegrations(w http.ResponseWriter, r *http.Request, params ListIntegrationsParams)
 	// CreateIntegration Install an integration. Secrets are write-only and are never returned
@@ -3738,7 +3738,7 @@ type StrictServerInterface interface {
 	// ListIntegrationTypes List the integration types this tenant may install, their fields and which of them are secret
 	// (GET /v1/integration-types)
 	ListIntegrationTypes(ctx context.Context, request ListIntegrationTypesRequestObject) (ListIntegrationTypesResponseObject, error)
-	// ListIntegrations List the integrations installed in the calling tenant, one page at a time
+	// ListIntegrations List the integrations installed in the calling tenant, the Act-owned email integration included, one page at a time
 	// (GET /v1/integrations)
 	ListIntegrations(ctx context.Context, request ListIntegrationsRequestObject) (ListIntegrationsResponseObject, error)
 	// CreateIntegration Install an integration. Secrets are write-only and are never returned

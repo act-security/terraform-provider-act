@@ -1263,7 +1263,7 @@
     "/v1/integrations": {
       "get": {
         "operationId": "listIntegrations",
-        "summary": "List the integrations installed in the calling tenant, one page at a time",
+        "summary": "List the integrations installed in the calling tenant, the Act-owned email integration included, one page at a time",
         "tags": [
           "integrations"
         ],
@@ -3230,7 +3230,8 @@
           "tlsVerification": {
             "$ref": "#/components/schemas/SplunkTlsVerification"
           }
-        }
+        },
+        "additionalProperties": false
       },
       "IntegrationSecrets": {
         "type": "object",
@@ -3256,7 +3257,8 @@
             "minLength": 1,
             "maxLength": 4096
           }
-        }
+        },
+        "additionalProperties": false
       },
       "IntegrationCreate": {
         "type": "object",
@@ -3275,6 +3277,7 @@
           "type",
           "secrets"
         ],
+        "additionalProperties": false,
         "description": "An integration to install. Each type takes its own config and secrets fields, all of them required."
       },
       "IntegrationPatch": {
@@ -3293,6 +3296,7 @@
         "required": [
           "type"
         ],
+        "additionalProperties": false,
         "description": "Merge patch. A member left out keeps its value; a config member replaces its value; a secrets member rotates that one secret. Changing any config value requires every secret of the type, so a stored secret is never sent to a new configuration. The connection check runs on the result before anything is stored."
       },
       "IntegrationSecretState": {
