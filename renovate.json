@@ -21,6 +21,6 @@
     { "matchManagers": ["github-actions"], "groupName": "github actions", "semanticCommitType": "ci", "semanticCommitScope": "deps" },
     { "matchManagers": ["mise"], "groupName": "toolchain", "semanticCommitType": "chore", "semanticCommitScope": "deps" },
     { "matchManagers": ["mise"], "matchPackageNames": ["go"], "groupName": null, "semanticCommitType": "fix", "semanticCommitScope": "deps" },
-    { "matchManagers": ["mise"], "matchPackageNames": ["terraform", "opentofu"], "groupName": null, "dependencyDashboardApproval": true }
+    { "matchManagers": ["mise"], "matchPackageNames": ["terraform"], "groupName": null, "dependencyDashboardApproval": true }
   ]
 }

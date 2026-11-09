@@ -29,7 +29,7 @@ import (
 
 const providerRepo = "terraform-provider-act"
 
-var mirrorHosts = []string{"registry.terraform.io", "registry.opentofu.org"}
+var mirrorHosts = []string{"registry.terraform.io"}
 
 type harness struct {
 	root      string
@@ -166,7 +166,7 @@ func resolveTerraform(installDir string) (string, error) {
 	}
 	p, err := exec.LookPath(envOr("E2E_TF", "terraform"))
 	if err != nil {
-		return "", errors.New("no CLI to test with: set E2E_TF to a terraform or tofu binary, or E2E_TERRAFORM_VERSION to download one")
+		return "", errors.New("no CLI to test with: set E2E_TF to a terraform binary, or E2E_TERRAFORM_VERSION to download one")
 	}
 	return p, nil
 }

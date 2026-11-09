@@ -8,7 +8,6 @@ if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
   exit 1
 fi
 case "$TOOL" in
-  opentofu*) bin=tofu; minutes=60 ;;
   terraform*) bin=terraform; minutes=30 ;;
   *) echo "unknown TOOL $TOOL" >&2; exit 1 ;;
 esac

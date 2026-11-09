@@ -17,10 +17,9 @@ The default target is an in-repo fake of the Act STS and public API, so no accou
 make fake
 make dev-plan
 make dev-apply TF_ARGS=-auto-approve
-make dev-plan TF=tofu
 ```
 
-Run `make fake` in one shell and the `dev-*` targets in another. `make dev-<cmd>` installs a build with the `actinternal` tag and runs `<cmd>` in `dev/$(TARGET)` with `dev_overrides` for both registries. `make debug` starts the provider for a debugger; export the `TF_REATTACH_PROVIDERS` it prints before running `make dev-plan`. `SCRIPT=dev/fake-script.example.json make fake` replays canned responses. Against a non-production Act environment, set `ACT_INTERNAL_STS` and `ACT_INTERNAL_API` to its origins; `install`, `debug` and `testacc` link them into the `actinternal` build, which otherwise accepts only production, plus loopback when `ACT_ALLOW_UNSAFE_ENDPOINT=1`. Release builds accept only production and never read `ACT_ALLOW_UNSAFE_ENDPOINT`.
+Run `make fake` in one shell and the `dev-*` targets in another. `make dev-<cmd>` installs a build with the `actinternal` tag and runs `<cmd>` in `dev/$(TARGET)` with `dev_overrides` for the provider. `make debug` starts the provider for a debugger; export the `TF_REATTACH_PROVIDERS` it prints before running `make dev-plan`. `SCRIPT=dev/fake-script.example.json make fake` replays canned responses. Against a non-production Act environment, set `ACT_INTERNAL_STS` and `ACT_INTERNAL_API` to its origins; `install`, `debug` and `testacc` link them into the `actinternal` build, which otherwise accepts only production, plus loopback when `ACT_ALLOW_UNSAFE_ENDPOINT=1`. Release builds accept only production and never read `ACT_ALLOW_UNSAFE_ENDPOINT`.
 
 The `actinternal` tag is set only by `install`, `debug` and `testacc`. Release builds never carry it. GoReleaser runs `scripts/release-guard.sh` on every binary right after building it, before anything is archived, signed or uploaded, and the release fails if a binary carries the tag, was built without `-trimpath` or `CGO_ENABLED=0`, reads `ACT_ALLOW_UNSAFE_ENDPOINT`, or contains any string listed in `RELEASE_GUARD_FORBIDDEN`.
 
@@ -50,11 +49,11 @@ To take a change from a fork, a maintainer reviews the diff, pushes the commits 
 
 | Command | What it runs |
 |---|---|
-| `make e2e` | `rc`, then the suite against the zip for this machine. Linux runs everything; macOS and Windows run the install and schema checks, because Go reads `SSL_CERT_FILE` only on Linux. `E2E_TF=tofu` tests OpenTofu. |
+| `make e2e` | `rc`, then the suite against the zip for this machine. Linux runs everything; macOS and Windows run the install and schema checks, because Go reads `SSL_CERT_FILE` only on Linux. |
 | `make e2e-docker` | `rc`, then the full suite in a Linux container, for macOS laptops. |
 | `make rc-install RUN=<id>` | downloads the `release-candidate` artifact of CI run `<id>`, checks its checksum and writes `.rc/terraformrc`. Export `TF_CLI_CONFIG_FILE` as printed and pin the printed version. |
 
-CI builds the release candidate on every pull request and runs the full suite on Linux with Terraform 1.5.7, the pinned Terraform and the pinned OpenTofu. The release pull request and `main` also run it on macOS and Windows.
+CI builds the release candidate on every pull request and runs the full suite on Linux with Terraform 1.5.7 and the pinned Terraform. The release pull request and `main` also run it on macOS and Windows.
 
 ## Releases
 

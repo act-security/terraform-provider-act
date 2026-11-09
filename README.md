@@ -1,8 +1,8 @@
 # terraform-provider-act
 
-The Terraform and OpenTofu provider for [Act Security](https://act.security). It manages Act deployments for AWS, Azure and GCP as code, authenticated with an Act API key.
+The Terraform provider for [Act Security](https://act.security). It manages Act deployments for AWS, Azure and GCP as code, authenticated with an Act API key.
 
-Published as `act-security/act` on registry.terraform.io and registry.opentofu.org.
+Published as [`act-security/act`](https://registry.terraform.io/providers/act-security/act/latest) on the Terraform Registry.
 
 ## Usage
 

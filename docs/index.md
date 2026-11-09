@@ -1,12 +1,12 @@
 ---
 page_title: "Provider: Act"
 description: |-
-  Use the Act provider to work with Act Security from Terraform and OpenTofu.
+  Use the Act provider to work with Act Security from Terraform.
 ---
 
 # Act Provider
 
-The Act provider connects Terraform and OpenTofu to [Act Security](https://act.security). It signs in with an Act API key and finds the tenant and the regional API on its own, so the client ID and secret are all it needs.
+The Act provider connects Terraform to [Act Security](https://act.security). It signs in with an Act API key and finds the tenant and the regional API on its own, so the client ID and secret are all it needs.
 
 ## Getting started
 
@@ -18,7 +18,7 @@ The Act provider connects Terraform and OpenTofu to [Act Security](https://act.s
    export ACT_CLIENT_SECRET="<client secret>"
    ```
 
-3. Add the provider and run `terraform init` (or `tofu init`):
+3. Add the provider and run `terraform init`:
 
 ```terraform
 terraform {
