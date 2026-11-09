@@ -72,6 +72,9 @@ jobs:
       - name: Check registry docs
         run: make docs-check
 
+      - name: Check every resource and data source ships docs and examples
+        run: make docs-rule
+
       - name: Check the release configuration
         run: make release-check
 

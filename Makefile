@@ -33,7 +33,7 @@ export TF_ACC_PROVIDER_HOST ?= registry.terraform.io
 .DEFAULT_GOAL := check
 
 .PHONY: check
-check: tidy-check fmt-check lint generate-check test sec build docs-check release-check workflow-lint
+check: tidy-check fmt-check lint generate-check test sec build docs-check docs-rule release-check workflow-lint
 
 .PHONY: fmt
 fmt:
@@ -123,6 +123,10 @@ docs-check: docs
 		git --no-pager diff -- docs; \
 		echo "docs/ differs from the committed version. Run: make docs and commit it"; exit 1; fi
 
+.PHONY: docs-rule
+docs-rule:
+	go test -count=1 -run TestEveryResourceAndDataSourceShipsDocsAndExamples ./internal/provider/
+
 .PHONY: release-check
 release-check:
 	goreleaser check
@@ -179,7 +183,7 @@ clean:
 .PHONY: help
 help:
 	@printf '%s\n' \
-	  'check            tidy-check fmt-check lint generate-check test sec build docs-check release-check workflow-lint' \
+	  'check            tidy-check fmt-check lint generate-check test sec build docs-check docs-rule release-check workflow-lint' \
 	  'fmt              format in place (gofumpt and imports through golangci-lint)' \
 	  'lint             golangci-lint for the release, actinternal and e2e tag sets; bans //nolint' \
 	  'test             unit and fake API tests with -race, release tags then actinternal' \
@@ -188,6 +192,7 @@ help:
 	  'contract-sync    refresh api/openapi.json and its lock from CONTRACT_URL, then generate' \
 	  'build            release-identical binary, no actinternal tag' \
 	  'docs             regenerate docs/ with tfplugindocs' \
+	  'docs-rule        fail when a resource or data source lacks its example, template or generated doc' \
 	  'release-check    goreleaser check, then rc' \
 	  'rc               release candidate: snapshot zips of 6 platforms in dist/, release guard on each binary' \
 	  'e2e              rc, then the end-to-end suite against the zip for this machine (full on Linux, smoke elsewhere)' \
