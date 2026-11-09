@@ -14,19 +14,10 @@ body:
       placeholder: 0.1.0
     validations:
       required: true
-  - type: dropdown
-    id: cli
-    attributes:
-      label: CLI
-      options:
-        - Terraform
-        - OpenTofu
-    validations:
-      required: true
   - type: input
-    id: cli-version
+    id: terraform-version
     attributes:
-      label: CLI version
+      label: Terraform version
     validations:
       required: true
   - type: dropdown

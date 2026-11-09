@@ -163,7 +163,7 @@ debug:
 	TF_LOG=$${TF_LOG:-INFO} go run $(DEV_TAGS) -ldflags '$(INTERNAL_LDFLAGS)' . -debug -address $(PROVIDER_ADDRESS)
 
 dev-%: install
-	@printf 'provider_installation {\n  dev_overrides {\n    "registry.terraform.io/act-security/act" = "%s"\n    "registry.opentofu.org/act-security/act" = "%s"\n  }\n  direct {}\n}\n' '$(GOBIN)' '$(GOBIN)' > $(DEV_TFRC)
+	@printf 'provider_installation {\n  dev_overrides {\n    "registry.terraform.io/act-security/act" = "%s"\n  }\n  direct {}\n}\n' '$(GOBIN)' > $(DEV_TFRC)
 	@test -f dev/env/$(TARGET).env || { echo "dev/env/$(TARGET).env is missing"; exit 1; }
 	set -a && . ./dev/env/$(TARGET).env && set +a && cd dev/$(TARGET) && TF_CLI_CONFIG_FILE=$(CURDIR)/$(DEV_TFRC) $(TF) $* $(TF_ARGS)
 

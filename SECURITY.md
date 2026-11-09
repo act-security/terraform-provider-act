@@ -43,4 +43,4 @@ shasum -a 256 --check --ignore-missing terraform-provider-act_<version>_SHA256SU
 gh attestation verify terraform-provider-act_<version>_<os>_<arch>.zip --repo act-security/terraform-provider-act
 ```
 
-`terraform init` and `tofu init` run the same signature check automatically when they install from a registry.
+`terraform init` runs the same signature check automatically when it installs from the Terraform Registry.

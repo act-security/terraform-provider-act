@@ -108,7 +108,6 @@ jobs:
     needs: origin
     runs-on: ubuntu-24.04
     timeout-minutes: 30
-    continue-on-error: ${{ matrix.experimental }}
     permissions:
       contents: read
     strategy:
@@ -120,19 +119,11 @@ jobs:
             tool: terraform@1.5.7
             bin: terraform
             host: registry.terraform.io
-            experimental: false
           - cli: terraform
             label: pinned
             tool: terraform
             bin: terraform
             host: registry.terraform.io
-            experimental: false
-          - cli: opentofu
-            label: pinned
-            tool: opentofu
-            bin: tofu
-            host: registry.opentofu.org
-            experimental: true
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -212,9 +203,6 @@ jobs:
           - label: terraform pinned
             tool: terraform
             bin: terraform
-          - label: opentofu pinned
-            tool: opentofu
-            bin: tofu
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -224,7 +212,7 @@ jobs:
       - name: Install pinned toolchain
         uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0
         with:
-          install_args: go terraform opentofu
+          install_args: go terraform
           cache: true
           experimental: true
 
@@ -258,14 +246,10 @@ jobs:
           - windows-2025
         label:
           - terraform pinned
-          - opentofu pinned
         include:
           - label: terraform pinned
             tool: terraform
             bin: terraform
-          - label: opentofu pinned
-            tool: opentofu
-            bin: tofu
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -275,7 +259,7 @@ jobs:
       - name: Install pinned toolchain
         uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0
         with:
-          install_args: go terraform opentofu
+          install_args: go terraform
           cache: true
           experimental: true
 

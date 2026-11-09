@@ -3,7 +3,7 @@ set -euo pipefail
 run="${1:?usage: rc-install.sh <CI run id>}"
 repo="${RC_REPO:-act-security/terraform-provider-act}"
 dest="$(pwd)/.rc"
-providers=(registry.terraform.io/act-security/act registry.opentofu.org/act-security/act)
+providers=(registry.terraform.io/act-security/act)
 
 rm -rf "$dest"
 mkdir -p "$dest/download"
@@ -22,10 +22,10 @@ cat >"$dest/terraformrc" <<RC
 provider_installation {
   filesystem_mirror {
     path    = "$dest/mirror"
-    include = ["${providers[0]}", "${providers[1]}"]
+    include = ["${providers[0]}"]
   }
   direct {
-    exclude = ["${providers[0]}", "${providers[1]}"]
+    exclude = ["${providers[0]}"]
   }
 }
 RC
