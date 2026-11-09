@@ -22,10 +22,7 @@ import (
 	"github.com/act-security/terraform-provider-act/internal/retry"
 )
 
-var (
-	tenantIDPattern = regexp.MustCompile(`^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`)
-	regionPattern   = regexp.MustCompile(`^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$`)
-)
+var tenantIDPattern = regexp.MustCompile(`^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`)
 
 var _ provider.Provider = (*actProvider)(nil)
 
@@ -35,7 +32,6 @@ type actProvider struct {
 
 type providerModel struct {
 	TenantID     types.String `tfsdk:"tenant_id"`
-	Region       types.String `tfsdk:"region"`
 	ClientID     types.String `tfsdk:"client_id"`
 	ClientSecret types.String `tfsdk:"client_secret"`
 }
@@ -58,24 +54,19 @@ func (p *actProvider) Metadata(_ context.Context, _ provider.MetadataRequest, re
 
 func (p *actProvider) Schema(_ context.Context, _ provider.SchemaRequest, resp *provider.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "The Act provider manages Act Security deployments as code. It authenticates with an Act API key at the Act STS (`auth.act.security`), which also tells it which regional public API serves the key's tenant.",
+		MarkdownDescription: "The Act provider connects Terraform and OpenTofu to [Act Security](https://act.security). It signs in with an Act API key and finds the tenant and the regional API on its own, so the client ID and secret are all it needs.",
 		Attributes: map[string]schema.Attribute{
 			"tenant_id": schema.StringAttribute{
-				MarkdownDescription: "The Act tenant ID, a lowercase UUID. Can also be set with `ACT_TENANT_ID`. Optional: the provider reads the tenant from the API key's token. When set, the provider fails if the key belongs to another tenant.",
+				MarkdownDescription: "The Act tenant ID, a lowercase UUID, here or in `ACT_TENANT_ID`. Not needed: the provider reads the tenant from the API key. When set, the provider fails if the key belongs to another tenant.",
 				Optional:            true,
 				Validators:          []validator.String{stringvalidator.RegexMatches(tenantIDPattern, "must be a lowercase UUID")},
 			},
-			"region": schema.StringAttribute{
-				MarkdownDescription: "The Act region the tenant lives in, such as `us1` or `eu1`. Can also be set with `ACT_REGION`. Optional: when set, the provider fails if the tenant lives elsewhere. The API endpoint always comes from the STS.",
-				Optional:            true,
-				Validators:          []validator.String{stringvalidator.RegexMatches(regionPattern, "must be a lowercase region name such as us1")},
-			},
 			"client_id": schema.StringAttribute{
-				MarkdownDescription: "The API key's client ID, from Settings → API keys in the Act console. Can also be set with `ACT_CLIENT_ID`.",
+				MarkdownDescription: "The API key's client ID, from Settings → API keys in the Act console. Required, here or in `ACT_CLIENT_ID`.",
 				Optional:            true,
 			},
 			"client_secret": schema.StringAttribute{
-				MarkdownDescription: "The API key's client secret. Can also be set with `ACT_CLIENT_SECRET`, which keeps it out of the configuration.",
+				MarkdownDescription: "The API key's client secret. Required, here or in `ACT_CLIENT_SECRET`, which keeps it out of the configuration.",
 				Optional:            true,
 				Sensitive:           true,
 			},
@@ -89,14 +80,13 @@ func (p *actProvider) Configure(ctx context.Context, req provider.ConfigureReque
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	for _, v := range []types.String{cfg.TenantID, cfg.Region, cfg.ClientID, cfg.ClientSecret} {
+	for _, v := range []types.String{cfg.TenantID, cfg.ClientID, cfg.ClientSecret} {
 		if v.IsUnknown() {
 			return
 		}
 	}
 
 	tenantID := valueOrEnv(cfg.TenantID, "ACT_TENANT_ID")
-	region := valueOrEnv(cfg.Region, "ACT_REGION")
 	clientID := valueOrEnv(cfg.ClientID, "ACT_CLIENT_ID")
 	clientSecret := valueOrEnv(cfg.ClientSecret, "ACT_CLIENT_SECRET")
 
@@ -104,9 +94,6 @@ func (p *actProvider) Configure(ctx context.Context, req provider.ConfigureReque
 	requireValue(resp, "client_secret", "ACT_CLIENT_SECRET", clientSecret)
 	if tenantID != "" && !tenantIDPattern.MatchString(tenantID) {
 		resp.Diagnostics.AddAttributeError(path.Root("tenant_id"), "Invalid tenant_id", "tenant_id must be a lowercase UUID.")
-	}
-	if region != "" && !regionPattern.MatchString(region) {
-		resp.Diagnostics.AddAttributeError(path.Root("region"), "Invalid region", "region must be a lowercase region name such as us1.")
 	}
 	if resp.Diagnostics.HasError() {
 		return
@@ -128,7 +115,6 @@ func (p *actProvider) Configure(ctx context.Context, req provider.ConfigureReque
 		TenantID:     tenantID,
 		ClientID:     clientID,
 		ClientSecret: clientSecret,
-		Region:       region,
 		HTTPClient:   httpClient,
 		UserAgent:    userAgent,
 		Retry:        retry.Default(),
@@ -151,10 +137,6 @@ func (p *actProvider) Configure(ctx context.Context, req provider.ConfigureReque
 	}
 	if whoami.TenantID != session.TenantID {
 		resp.Diagnostics.AddError("Act tenant mismatch", fmt.Sprintf("The Act API answered for tenant %s, not %s.", whoami.TenantID, session.TenantID))
-		return
-	}
-	if region != "" && whoami.Region != nil && *whoami.Region != region {
-		resp.Diagnostics.AddError("Act region mismatch", fmt.Sprintf("The Act API serves region %q, but the provider sets region %q.", *whoami.Region, region))
 		return
 	}
 

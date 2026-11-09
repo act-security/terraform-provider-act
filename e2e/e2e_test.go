@@ -63,7 +63,7 @@ func TestInstallsFromTheMirror(t *testing.T) {
 			continue
 		}
 		found = true
-		for _, attr := range []string{"tenant_id", "region", "client_id", "client_secret"} {
+		for _, attr := range []string{"tenant_id", "client_id", "client_secret"} {
 			if _, ok := s.Provider.Block.Attributes[attr]; !ok {
 				t.Errorf("the provider schema has no %s", attr)
 			}
@@ -175,11 +175,6 @@ func TestFailsClosed(t *testing.T) {
 			name:   "public API not available yet",
 			mutate: func(c *fakeapi.Config) { c.PublicAPIUnavailable = true },
 			want:   "not available for this tenant yet",
-		},
-		{
-			name: "region mismatch",
-			env:  map[string]string{"ACT_REGION": "eu1"},
-			want: `lives in region "us1"`,
 		},
 		{
 			name: "public API URL off the allow-list",

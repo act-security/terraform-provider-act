@@ -57,10 +57,7 @@ func TestCurrentIdentity(t *testing.T) {
 	resource.UnitTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: factories(),
 		Steps: []resource.TestStep{{
-			Config: identityConfig(`provider "act" {
-  region = "us1"
-}
-`),
+			Config: identityConfig(`provider "act" {}` + "\n"),
 			ConfigStateChecks: []statecheck.StateCheck{
 				statecheck.ExpectKnownValue("data.act_current_identity.this", tfjsonpath.New("tenant_id"), knownvalue.StringExact(fakeapi.DefaultTenantID)),
 				statecheck.ExpectKnownValue("data.act_current_identity.this", tfjsonpath.New("tenant_display_name"), knownvalue.StringExact(fakeapi.DefaultTenantDisplayName)),
@@ -98,11 +95,6 @@ func TestProviderConfigurationErrors(t *testing.T) {
 			name:     "tenant the key is not bound to",
 			provider: `provider "act" { tenant_id = "00000000-0000-4000-8000-000000000002" }`,
 			want:     `not bound to this tenant_id`,
-		},
-		{
-			name:     "region mismatch",
-			provider: `provider "act" { region = "eu1" }`,
-			want:     `lives in region "us1"`,
 		},
 		{
 			name: "public API not available yet",
