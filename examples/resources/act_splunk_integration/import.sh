@@ -1,0 +1,1 @@
+terraform import act_splunk_integration.this splunk

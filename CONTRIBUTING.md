@@ -40,7 +40,7 @@ Every resource and data source ships with an example, a doc template and the gen
 | Resource | `examples/resources/act_<name>/resource.tf`, `examples/resources/act_<name>/import.sh`, `templates/resources/<name>.md.tmpl`, `docs/resources/<name>.md` |
 | Data source | `examples/data-sources/act_<name>/data-source.tf`, `templates/data-sources/<name>.md.tmpl`, `docs/data-sources/<name>.md` |
 
-Start the template from a copy of `.github/doc-templates/resource.md.tmpl` or `.github/doc-templates/data-source.md.tmpl`. They live outside `templates/` because tfplugindocs renders every file there into `docs/`. Keep the example small enough to paste and valid on Terraform 1.5.7. A resource that takes a secret keeps the **Secrets** section and says which arguments are write-only, which Terraform version they need, how to rotate them and what reaches the state file. `docs/` is generated: run `make docs` and commit the result.
+Start the template from a copy of `.github/doc-templates/resource.md.tmpl` or `.github/doc-templates/data-source.md.tmpl`. They live outside `templates/` because tfplugindocs renders every file there into `docs/`. Keep the example small enough to paste and valid on Terraform 1.5.7, except a write-only argument, which needs 1.11: then the template also shows the 1.5.7 way. A resource that takes a secret keeps the **Secrets** section and says which arguments are write-only, which Terraform version they need, how to rotate them and what reaches the state file. `docs/` is generated: run `make docs` and commit the result.
 
 ## Rules
 

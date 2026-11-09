@@ -1,0 +1,50 @@
+---
+page_title: "{{ .Name }} {{ .Type }} - {{ .ProviderName }}"
+subcategory: ""
+description: |-
+{{ .Description | plainmarkdown | trimspace | prefixlines "  " }}
+---
+
+# {{ .Name }} ({{ .Type }})
+
+{{ .Description | trimspace }}
+
+The Slack app must already exist in your workspace. Create it from the manifest shown in **Settings → Integrations → Slack** in the Act console, install it, and copy its Bot User OAuth Token. Act checks the connection before it saves anything, so an apply with credentials Slack rejects fails and changes nothing.
+
+## Example Usage
+
+{{ tffile .ExampleFile }}
+
+Reference the integration from a notification rule with its `id`. The ID stays the same when you rotate the secret or change a setting.
+
+## Secrets
+
+Act never returns the bot token. Set it one of two ways, never both:
+
+| Argument | Terraform | Stored in the state |
+|---|---|---|
+| `bot_token_wo` with `bot_token_wo_version` | 1.11 and later | No. The value lives only in the configuration, so it can come from an ephemeral variable or an ephemeral resource. |
+| `bot_token` | 1.5.7 and later | Yes, marked sensitive. Anyone who can read the state can read it. |
+
+To rotate a write-only secret, change the value and increase `bot_token_wo_version`. The integration is updated in place. With `bot_token`, changing the value is enough.
+
+On Terraform before 1.11, use `bot_token` with a sensitive variable:
+
+```terraform
+resource "act_slack_integration" "this" {
+  bot_token = var.slack_bot_token
+}
+```
+
+
+`bot_token_updated_at` records when Act last stored a new value. If it moves without Terraform, for example after someone rotates the secret in the Act console, the next plan updates the integration in place and sends the configured value again, with a warning.
+
+{{ .SchemaMarkdown | trimspace }}
+
+## Import
+
+Import by integration ID, or by `slack`, since a tenant has at most one Slack integration:
+
+{{ codefile "shell" .ImportFile }}
+
+Import cannot read the secret. Set `bot_token` or `bot_token_wo` in the configuration; the first apply sends it once.

@@ -1,0 +1,53 @@
+---
+page_title: "{{ .Name }} {{ .Type }} - {{ .ProviderName }}"
+subcategory: ""
+description: |-
+{{ .Description | plainmarkdown | trimspace | prefixlines "  " }}
+---
+
+# {{ .Name }} ({{ .Type }})
+
+{{ .Description | trimspace }}
+
+Create a scoped Atlassian API token for Jira with `read:jira-work`, `write:jira-work` and `read:jira-user`. Only Jira Cloud sites are supported. Act checks the connection before it saves anything, so an apply with credentials Jira rejects fails and changes nothing.
+
+## Example Usage
+
+{{ tffile .ExampleFile }}
+
+Reference the integration from a notification rule with its `id`. The ID stays the same when you rotate the secret or change a setting.
+
+## Secrets
+
+Act never returns the API token. Set it one of two ways, never both:
+
+| Argument | Terraform | Stored in the state |
+|---|---|---|
+| `api_token_wo` with `api_token_wo_version` | 1.11 and later | No. The value lives only in the configuration, so it can come from an ephemeral variable or an ephemeral resource. |
+| `api_token` | 1.5.7 and later | Yes, marked sensitive. Anyone who can read the state can read it. |
+
+To rotate a write-only secret, change the value and increase `api_token_wo_version`. The integration is updated in place. With `api_token`, changing the value is enough.
+
+On Terraform before 1.11, use `api_token` with a sensitive variable:
+
+```terraform
+resource "act_jira_integration" "this" {
+  base_url  = "https://acme.atlassian.net"
+  email     = "act-bot@acme.com"
+  api_token = var.jira_api_token
+}
+```
+
+Changing `base_url` or `email` also sends the API token again: Act checks the new settings with the secret you configure and never reuses the stored one for them.
+
+`api_token_updated_at` records when Act last stored a new value. If it moves without Terraform, for example after someone rotates the secret in the Act console, the next plan updates the integration in place and sends the configured value again, with a warning.
+
+{{ .SchemaMarkdown | trimspace }}
+
+## Import
+
+Import by integration ID, or by `jira`, since a tenant has at most one Jira integration:
+
+{{ codefile "shell" .ImportFile }}
+
+Import cannot read the secret. Set `api_token` or `api_token_wo` in the configuration; the first apply sends it once.

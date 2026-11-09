@@ -146,12 +146,19 @@ func (p *actProvider) Configure(ctx context.Context, req provider.ConfigureReque
 }
 
 func (p *actProvider) Resources(context.Context) []func() resource.Resource {
-	return nil
+	return []func() resource.Resource{
+		NewSlackIntegrationResource,
+		NewJiraIntegrationResource,
+		NewWizIntegrationResource,
+		NewSplunkIntegrationResource,
+	}
 }
 
 func (p *actProvider) DataSources(context.Context) []func() datasource.DataSource {
 	return []func() datasource.DataSource{
 		NewCurrentIdentityDataSource,
+		NewIntegrationDataSource,
+		NewIntegrationTypesDataSource,
 	}
 }
 
