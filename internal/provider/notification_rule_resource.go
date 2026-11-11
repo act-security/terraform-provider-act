@@ -64,8 +64,8 @@ func (r *notificationRuleResource) Metadata(_ context.Context, req resource.Meta
 func (r *notificationRuleResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	blocks := actionBlocks("to notify")
 	blocks["condition"] = schema.ListNestedBlock{
-		MarkdownDescription: "Narrows one event type to the events whose `field` has one of `values`. Up to 10. The `act_notification_event_types` data source lists the fields each event type takes.",
-		Validators:          []validator.List{listvalidator.SizeAtMost(10)},
+		MarkdownDescription: fmt.Sprintf("Narrows one event type to the events whose `field` has one of `values`. Up to %d. The `act_notification_event_types` data source lists the fields each event type takes.", maxRuleConditions),
+		Validators:          []validator.List{listvalidator.SizeAtMost(maxRuleConditions)},
 		NestedObject: schema.NestedBlockObject{Attributes: map[string]schema.Attribute{
 			"event_type": schema.StringAttribute{
 				MarkdownDescription: "The event type the condition applies to. It must be one of `event_types`.",
@@ -82,10 +82,10 @@ func (r *notificationRuleResource) Schema(_ context.Context, _ resource.SchemaRe
 				Default:             stringdefault.StaticString("in"),
 			},
 			"values": schema.SetAttribute{
-				MarkdownDescription: "The values to match, up to 20, such as `policy_mgmt`.",
+				MarkdownDescription: fmt.Sprintf("The values to match, up to %d, such as `policy_mgmt`.", maxConditionValues),
 				ElementType:         types.StringType,
 				Required:            true,
-				Validators:          []validator.Set{setvalidator.SizeBetween(1, 20)},
+				Validators:          []validator.Set{setvalidator.SizeBetween(1, maxConditionValues)},
 			},
 		}},
 	}
@@ -98,9 +98,9 @@ func (r *notificationRuleResource) Schema(_ context.Context, _ resource.SchemaRe
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"name": schema.StringAttribute{
-				MarkdownDescription: "The name Act shows for the rule, up to 100 characters.",
+				MarkdownDescription: fmt.Sprintf("The name Act shows for the rule, up to %d characters.", maxNotificationNameLength),
 				Required:            true,
-				Validators:          []validator.String{stringvalidator.LengthBetween(1, 100)},
+				Validators:          []validator.String{stringvalidator.LengthBetween(1, maxNotificationNameLength)},
 			},
 			"enabled": schema.BoolAttribute{
 				MarkdownDescription: "Whether the rule sends notifications. Defaults to `true`.",
@@ -109,17 +109,17 @@ func (r *notificationRuleResource) Schema(_ context.Context, _ resource.SchemaRe
 				Default:             booldefault.StaticBool(true),
 			},
 			"event_types": schema.SetAttribute{
-				MarkdownDescription: "The event types that trigger the rule, up to 10, joined by OR, such as `simulation.finished`. The `act_notification_event_types` data source lists them.",
+				MarkdownDescription: fmt.Sprintf("The event types that trigger the rule, up to %d, joined by OR, such as `simulation.finished`. The `act_notification_event_types` data source lists them.", maxRuleEventTypes),
 				ElementType:         types.StringType,
 				Required:            true,
-				Validators:          []validator.Set{setvalidator.SizeBetween(1, 10)},
+				Validators:          []validator.Set{setvalidator.SizeBetween(1, maxRuleEventTypes)},
 			},
 			"recipient_ids": schema.SetAttribute{
-				MarkdownDescription: "IDs of `act_notification_recipient` entries to notify as well, up to 20.",
+				MarkdownDescription: fmt.Sprintf("IDs of `act_notification_recipient` entries to notify as well, up to %d.", maxRuleRecipientIDs),
 				ElementType:         types.StringType,
 				Optional:            true,
 				Validators: []validator.Set{
-					setvalidator.SizeAtMost(20),
+					setvalidator.SizeAtMost(maxRuleRecipientIDs),
 					setvalidator.ValueStringsAre(stringvalidator.RegexMatches(uuidPattern, "must be a lowercase UUID")),
 				},
 			},
@@ -162,6 +162,96 @@ func (r *notificationRuleResource) Configure(_ context.Context, req resource.Con
 	r.data = data
 }
 
+func (r *notificationRuleResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
+	keepStateWhenOnlyComputedDiffer(ctx, req, resp, "revision", "min_client_revision", "last_modified_via")
+}
+
+func (r *notificationRuleResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
+	var plan notificationRuleModel
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	body := ruleWriteOf(ctx, plan, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	result, err := r.data.Client.CreateNotificationRule(ctx, body, idempotencyKey())
+	if err != nil {
+		addNotificationWriteError(&resp.Diagnostics, notificationWriteFailure{kind: notificationRuleKind, verb: "create", body: body, err: err})
+		return
+	}
+	warnNewerRule(&resp.Diagnostics, result.Value)
+	state := ruleModelOf(ctx, result.Value, plan, &resp.Diagnostics)
+	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
+	setPrivate(ctx, resp.Private, privateETag, result.ETag, &resp.Diagnostics)
+}
+
+func (r *notificationRuleResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
+	var prior notificationRuleModel
+	resp.Diagnostics.Append(req.State.Get(ctx, &prior)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	result, err := r.data.Client.GetNotificationRule(ctx, prior.ID.ValueString())
+	if err != nil {
+		notificationReadError(&resp.Diagnostics, "Reading the notification rule failed", err)
+		return
+	}
+	if result == nil {
+		resp.State.RemoveResource(ctx)
+		return
+	}
+	warnNewerRule(&resp.Diagnostics, result.Value)
+	state := ruleModelOf(ctx, result.Value, prior, &resp.Diagnostics)
+	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
+	setPrivate(ctx, resp.Private, privateETag, result.ETag, &resp.Diagnostics)
+}
+
+func (r *notificationRuleResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+	var plan, prior notificationRuleModel
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
+	resp.Diagnostics.Append(req.State.Get(ctx, &prior)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	body := ruleWriteOf(ctx, plan, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	etag := revisionETag(privateString(ctx, req.Private, privateETag), prior.Revision)
+	result, err := r.data.Client.ReplaceNotificationRule(ctx, prior.ID.ValueString(), etag, body)
+	if err != nil {
+		addNotificationWriteError(&resp.Diagnostics, notificationWriteFailure{kind: notificationRuleKind, verb: "update", body: body, err: err})
+		return
+	}
+	warnNewerRule(&resp.Diagnostics, result.Value)
+	state := ruleModelOf(ctx, result.Value, plan, &resp.Diagnostics)
+	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
+	setPrivate(ctx, resp.Private, privateETag, result.ETag, &resp.Diagnostics)
+}
+
+func (r *notificationRuleResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
+	var prior notificationRuleModel
+	resp.Diagnostics.Append(req.State.Get(ctx, &prior)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	etag := revisionETag(privateString(ctx, req.Private, privateETag), prior.Revision)
+	if err := r.data.Client.DeleteNotificationRule(ctx, prior.ID.ValueString(), etag); err != nil {
+		addNotificationWriteError(&resp.Diagnostics, notificationWriteFailure{kind: notificationRuleKind, verb: "delete", err: err})
+	}
+}
+
+func (r *notificationRuleResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	id := strings.TrimSpace(req.ID)
+	if !uuidPattern.MatchString(id) {
+		resp.Diagnostics.AddError("Invalid import ID", "Use the notification rule ID, a lowercase UUID.")
+		return
+	}
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("id"), id)...)
+}
+
 func ruleWriteOf(ctx context.Context, m notificationRuleModel, diags *diag.Diagnostics) apigen.NotificationRuleWrite {
 	enabled := m.Enabled.ValueBool()
 	conditions := []apigen.NotificationCondition{}
@@ -183,6 +273,16 @@ func ruleWriteOf(ctx context.Context, m notificationRuleModel, diags *diag.Diagn
 		Actions:      &actions,
 		RecipientIds: &recipientIDs,
 	}
+}
+
+func warnNewerRule(diags *diag.Diagnostics, rule apigen.NotificationRule) {
+	if rule.MinClientRevision <= supportedClientRevision {
+		return
+	}
+	diags.AddWarning(
+		"Notification rule uses features this provider does not know",
+		fmt.Sprintf("Rule %s (%q) needs client revision %d, and this provider understands revision %d. Terraform cannot show those parts of the rule; Act keeps them when Terraform updates it. Upgrade the provider to manage them.", rule.ID, rule.Name, rule.MinClientRevision, supportedClientRevision),
+	)
 }
 
 func ruleModelOf(ctx context.Context, rule apigen.NotificationRule, prior notificationRuleModel, diags *diag.Diagnostics) notificationRuleModel {
@@ -211,104 +311,4 @@ func ruleModelOf(ctx context.Context, rule apigen.NotificationRule, prior notifi
 		LastModifiedVia:   types.StringValue(string(rule.LastModifiedVia)),
 		WebURL:            types.StringPointerValue(rule.WebURL),
 	}
-}
-
-func warnNewerRule(diags *diag.Diagnostics, rule apigen.NotificationRule) {
-	if rule.MinClientRevision <= supportedClientRevision {
-		return
-	}
-	diags.AddWarning(
-		"Notification rule uses features this provider does not know",
-		fmt.Sprintf("Rule %s (%q) needs client revision %d, and this provider understands revision %d. Terraform cannot show those parts of the rule; Act keeps them when Terraform updates it. Upgrade the provider to manage them.", rule.ID, rule.Name, rule.MinClientRevision, supportedClientRevision),
-	)
-}
-
-func (r *notificationRuleResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
-	keepStateWhenOnlyComputedDiffer(ctx, req, resp, "revision", "min_client_revision", "last_modified_via")
-}
-
-func (r *notificationRuleResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	var plan notificationRuleModel
-	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	body := ruleWriteOf(ctx, plan, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	result, err := r.data.Client.CreateNotificationRule(ctx, body, idempotencyKey())
-	if err != nil {
-		addNotificationWriteError(&resp.Diagnostics, "Could not create the notification rule", "notification rule", "actions", body, err)
-		return
-	}
-	warnNewerRule(&resp.Diagnostics, result.Rule)
-	state := ruleModelOf(ctx, result.Rule, plan, &resp.Diagnostics)
-	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
-	setPrivate(ctx, resp.Private, privateETag, result.ETag, &resp.Diagnostics)
-}
-
-func (r *notificationRuleResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
-	var prior notificationRuleModel
-	resp.Diagnostics.Append(req.State.Get(ctx, &prior)...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	result, err := r.data.Client.GetNotificationRule(ctx, prior.ID.ValueString())
-	if err != nil {
-		notificationReadError(&resp.Diagnostics, "Reading the notification rule failed", err)
-		return
-	}
-	if result == nil {
-		resp.State.RemoveResource(ctx)
-		return
-	}
-	warnNewerRule(&resp.Diagnostics, result.Rule)
-	state := ruleModelOf(ctx, result.Rule, prior, &resp.Diagnostics)
-	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
-	setPrivate(ctx, resp.Private, privateETag, result.ETag, &resp.Diagnostics)
-}
-
-func (r *notificationRuleResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var plan, prior notificationRuleModel
-	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
-	resp.Diagnostics.Append(req.State.Get(ctx, &prior)...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	body := ruleWriteOf(ctx, plan, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	etag := revisionETag(privateString(ctx, req.Private, privateETag), prior.Revision)
-	result, err := r.data.Client.ReplaceNotificationRule(ctx, prior.ID.ValueString(), etag, body)
-	if err != nil {
-		addNotificationWriteError(&resp.Diagnostics, "Could not update the notification rule", "notification rule", "actions", body, err)
-		return
-	}
-	warnNewerRule(&resp.Diagnostics, result.Rule)
-	state := ruleModelOf(ctx, result.Rule, plan, &resp.Diagnostics)
-	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
-	setPrivate(ctx, resp.Private, privateETag, result.ETag, &resp.Diagnostics)
-}
-
-func (r *notificationRuleResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	var prior notificationRuleModel
-	resp.Diagnostics.Append(req.State.Get(ctx, &prior)...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	etag := revisionETag(privateString(ctx, req.Private, privateETag), prior.Revision)
-	if err := r.data.Client.DeleteNotificationRule(ctx, prior.ID.ValueString(), etag); err != nil {
-		addNotificationWriteError(&resp.Diagnostics, "Could not delete the notification rule", "notification rule", "actions", nil, err)
-	}
-}
-
-func (r *notificationRuleResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	id := strings.TrimSpace(req.ID)
-	if !uuidPattern.MatchString(id) {
-		resp.Diagnostics.AddError("Invalid import ID", "Use the notification rule ID, a lowercase UUID.")
-		return
-	}
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("id"), id)...)
 }

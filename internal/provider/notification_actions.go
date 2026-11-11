@@ -29,7 +29,39 @@ import (
 
 const supportedClientRevision = 1
 
+const (
+	maxNotificationNameLength = 100
+	maxRuleEventTypes         = 10
+	maxRuleConditions         = 10
+	maxConditionValues        = 20
+	maxRuleRecipientIDs       = 20
+	maxEmailRecipients        = 100
+	maxSlackChannels          = 50
+	maxSlackChannelNameLength = 200
+)
+
 var slackChannelIDPattern = regexp.MustCompile(`^[A-Z0-9]+$`)
+
+type notificationKind struct {
+	noun          string
+	actionsMember string
+}
+
+var (
+	notificationRuleKind      = notificationKind{noun: "notification rule", actionsMember: "actions"}
+	notificationRecipientKind = notificationKind{noun: "notification recipient", actionsMember: "methods"}
+)
+
+type notificationWriteFailure struct {
+	kind notificationKind
+	verb string
+	body any
+	err  error
+}
+
+func (f notificationWriteFailure) summary() string {
+	return "Could not " + f.verb + " the " + f.kind.noun
+}
 
 type emailActionModel struct {
 	IntegrationID types.String `tfsdk:"integration_id"`
@@ -53,10 +85,10 @@ func actionBlocks(owner string) map[string]schema.Block {
 					Validators:          []validator.String{stringvalidator.RegexMatches(uuidPattern, "must be a lowercase UUID")},
 				},
 				"recipients": schema.SetAttribute{
-					MarkdownDescription: "The email addresses " + owner + ", up to 100.",
+					MarkdownDescription: fmt.Sprintf("The email addresses %s, up to %d.", owner, maxEmailRecipients),
 					ElementType:         types.StringType,
 					Required:            true,
-					Validators:          []validator.Set{setvalidator.SizeBetween(1, 100)},
+					Validators:          []validator.Set{setvalidator.SizeBetween(1, maxEmailRecipients)},
 					PlanModifiers:       []planmodifier.Set{caseInsensitiveSet{}},
 				},
 			}},
@@ -71,11 +103,11 @@ func actionBlocks(owner string) map[string]schema.Block {
 					Validators:          []validator.String{stringvalidator.RegexMatches(uuidPattern, "must be a lowercase UUID")},
 				},
 				"channel_ids": schema.SetAttribute{
-					MarkdownDescription: "The Slack channel IDs " + owner + ", up to 50, such as `C05PLATGRD2`. Act does not take channel names; look an ID up with the `act_slack_channel` data source.",
+					MarkdownDescription: fmt.Sprintf("The Slack channel IDs %s, up to %d, such as `C05PLATGRD2`. Act does not take channel names; look an ID up with the `act_slack_channel` data source.", owner, maxSlackChannels),
 					ElementType:         types.StringType,
 					Required:            true,
 					Validators: []validator.Set{
-						setvalidator.SizeBetween(1, 50),
+						setvalidator.SizeBetween(1, maxSlackChannels),
 						setvalidator.ValueStringsAre(stringvalidator.RegexMatches(slackChannelIDPattern, "must be a Slack channel ID, not a #name")),
 					},
 				},
@@ -108,8 +140,11 @@ func actionsOf(ctx context.Context, email []emailActionModel, slack []slackActio
 func actionModelsOf(ctx context.Context, actions []apigen.NotificationAction, priorEmail []emailActionModel, diags *diag.Diagnostics) ([]emailActionModel, []slackActionModel) {
 	email, slack := []emailActionModel{}, []slackActionModel{}
 	for _, action := range actions {
-		switch {
-		case action.Type == apigen.NotificationActionTypeEmail && action.Email != nil:
+		switch action.Type {
+		case apigen.NotificationActionTypeEmail:
+			if action.Email == nil {
+				continue
+			}
 			got := make([]string, 0, len(action.Email.Recipients))
 			for _, value := range action.Email.Recipients {
 				got = append(got, string(value))
@@ -122,7 +157,10 @@ func actionModelsOf(ctx context.Context, actions []apigen.NotificationAction, pr
 				IntegrationID: types.StringValue(action.Email.IntegrationID),
 				Recipients:    stringSet(ctx, keepSpelling(prior, got), diags),
 			})
-		case action.Type == apigen.NotificationActionTypeSlack && action.Slack != nil:
+		case apigen.NotificationActionTypeSlack:
+			if action.Slack == nil {
+				continue
+			}
 			slack = append(slack, slackActionModel{
 				IntegrationID: types.StringValue(action.Slack.IntegrationID),
 				ChannelIDs:    stringSet(ctx, action.Slack.ChannelIds, diags),
@@ -309,7 +347,8 @@ func attributePath(pointer, member string, body any) (path.Path, bool) {
 	return path.Empty(), false
 }
 
-func addNotificationWriteError(diags *diag.Diagnostics, summary, noun, member string, body any, err error) {
+func addNotificationWriteError(diags *diag.Diagnostics, failure notificationWriteFailure) {
+	summary, noun, body, err := failure.summary(), failure.kind.noun, failure.body, failure.err
 	var apiErr *client.APIError
 	if !asAPIError(err, &apiErr) {
 		diags.AddError(summary, err.Error())
@@ -319,7 +358,7 @@ func addNotificationWriteError(diags *diag.Diagnostics, summary, noun, member st
 	if pointer == "" && apiErr.Detail("attribute") != "" {
 		pointer = "/" + strings.ReplaceAll(apiErr.Detail("attribute"), ".", "/")
 	}
-	at, mapped := attributePath(pointer, member, body)
+	at, mapped := attributePath(pointer, failure.kind.actionsMember, body)
 	addAt := func(detail string) {
 		if mapped {
 			diags.AddAttributeError(at, summary, detail)

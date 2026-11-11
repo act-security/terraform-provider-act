@@ -55,9 +55,9 @@ func (r *notificationRecipientResource) Schema(_ context.Context, _ resource.Sch
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"name": schema.StringAttribute{
-				MarkdownDescription: "The name Act shows, up to 100 characters. Unique in the tenant.",
+				MarkdownDescription: fmt.Sprintf("The name Act shows, up to %d characters. Unique in the tenant.", maxNotificationNameLength),
 				Required:            true,
-				Validators:          []validator.String{stringvalidator.LengthBetween(1, 100)},
+				Validators:          []validator.String{stringvalidator.LengthBetween(1, maxNotificationNameLength)},
 			},
 			"revision": schema.Int64Attribute{
 				MarkdownDescription: "The recipient's revision in Act. It goes up on every change.",
@@ -97,22 +97,6 @@ func (r *notificationRecipientResource) Configure(_ context.Context, req resourc
 	r.data = data
 }
 
-func recipientWriteOf(ctx context.Context, m notificationRecipientModel, diags *diag.Diagnostics) apigen.NotificationRecipientWrite {
-	return apigen.NotificationRecipientWrite{Name: m.Name.ValueString(), Methods: actionsOf(ctx, m.Email, m.Slack, diags)}
-}
-
-func recipientModelOf(ctx context.Context, recipient apigen.NotificationRecipient, prior notificationRecipientModel, diags *diag.Diagnostics) notificationRecipientModel {
-	email, slack := actionModelsOf(ctx, recipient.Methods, prior.Email, diags)
-	return notificationRecipientModel{
-		ID:       types.StringValue(recipient.ID),
-		Name:     types.StringValue(recipient.Name),
-		Email:    email,
-		Slack:    slack,
-		Revision: types.Int64Value(int64(recipient.Revision)),
-		RuleIDs:  stringSet(ctx, recipient.RuleIds, diags),
-	}
-}
-
 func (r *notificationRecipientResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
 	keepStateWhenOnlyComputedDiffer(ctx, req, resp, "revision", "rule_ids")
 }
@@ -129,10 +113,10 @@ func (r *notificationRecipientResource) Create(ctx context.Context, req resource
 	}
 	result, err := r.data.Client.CreateNotificationRecipient(ctx, body, idempotencyKey())
 	if err != nil {
-		addNotificationWriteError(&resp.Diagnostics, "Could not create the notification recipient", "notification recipient", "methods", body, err)
+		addNotificationWriteError(&resp.Diagnostics, notificationWriteFailure{kind: notificationRecipientKind, verb: "create", body: body, err: err})
 		return
 	}
-	state := recipientModelOf(ctx, result.Recipient, plan, &resp.Diagnostics)
+	state := recipientModelOf(ctx, result.Value, plan, &resp.Diagnostics)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 	setPrivate(ctx, resp.Private, privateETag, result.ETag, &resp.Diagnostics)
 }
@@ -152,7 +136,7 @@ func (r *notificationRecipientResource) Read(ctx context.Context, req resource.R
 		resp.State.RemoveResource(ctx)
 		return
 	}
-	state := recipientModelOf(ctx, result.Recipient, prior, &resp.Diagnostics)
+	state := recipientModelOf(ctx, result.Value, prior, &resp.Diagnostics)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 	setPrivate(ctx, resp.Private, privateETag, result.ETag, &resp.Diagnostics)
 }
@@ -171,10 +155,10 @@ func (r *notificationRecipientResource) Update(ctx context.Context, req resource
 	etag := revisionETag(privateString(ctx, req.Private, privateETag), prior.Revision)
 	result, err := r.data.Client.ReplaceNotificationRecipient(ctx, prior.ID.ValueString(), etag, body)
 	if err != nil {
-		addNotificationWriteError(&resp.Diagnostics, "Could not update the notification recipient", "notification recipient", "methods", body, err)
+		addNotificationWriteError(&resp.Diagnostics, notificationWriteFailure{kind: notificationRecipientKind, verb: "update", body: body, err: err})
 		return
 	}
-	state := recipientModelOf(ctx, result.Recipient, plan, &resp.Diagnostics)
+	state := recipientModelOf(ctx, result.Value, plan, &resp.Diagnostics)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 	setPrivate(ctx, resp.Private, privateETag, result.ETag, &resp.Diagnostics)
 }
@@ -190,15 +174,16 @@ func (r *notificationRecipientResource) Delete(ctx context.Context, req resource
 	if err == nil {
 		return
 	}
+	failure := notificationWriteFailure{kind: notificationRecipientKind, verb: "delete", err: err}
 	var apiErr *client.APIError
 	if asAPIError(err, &apiErr) && apiErr.Code == "conflict" && apiErr.Detail("reason") == "notification_recipient_in_use" {
 		resp.Diagnostics.AddError(
-			"Could not delete the notification recipient",
+			failure.summary(),
 			fmt.Sprintf("Recipient %s is still named by notification rules %s. Remove it from their recipient_ids first; when Terraform manages those rules, reference this resource's id there so Terraform orders the change.", prior.ID.ValueString(), strings.Join(apiErr.DetailStrings("ruleIds"), ", ")),
 		)
 		return
 	}
-	addNotificationWriteError(&resp.Diagnostics, "Could not delete the notification recipient", "notification recipient", "methods", nil, err)
+	addNotificationWriteError(&resp.Diagnostics, failure)
 }
 
 func (r *notificationRecipientResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
@@ -208,4 +193,20 @@ func (r *notificationRecipientResource) ImportState(ctx context.Context, req res
 		return
 	}
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("id"), id)...)
+}
+
+func recipientWriteOf(ctx context.Context, m notificationRecipientModel, diags *diag.Diagnostics) apigen.NotificationRecipientWrite {
+	return apigen.NotificationRecipientWrite{Name: m.Name.ValueString(), Methods: actionsOf(ctx, m.Email, m.Slack, diags)}
+}
+
+func recipientModelOf(ctx context.Context, recipient apigen.NotificationRecipient, prior notificationRecipientModel, diags *diag.Diagnostics) notificationRecipientModel {
+	email, slack := actionModelsOf(ctx, recipient.Methods, prior.Email, diags)
+	return notificationRecipientModel{
+		ID:       types.StringValue(recipient.ID),
+		Name:     types.StringValue(recipient.Name),
+		Email:    email,
+		Slack:    slack,
+		Revision: types.Int64Value(int64(recipient.Revision)),
+		RuleIDs:  stringSet(ctx, recipient.RuleIds, diags),
+	}
 }

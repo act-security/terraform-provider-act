@@ -7,14 +7,9 @@ import (
 	"github.com/act-security/terraform-provider-act/internal/apigen"
 )
 
-type NotificationRuleResult struct {
-	Rule apigen.NotificationRule
-	ETag string
-}
-
-type NotificationRecipientResult struct {
-	Recipient apigen.NotificationRecipient
-	ETag      string
+type Versioned[T any] struct {
+	Value T
+	ETag  string
 }
 
 func (c *Client) ListNotificationEventTypes(ctx context.Context) (*apigen.NotificationEventTypeList, error) {
@@ -53,40 +48,28 @@ func (c *Client) FindSlackChannels(ctx context.Context, name string, integration
 	return resp.JSON200.Items, nil
 }
 
-func (c *Client) GetNotificationRule(ctx context.Context, id string) (*NotificationRuleResult, error) {
+func (c *Client) GetNotificationRule(ctx context.Context, id string) (*Versioned[apigen.NotificationRule], error) {
 	resp, err := c.api.GetNotificationRuleWithResponse(ctx, id)
 	if err != nil {
 		return nil, err
 	}
-	if resp.StatusCode() == http.StatusNotFound {
-		return nil, nil
-	}
-	if resp.JSON200 == nil {
-		return nil, newAPIError(resp.StatusCode(), resp.Body)
-	}
-	return &NotificationRuleResult{Rule: *resp.JSON200, ETag: resp.HTTPResponse.Header.Get("ETag")}, nil
+	return versionedOrMissing(resp.HTTPResponse, resp.Body, resp.JSON200)
 }
 
-func (c *Client) CreateNotificationRule(ctx context.Context, body apigen.NotificationRuleWrite, idempotencyKey string) (*NotificationRuleResult, error) {
+func (c *Client) CreateNotificationRule(ctx context.Context, body apigen.NotificationRuleWrite, idempotencyKey string) (*Versioned[apigen.NotificationRule], error) {
 	resp, err := c.api.CreateNotificationRuleWithResponse(ctx, &apigen.CreateNotificationRuleParams{IdempotencyKey: &idempotencyKey}, body)
 	if err != nil {
 		return nil, err
 	}
-	if resp.JSON201 == nil {
-		return nil, newAPIError(resp.StatusCode(), resp.Body)
-	}
-	return &NotificationRuleResult{Rule: *resp.JSON201, ETag: resp.HTTPResponse.Header.Get("ETag")}, nil
+	return versionedOf(resp.HTTPResponse, resp.Body, resp.JSON201)
 }
 
-func (c *Client) ReplaceNotificationRule(ctx context.Context, id, etag string, body apigen.NotificationRuleWrite) (*NotificationRuleResult, error) {
+func (c *Client) ReplaceNotificationRule(ctx context.Context, id, etag string, body apigen.NotificationRuleWrite) (*Versioned[apigen.NotificationRule], error) {
 	resp, err := c.api.ReplaceNotificationRuleWithResponse(ctx, id, &apigen.ReplaceNotificationRuleParams{IfMatch: etag}, body)
 	if err != nil {
 		return nil, err
 	}
-	if resp.JSON200 == nil {
-		return nil, newAPIError(resp.StatusCode(), resp.Body)
-	}
-	return &NotificationRuleResult{Rule: *resp.JSON200, ETag: resp.HTTPResponse.Header.Get("ETag")}, nil
+	return versionedOf(resp.HTTPResponse, resp.Body, resp.JSON200)
 }
 
 func (c *Client) DeleteNotificationRule(ctx context.Context, id, etag string) error {
@@ -94,48 +77,31 @@ func (c *Client) DeleteNotificationRule(ctx context.Context, id, etag string) er
 	if err != nil {
 		return err
 	}
-	switch resp.StatusCode() {
-	case http.StatusNoContent, http.StatusNotFound:
-		return nil
-	default:
-		return newAPIError(resp.StatusCode(), resp.Body)
-	}
+	return deletedOrMissing(resp.StatusCode(), resp.Body)
 }
 
-func (c *Client) GetNotificationRecipient(ctx context.Context, id string) (*NotificationRecipientResult, error) {
+func (c *Client) GetNotificationRecipient(ctx context.Context, id string) (*Versioned[apigen.NotificationRecipient], error) {
 	resp, err := c.api.GetNotificationRecipientWithResponse(ctx, id)
 	if err != nil {
 		return nil, err
 	}
-	if resp.StatusCode() == http.StatusNotFound {
-		return nil, nil
-	}
-	if resp.JSON200 == nil {
-		return nil, newAPIError(resp.StatusCode(), resp.Body)
-	}
-	return &NotificationRecipientResult{Recipient: *resp.JSON200, ETag: resp.HTTPResponse.Header.Get("ETag")}, nil
+	return versionedOrMissing(resp.HTTPResponse, resp.Body, resp.JSON200)
 }
 
-func (c *Client) CreateNotificationRecipient(ctx context.Context, body apigen.NotificationRecipientWrite, idempotencyKey string) (*NotificationRecipientResult, error) {
+func (c *Client) CreateNotificationRecipient(ctx context.Context, body apigen.NotificationRecipientWrite, idempotencyKey string) (*Versioned[apigen.NotificationRecipient], error) {
 	resp, err := c.api.CreateNotificationRecipientWithResponse(ctx, &apigen.CreateNotificationRecipientParams{IdempotencyKey: &idempotencyKey}, body)
 	if err != nil {
 		return nil, err
 	}
-	if resp.JSON201 == nil {
-		return nil, newAPIError(resp.StatusCode(), resp.Body)
-	}
-	return &NotificationRecipientResult{Recipient: *resp.JSON201, ETag: resp.HTTPResponse.Header.Get("ETag")}, nil
+	return versionedOf(resp.HTTPResponse, resp.Body, resp.JSON201)
 }
 
-func (c *Client) ReplaceNotificationRecipient(ctx context.Context, id, etag string, body apigen.NotificationRecipientWrite) (*NotificationRecipientResult, error) {
+func (c *Client) ReplaceNotificationRecipient(ctx context.Context, id, etag string, body apigen.NotificationRecipientWrite) (*Versioned[apigen.NotificationRecipient], error) {
 	resp, err := c.api.ReplaceNotificationRecipientWithResponse(ctx, id, &apigen.ReplaceNotificationRecipientParams{IfMatch: etag}, body)
 	if err != nil {
 		return nil, err
 	}
-	if resp.JSON200 == nil {
-		return nil, newAPIError(resp.StatusCode(), resp.Body)
-	}
-	return &NotificationRecipientResult{Recipient: *resp.JSON200, ETag: resp.HTTPResponse.Header.Get("ETag")}, nil
+	return versionedOf(resp.HTTPResponse, resp.Body, resp.JSON200)
 }
 
 func (c *Client) DeleteNotificationRecipient(ctx context.Context, id, etag string) error {
@@ -143,11 +109,29 @@ func (c *Client) DeleteNotificationRecipient(ctx context.Context, id, etag strin
 	if err != nil {
 		return err
 	}
-	switch resp.StatusCode() {
+	return deletedOrMissing(resp.StatusCode(), resp.Body)
+}
+
+func versionedOrMissing[T any](resp *http.Response, body []byte, value *T) (*Versioned[T], error) {
+	if resp.StatusCode == http.StatusNotFound {
+		return nil, nil
+	}
+	return versionedOf(resp, body, value)
+}
+
+func versionedOf[T any](resp *http.Response, body []byte, value *T) (*Versioned[T], error) {
+	if value == nil {
+		return nil, newAPIError(resp.StatusCode, body)
+	}
+	return &Versioned[T]{Value: *value, ETag: resp.Header.Get("ETag")}, nil
+}
+
+func deletedOrMissing(status int, body []byte) error {
+	switch status {
 	case http.StatusNoContent, http.StatusNotFound:
 		return nil
 	default:
-		return newAPIError(resp.StatusCode(), resp.Body)
+		return newAPIError(status, body)
 	}
 }
 

@@ -14,6 +14,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
+	"github.com/act-security/terraform-provider-act/internal/apigen"
 	"github.com/act-security/terraform-provider-act/internal/client"
 )
 
@@ -101,7 +102,7 @@ func (d *slackChannelDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 			"name": schema.StringAttribute{
 				MarkdownDescription: "The channel name, with or without `#`, or a channel ID. Matched exactly, ignoring case.",
 				Required:            true,
-				Validators:          []validator.String{stringvalidator.LengthBetween(1, 200)},
+				Validators:          []validator.String{stringvalidator.LengthBetween(1, maxSlackChannelNameLength)},
 			},
 			"integration_id": schema.StringAttribute{
 				MarkdownDescription: "The Slack integration to search. Needed only when the tenant has more than one.",
@@ -167,16 +168,27 @@ var eventTypeType = types.ObjectType{AttrTypes: map[string]attr.Type{
 	"condition_fields": types.ListType{ElemType: conditionFieldType},
 }}
 
-var limitNames = []string{
-	"max_name_length", "max_event_types_per_rule", "max_actions_per_rule", "max_recipients_per_rule",
-	"max_email_recipients", "max_slack_channels", "max_enabled_rules_per_event_type",
-	"max_recipient_name_length", "activity_retention_months",
+type notificationLimit struct {
+	name  string
+	value func(apigen.NotificationRuleLimits) int
+}
+
+var notificationLimits = []notificationLimit{
+	{"max_name_length", func(l apigen.NotificationRuleLimits) int { return l.MaxNameLength }},
+	{"max_event_types_per_rule", func(l apigen.NotificationRuleLimits) int { return l.MaxEventTypesPerRule }},
+	{"max_actions_per_rule", func(l apigen.NotificationRuleLimits) int { return l.MaxActionsPerRule }},
+	{"max_recipients_per_rule", func(l apigen.NotificationRuleLimits) int { return l.MaxRecipientsPerRule }},
+	{"max_email_recipients", func(l apigen.NotificationRuleLimits) int { return l.MaxEmailRecipients }},
+	{"max_slack_channels", func(l apigen.NotificationRuleLimits) int { return l.MaxSlackChannels }},
+	{"max_enabled_rules_per_event_type", func(l apigen.NotificationRuleLimits) int { return l.MaxEnabledRulesPerEventType }},
+	{"max_recipient_name_length", func(l apigen.NotificationRuleLimits) int { return l.MaxRecipientNameLength }},
+	{"activity_retention_months", func(l apigen.NotificationRuleLimits) int { return l.ActivityRetentionMonths }},
 }
 
 var limitsType = func() types.ObjectType {
 	attrs := map[string]attr.Type{}
-	for _, name := range limitNames {
-		attrs[name] = types.Int64Type
+	for _, limit := range notificationLimits {
+		attrs[limit.name] = types.Int64Type
 	}
 	return types.ObjectType{AttrTypes: attrs}
 }()
@@ -191,8 +203,8 @@ func (d *notificationEventTypesDataSource) Metadata(_ context.Context, req datas
 
 func (d *notificationEventTypesDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	limits := map[string]schema.Attribute{}
-	for _, name := range limitNames {
-		limits[name] = schema.Int64Attribute{MarkdownDescription: "The `" + name + "` limit.", Computed: true}
+	for _, limit := range notificationLimits {
+		limits[limit.name] = schema.Int64Attribute{MarkdownDescription: "The `" + limit.name + "` limit.", Computed: true}
 	}
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "The event types a notification rule can use in this tenant, the conditions each takes, and the limits on rules and recipients.",
@@ -256,18 +268,11 @@ func (d *notificationEventTypesDataSource) Read(ctx context.Context, _ datasourc
 			"condition_fields": listValue(conditionFieldType, fields, diags),
 		}, diags))
 	}
-	l := catalog.Limits
-	limits := objectValue(limitsType, map[string]attr.Value{
-		"max_name_length":                  types.Int64Value(int64(l.MaxNameLength)),
-		"max_event_types_per_rule":         types.Int64Value(int64(l.MaxEventTypesPerRule)),
-		"max_actions_per_rule":             types.Int64Value(int64(l.MaxActionsPerRule)),
-		"max_recipients_per_rule":          types.Int64Value(int64(l.MaxRecipientsPerRule)),
-		"max_email_recipients":             types.Int64Value(int64(l.MaxEmailRecipients)),
-		"max_slack_channels":               types.Int64Value(int64(l.MaxSlackChannels)),
-		"max_enabled_rules_per_event_type": types.Int64Value(int64(l.MaxEnabledRulesPerEventType)),
-		"max_recipient_name_length":        types.Int64Value(int64(l.MaxRecipientNameLength)),
-		"activity_retention_months":        types.Int64Value(int64(l.ActivityRetentionMonths)),
-	}, diags)
+	limitValues := map[string]attr.Value{}
+	for _, limit := range notificationLimits {
+		limitValues[limit.name] = types.Int64Value(int64(limit.value(catalog.Limits)))
+	}
+	limits := objectValue(limitsType, limitValues, diags)
 	eventTypes := listValue(eventTypeType, entries, diags)
 	if diags.HasError() {
 		return

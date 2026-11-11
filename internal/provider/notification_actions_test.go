@@ -127,7 +127,7 @@ func TestAddNotificationWriteError(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var diags diag.Diagnostics
-			addNotificationWriteError(&diags, "Could not create the notification rule", "notification rule", "actions", body, tt.err)
+			addNotificationWriteError(&diags, notificationWriteFailure{kind: notificationRuleKind, verb: "create", body: body, err: tt.err})
 			if len(diags) != 1 {
 				t.Fatalf("got %d diagnostics", len(diags))
 			}
