@@ -14,6 +14,14 @@ type APIError struct {
 	Message   string
 	RequestID string
 	Retryable bool
+	Details   map[string]any
+}
+
+func (e *APIError) Detail(key string) string {
+	if value, ok := e.Details[key].(string); ok {
+		return value
+	}
+	return ""
 }
 
 func (e *APIError) Error() string {
@@ -38,5 +46,13 @@ func newAPIError(status int, body []byte) *APIError {
 		Message:   envelope.Error.Message,
 		RequestID: envelope.Error.RequestID,
 		Retryable: envelope.Error.Retryable,
+		Details:   detailsOf(envelope.Error.Details),
 	}
+}
+
+func detailsOf(details *map[string]any) map[string]any {
+	if details == nil {
+		return nil
+	}
+	return *details
 }

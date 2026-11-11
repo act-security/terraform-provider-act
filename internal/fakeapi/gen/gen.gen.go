@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/oapi-codegen/runtime"
+	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
 // Defines values for AuthMethod.
@@ -260,6 +261,99 @@ func (e GcpDeploymentMethod) Valid() bool {
 	}
 }
 
+// Defines values for InstallableIntegrationType.
+const (
+	InstallableIntegrationTypeJira   InstallableIntegrationType = "jira"
+	InstallableIntegrationTypeSlack  InstallableIntegrationType = "slack"
+	InstallableIntegrationTypeSplunk InstallableIntegrationType = "splunk"
+	InstallableIntegrationTypeWiz    InstallableIntegrationType = "wiz"
+)
+
+// Valid indicates whether the value is a known member of the InstallableIntegrationType enum.
+func (e InstallableIntegrationType) Valid() bool {
+	switch e {
+	case InstallableIntegrationTypeJira:
+		return true
+	case InstallableIntegrationTypeSlack:
+		return true
+	case InstallableIntegrationTypeSplunk:
+		return true
+	case InstallableIntegrationTypeWiz:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for IntegrationChangeSource.
+const (
+	IntegrationChangeSourceAPI IntegrationChangeSource = "api"
+	IntegrationChangeSourceUI  IntegrationChangeSource = "ui"
+)
+
+// Valid indicates whether the value is a known member of the IntegrationChangeSource enum.
+func (e IntegrationChangeSource) Valid() bool {
+	switch e {
+	case IntegrationChangeSourceAPI:
+		return true
+	case IntegrationChangeSourceUI:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for IntegrationStatus.
+const (
+	IntegrationStatusConnected    IntegrationStatus = "connected"
+	IntegrationStatusDisconnected IntegrationStatus = "disconnected"
+	IntegrationStatusError        IntegrationStatus = "error"
+	IntegrationStatusPending      IntegrationStatus = "pending"
+)
+
+// Valid indicates whether the value is a known member of the IntegrationStatus enum.
+func (e IntegrationStatus) Valid() bool {
+	switch e {
+	case IntegrationStatusConnected:
+		return true
+	case IntegrationStatusDisconnected:
+		return true
+	case IntegrationStatusError:
+		return true
+	case IntegrationStatusPending:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for IntegrationType.
+const (
+	IntegrationTypeEmail  IntegrationType = "email"
+	IntegrationTypeJira   IntegrationType = "jira"
+	IntegrationTypeSlack  IntegrationType = "slack"
+	IntegrationTypeSplunk IntegrationType = "splunk"
+	IntegrationTypeWiz    IntegrationType = "wiz"
+)
+
+// Valid indicates whether the value is a known member of the IntegrationType enum.
+func (e IntegrationType) Valid() bool {
+	switch e {
+	case IntegrationTypeEmail:
+		return true
+	case IntegrationTypeJira:
+		return true
+	case IntegrationTypeSlack:
+		return true
+	case IntegrationTypeSplunk:
+		return true
+	case IntegrationTypeWiz:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for PrincipalKind.
 const (
 	PrincipalKindServiceAccount PrincipalKind = "service_account"
@@ -269,6 +363,27 @@ const (
 func (e PrincipalKind) Valid() bool {
 	switch e {
 	case PrincipalKindServiceAccount:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SplunkTLSVerification.
+const (
+	SplunkTLSVerificationNone            SplunkTLSVerification = "none"
+	SplunkTLSVerificationSplunkDefaultCa SplunkTLSVerification = "splunk_default_ca"
+	SplunkTLSVerificationVerify          SplunkTLSVerification = "verify"
+)
+
+// Valid indicates whether the value is a known member of the SplunkTLSVerification enum.
+func (e SplunkTLSVerification) Valid() bool {
+	switch e {
+	case SplunkTLSVerificationNone:
+		return true
+	case SplunkTLSVerificationSplunkDefaultCa:
+		return true
+	case SplunkTLSVerificationVerify:
 		return true
 	default:
 		return false
@@ -484,6 +599,104 @@ type GcpOnboarding struct {
 	PoolHostProjectNumber string          `json:"poolHostProjectNumber"`
 }
 
+// InstallableIntegrationType defines model for InstallableIntegrationType.
+type InstallableIntegrationType string
+
+// Integration defines model for Integration.
+type Integration struct {
+	Config          map[string]string                 `json:"config"`
+	ConnectedAt     time.Time                         `json:"connectedAt"`
+	CreatedVia      *IntegrationChangeSource          `json:"createdVia"`
+	DisplayName     string                            `json:"displayName"`
+	Health          *IntegrationHealth                `json:"health"`
+	ID              string                            `json:"id"`
+	LastModifiedVia *IntegrationChangeSource          `json:"lastModifiedVia"`
+	Secrets         map[string]IntegrationSecretState `json:"secrets"`
+	Status          IntegrationStatus                 `json:"status"`
+	Type            IntegrationType                   `json:"type"`
+	UpdatedAt       time.Time                         `json:"updatedAt"`
+}
+
+// IntegrationChangeSource defines model for IntegrationChangeSource.
+type IntegrationChangeSource string
+
+// IntegrationConfig defines model for IntegrationConfig.
+type IntegrationConfig struct {
+	APIEndpointURL  *string                `json:"apiEndpointUrl,omitempty"`
+	BaseURL         *string                `json:"baseUrl,omitempty"`
+	ClientID        *string                `json:"clientId,omitempty"`
+	Email           *openapi_types.Email   `json:"email,omitempty"`
+	HecURL          *string                `json:"hecUrl,omitempty"`
+	TLSVerification *SplunkTLSVerification `json:"tlsVerification,omitempty"`
+}
+
+// IntegrationCreate An integration to install. Each type takes its own config and secrets fields, all of them required.
+type IntegrationCreate struct {
+	Config  *IntegrationConfig         `json:"config,omitempty"`
+	Secrets IntegrationSecrets         `json:"secrets"`
+	Type    InstallableIntegrationType `json:"type"`
+}
+
+// IntegrationHealth defines model for IntegrationHealth.
+type IntegrationHealth struct {
+	Note   *string `json:"note"`
+	Reason *string `json:"reason"`
+}
+
+// IntegrationPage defines model for IntegrationPage.
+type IntegrationPage struct {
+	Items         []Integration `json:"items"`
+	NextPageToken *string       `json:"nextPageToken"`
+}
+
+// IntegrationPatch Merge patch. A member left out keeps its value; a config member replaces its value; a secrets member rotates that one secret. Changing any config value requires every secret of the type, so a stored secret is never sent to a new configuration. The connection check runs on the result before anything is stored.
+type IntegrationPatch struct {
+	Config  *IntegrationConfig         `json:"config,omitempty"`
+	Secrets *IntegrationSecrets        `json:"secrets,omitempty"`
+	Type    InstallableIntegrationType `json:"type"`
+}
+
+// IntegrationSecretState defines model for IntegrationSecretState.
+type IntegrationSecretState struct {
+	Configured bool      `json:"configured"`
+	UpdatedAt  time.Time `json:"updatedAt"`
+}
+
+// IntegrationSecrets defines model for IntegrationSecrets.
+type IntegrationSecrets struct {
+	APIToken     *string `json:"apiToken,omitempty"`
+	BotToken     *string `json:"botToken,omitempty"`
+	ClientSecret *string `json:"clientSecret,omitempty"`
+	HecToken     *string `json:"hecToken,omitempty"`
+}
+
+// IntegrationStatus defines model for IntegrationStatus.
+type IntegrationStatus string
+
+// IntegrationType defines model for IntegrationType.
+type IntegrationType string
+
+// IntegrationTypeField defines model for IntegrationTypeField.
+type IntegrationTypeField struct {
+	Name      string `json:"name"`
+	Sensitive bool   `json:"sensitive"`
+}
+
+// IntegrationTypeInfo defines model for IntegrationTypeInfo.
+type IntegrationTypeInfo struct {
+	Category    string                 `json:"category"`
+	DisplayName string                 `json:"displayName"`
+	Fields      []IntegrationTypeField `json:"fields"`
+	Installable bool                   `json:"installable"`
+	Installed   bool                   `json:"installed"`
+	Type        IntegrationType        `json:"type"`
+}
+
+// IntegrationTypeList defines model for IntegrationTypeList.
+type IntegrationTypeList struct {
+	Items []IntegrationTypeInfo `json:"items"`
+}
+
 // ModuleVersion defines model for ModuleVersion.
 type ModuleVersion struct {
 	DeploymentVersion string `json:"deploymentVersion"`
@@ -502,6 +715,9 @@ type Principal struct {
 
 // PrincipalKind defines model for PrincipalKind.
 type PrincipalKind string
+
+// SplunkTLSVerification defines model for SplunkTlsVerification.
+type SplunkTLSVerification string
 
 // TokenScope defines model for TokenScope.
 type TokenScope string
@@ -529,10 +745,39 @@ type ListDeploymentsParams struct {
 	PageToken *string            `form:"pageToken,omitempty" json:"pageToken,omitempty"`
 }
 
+// ListIntegrationsParams defines parameters for ListIntegrations.
+type ListIntegrationsParams struct {
+	Type      *IntegrationType   `form:"type,omitempty" json:"type,omitempty"`
+	Status    *IntegrationStatus `form:"status,omitempty" json:"status,omitempty"`
+	PageSize  *int               `form:"pageSize,omitempty" json:"pageSize,omitempty"`
+	PageToken *string            `form:"pageToken,omitempty" json:"pageToken,omitempty"`
+}
+
+// CreateIntegrationParams defines parameters for CreateIntegration.
+type CreateIntegrationParams struct {
+	IdempotencyKey *string `json:"idempotency-key,omitempty"`
+}
+
+// DeleteIntegrationParams defines parameters for DeleteIntegration.
+type DeleteIntegrationParams struct {
+	IfMatch *string `json:"if-match,omitempty"`
+}
+
+// UpdateIntegrationParams defines parameters for UpdateIntegration.
+type UpdateIntegrationParams struct {
+	IfMatch string `json:"if-match"`
+}
+
 // GetAwsOnboardingParams defines parameters for GetAwsOnboarding.
 type GetAwsOnboardingParams struct {
 	DeploymentID string `form:"deploymentId" json:"deploymentId"`
 }
+
+// CreateIntegrationJSONRequestBody defines body for CreateIntegration for application/json ContentType.
+type CreateIntegrationJSONRequestBody = IntegrationCreate
+
+// UpdateIntegrationJSONRequestBody defines body for UpdateIntegration for application/json ContentType.
+type UpdateIntegrationJSONRequestBody = IntegrationPatch
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
@@ -548,6 +793,24 @@ type ServerInterface interface {
 	// GetGcpDeployment Return one GCP deployment
 	// (GET /v1/deployments/gcp/{id})
 	GetGcpDeployment(w http.ResponseWriter, r *http.Request, id string)
+	// ListIntegrationTypes List the integration types this tenant may install, their fields and which of them are secret
+	// (GET /v1/integration-types)
+	ListIntegrationTypes(w http.ResponseWriter, r *http.Request)
+	// ListIntegrations List the integrations installed in the calling tenant, the Act-owned email integration included, one page at a time
+	// (GET /v1/integrations)
+	ListIntegrations(w http.ResponseWriter, r *http.Request, params ListIntegrationsParams)
+	// CreateIntegration Install an integration. Secrets are write-only and are never returned
+	// (POST /v1/integrations)
+	CreateIntegration(w http.ResponseWriter, r *http.Request, params CreateIntegrationParams)
+	// DeleteIntegration Uninstall an integration and delete its secrets
+	// (DELETE /v1/integrations/{id})
+	DeleteIntegration(w http.ResponseWriter, r *http.Request, id string, params DeleteIntegrationParams)
+	// GetIntegration Return one installed integration
+	// (GET /v1/integrations/{id})
+	GetIntegration(w http.ResponseWriter, r *http.Request, id string)
+	// UpdateIntegration Change an installed integration in place, keeping its id
+	// (PATCH /v1/integrations/{id})
+	UpdateIntegration(w http.ResponseWriter, r *http.Request, id string, params UpdateIntegrationParams)
 	// GetAwsOnboarding Return the values an AWS deployment needs before it is created
 	// (GET /v1/onboarding/aws)
 	GetAwsOnboarding(w http.ResponseWriter, r *http.Request, params GetAwsOnboardingParams)
@@ -725,6 +988,263 @@ func (siw *ServerInterfaceWrapper) GetGcpDeployment(w http.ResponseWriter, r *ht
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetGcpDeployment(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListIntegrationTypes operation middleware
+func (siw *ServerInterfaceWrapper) ListIntegrationTypes(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListIntegrationTypes(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListIntegrations operation middleware
+func (siw *ServerInterfaceWrapper) ListIntegrations(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListIntegrationsParams
+
+	// ------------- Optional query parameter "type" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "type", r.URL.Query(), &params.Type, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "type"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "type", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "status" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "status", r.URL.Query(), &params.Status, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "status"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "status", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "pageSize" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "pageSize", r.URL.Query(), &params.PageSize, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "pageSize"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "pageSize", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "pageToken" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "pageToken", r.URL.Query(), &params.PageToken, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "pageToken"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "pageToken", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListIntegrations(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateIntegration operation middleware
+func (siw *ServerInterfaceWrapper) CreateIntegration(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params CreateIntegrationParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "idempotency-key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("idempotency-key")]; found {
+		var IdempotencyKey string
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "idempotency-key", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "idempotency-key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "idempotency-key", Err: err})
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateIntegration(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteIntegration operation middleware
+func (siw *ServerInterfaceWrapper) DeleteIntegration(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params DeleteIntegrationParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "if-match" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("if-match")]; found {
+		var IfMatch string
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "if-match", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "if-match", valueList[0], &IfMatch, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "if-match", Err: err})
+			return
+		}
+
+		params.IfMatch = &IfMatch
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteIntegration(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetIntegration operation middleware
+func (siw *ServerInterfaceWrapper) GetIntegration(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetIntegration(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateIntegration operation middleware
+func (siw *ServerInterfaceWrapper) UpdateIntegration(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params UpdateIntegrationParams
+
+	headers := r.Header
+
+	// ------------- Required header parameter "if-match" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("if-match")]; found {
+		var IfMatch string
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "if-match", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "if-match", valueList[0], &IfMatch, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "if-match", Err: err})
+			return
+		}
+
+		params.IfMatch = IfMatch
+
+	} else {
+		err := fmt.Errorf("Header parameter if-match is required, but not found")
+		siw.ErrorHandlerFunc(w, r, &RequiredHeaderError{ParamName: "if-match", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateIntegration(w, r, id, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -933,6 +1453,12 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/v1/deployments/aws/{id}", wrapper.GetAwsDeployment)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/v1/deployments/azure/{id}", wrapper.GetAzureDeployment)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/v1/deployments/gcp/{id}", wrapper.GetGcpDeployment)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/v1/integration-types", wrapper.ListIntegrationTypes)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/v1/integrations", wrapper.ListIntegrations)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/v1/integrations", wrapper.CreateIntegration)
+	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/v1/integrations/{id}", wrapper.DeleteIntegration)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/v1/integrations/{id}", wrapper.GetIntegration)
+	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/v1/integrations/{id}", wrapper.UpdateIntegration)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/v1/onboarding/aws", wrapper.GetAwsOnboarding)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/v1/onboarding/azure", wrapper.GetAzureOnboarding)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/v1/onboarding/gcp", wrapper.GetGcpOnboarding)
@@ -1591,6 +2117,1029 @@ func (response GetGcpDeployment503JSONResponse) VisitGetGcpDeploymentResponse(w 
 	return err
 }
 
+type ListIntegrationTypesRequestObject struct {
+}
+
+type ListIntegrationTypesResponseObject interface {
+	VisitListIntegrationTypesResponse(w http.ResponseWriter) error
+}
+
+type ListIntegrationTypes200JSONResponse IntegrationTypeList
+
+func (response ListIntegrationTypes200JSONResponse) VisitListIntegrationTypesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListIntegrationTypes400JSONResponse ErrorEnvelope
+
+func (response ListIntegrationTypes400JSONResponse) VisitListIntegrationTypesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListIntegrationTypes401ResponseHeaders struct {
+	WWWAuthenticate *string
+}
+
+type ListIntegrationTypes401JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers ListIntegrationTypes401ResponseHeaders
+}
+
+func (response ListIntegrationTypes401JSONResponse) VisitListIntegrationTypesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListIntegrationTypes403ResponseHeaders struct {
+	WWWAuthenticate *string
+}
+
+type ListIntegrationTypes403JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers ListIntegrationTypes403ResponseHeaders
+}
+
+func (response ListIntegrationTypes403JSONResponse) VisitListIntegrationTypesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListIntegrationTypes429ResponseHeaders struct {
+	RetryAfter *int
+}
+
+type ListIntegrationTypes429JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers ListIntegrationTypes429ResponseHeaders
+}
+
+func (response ListIntegrationTypes429JSONResponse) VisitListIntegrationTypesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	w.WriteHeader(429)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListIntegrationTypes500JSONResponse ErrorEnvelope
+
+func (response ListIntegrationTypes500JSONResponse) VisitListIntegrationTypesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListIntegrationTypes503ResponseHeaders struct {
+	RetryAfter *int
+}
+
+type ListIntegrationTypes503JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers ListIntegrationTypes503ResponseHeaders
+}
+
+func (response ListIntegrationTypes503JSONResponse) VisitListIntegrationTypesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListIntegrationsRequestObject struct {
+	Params ListIntegrationsParams
+}
+
+type ListIntegrationsResponseObject interface {
+	VisitListIntegrationsResponse(w http.ResponseWriter) error
+}
+
+type ListIntegrations200JSONResponse IntegrationPage
+
+func (response ListIntegrations200JSONResponse) VisitListIntegrationsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListIntegrations400JSONResponse ErrorEnvelope
+
+func (response ListIntegrations400JSONResponse) VisitListIntegrationsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListIntegrations401ResponseHeaders struct {
+	WWWAuthenticate *string
+}
+
+type ListIntegrations401JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers ListIntegrations401ResponseHeaders
+}
+
+func (response ListIntegrations401JSONResponse) VisitListIntegrationsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListIntegrations403ResponseHeaders struct {
+	WWWAuthenticate *string
+}
+
+type ListIntegrations403JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers ListIntegrations403ResponseHeaders
+}
+
+func (response ListIntegrations403JSONResponse) VisitListIntegrationsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListIntegrations429ResponseHeaders struct {
+	RetryAfter *int
+}
+
+type ListIntegrations429JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers ListIntegrations429ResponseHeaders
+}
+
+func (response ListIntegrations429JSONResponse) VisitListIntegrationsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	w.WriteHeader(429)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListIntegrations500JSONResponse ErrorEnvelope
+
+func (response ListIntegrations500JSONResponse) VisitListIntegrationsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListIntegrations503ResponseHeaders struct {
+	RetryAfter *int
+}
+
+type ListIntegrations503JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers ListIntegrations503ResponseHeaders
+}
+
+func (response ListIntegrations503JSONResponse) VisitListIntegrationsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateIntegrationRequestObject struct {
+	Params CreateIntegrationParams
+	Body   *CreateIntegrationJSONRequestBody
+}
+
+type CreateIntegrationResponseObject interface {
+	VisitCreateIntegrationResponse(w http.ResponseWriter) error
+}
+
+type CreateIntegration201ResponseHeaders struct {
+	ETag string
+}
+
+type CreateIntegration201JSONResponse struct {
+	Body    Integration
+	Headers CreateIntegration201ResponseHeaders
+}
+
+func (response CreateIntegration201JSONResponse) VisitCreateIntegrationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("ETag", fmt.Sprint(response.Headers.ETag))
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateIntegration400JSONResponse ErrorEnvelope
+
+func (response CreateIntegration400JSONResponse) VisitCreateIntegrationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateIntegration401ResponseHeaders struct {
+	WWWAuthenticate *string
+}
+
+type CreateIntegration401JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers CreateIntegration401ResponseHeaders
+}
+
+func (response CreateIntegration401JSONResponse) VisitCreateIntegrationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateIntegration403ResponseHeaders struct {
+	WWWAuthenticate *string
+}
+
+type CreateIntegration403JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers CreateIntegration403ResponseHeaders
+}
+
+func (response CreateIntegration403JSONResponse) VisitCreateIntegrationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateIntegration404JSONResponse ErrorEnvelope
+
+func (response CreateIntegration404JSONResponse) VisitCreateIntegrationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateIntegration409JSONResponse ErrorEnvelope
+
+func (response CreateIntegration409JSONResponse) VisitCreateIntegrationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateIntegration422JSONResponse ErrorEnvelope
+
+func (response CreateIntegration422JSONResponse) VisitCreateIntegrationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateIntegration429ResponseHeaders struct {
+	RetryAfter *int
+}
+
+type CreateIntegration429JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers CreateIntegration429ResponseHeaders
+}
+
+func (response CreateIntegration429JSONResponse) VisitCreateIntegrationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	w.WriteHeader(429)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateIntegration500JSONResponse ErrorEnvelope
+
+func (response CreateIntegration500JSONResponse) VisitCreateIntegrationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateIntegration503ResponseHeaders struct {
+	RetryAfter *int
+}
+
+type CreateIntegration503JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers CreateIntegration503ResponseHeaders
+}
+
+func (response CreateIntegration503JSONResponse) VisitCreateIntegrationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteIntegrationRequestObject struct {
+	ID     string `json:"id"`
+	Params DeleteIntegrationParams
+}
+
+type DeleteIntegrationResponseObject interface {
+	VisitDeleteIntegrationResponse(w http.ResponseWriter) error
+}
+
+type DeleteIntegration204Response struct {
+}
+
+func (response DeleteIntegration204Response) VisitDeleteIntegrationResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DeleteIntegration400JSONResponse ErrorEnvelope
+
+func (response DeleteIntegration400JSONResponse) VisitDeleteIntegrationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteIntegration401ResponseHeaders struct {
+	WWWAuthenticate *string
+}
+
+type DeleteIntegration401JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers DeleteIntegration401ResponseHeaders
+}
+
+func (response DeleteIntegration401JSONResponse) VisitDeleteIntegrationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteIntegration403ResponseHeaders struct {
+	WWWAuthenticate *string
+}
+
+type DeleteIntegration403JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers DeleteIntegration403ResponseHeaders
+}
+
+func (response DeleteIntegration403JSONResponse) VisitDeleteIntegrationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteIntegration404JSONResponse ErrorEnvelope
+
+func (response DeleteIntegration404JSONResponse) VisitDeleteIntegrationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteIntegration412JSONResponse ErrorEnvelope
+
+func (response DeleteIntegration412JSONResponse) VisitDeleteIntegrationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(412)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteIntegration429ResponseHeaders struct {
+	RetryAfter *int
+}
+
+type DeleteIntegration429JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers DeleteIntegration429ResponseHeaders
+}
+
+func (response DeleteIntegration429JSONResponse) VisitDeleteIntegrationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	w.WriteHeader(429)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteIntegration500JSONResponse ErrorEnvelope
+
+func (response DeleteIntegration500JSONResponse) VisitDeleteIntegrationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteIntegration503ResponseHeaders struct {
+	RetryAfter *int
+}
+
+type DeleteIntegration503JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers DeleteIntegration503ResponseHeaders
+}
+
+func (response DeleteIntegration503JSONResponse) VisitDeleteIntegrationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetIntegrationRequestObject struct {
+	ID string `json:"id"`
+}
+
+type GetIntegrationResponseObject interface {
+	VisitGetIntegrationResponse(w http.ResponseWriter) error
+}
+
+type GetIntegration200ResponseHeaders struct {
+	ETag string
+}
+
+type GetIntegration200JSONResponse struct {
+	Body    Integration
+	Headers GetIntegration200ResponseHeaders
+}
+
+func (response GetIntegration200JSONResponse) VisitGetIntegrationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("ETag", fmt.Sprint(response.Headers.ETag))
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetIntegration400JSONResponse ErrorEnvelope
+
+func (response GetIntegration400JSONResponse) VisitGetIntegrationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetIntegration401ResponseHeaders struct {
+	WWWAuthenticate *string
+}
+
+type GetIntegration401JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers GetIntegration401ResponseHeaders
+}
+
+func (response GetIntegration401JSONResponse) VisitGetIntegrationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetIntegration403ResponseHeaders struct {
+	WWWAuthenticate *string
+}
+
+type GetIntegration403JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers GetIntegration403ResponseHeaders
+}
+
+func (response GetIntegration403JSONResponse) VisitGetIntegrationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetIntegration404JSONResponse ErrorEnvelope
+
+func (response GetIntegration404JSONResponse) VisitGetIntegrationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetIntegration429ResponseHeaders struct {
+	RetryAfter *int
+}
+
+type GetIntegration429JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers GetIntegration429ResponseHeaders
+}
+
+func (response GetIntegration429JSONResponse) VisitGetIntegrationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	w.WriteHeader(429)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetIntegration500JSONResponse ErrorEnvelope
+
+func (response GetIntegration500JSONResponse) VisitGetIntegrationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetIntegration503ResponseHeaders struct {
+	RetryAfter *int
+}
+
+type GetIntegration503JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers GetIntegration503ResponseHeaders
+}
+
+func (response GetIntegration503JSONResponse) VisitGetIntegrationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateIntegrationRequestObject struct {
+	ID     string `json:"id"`
+	Params UpdateIntegrationParams
+	Body   *UpdateIntegrationJSONRequestBody
+}
+
+type UpdateIntegrationResponseObject interface {
+	VisitUpdateIntegrationResponse(w http.ResponseWriter) error
+}
+
+type UpdateIntegration200ResponseHeaders struct {
+	ETag string
+}
+
+type UpdateIntegration200JSONResponse struct {
+	Body    Integration
+	Headers UpdateIntegration200ResponseHeaders
+}
+
+func (response UpdateIntegration200JSONResponse) VisitUpdateIntegrationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("ETag", fmt.Sprint(response.Headers.ETag))
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateIntegration400JSONResponse ErrorEnvelope
+
+func (response UpdateIntegration400JSONResponse) VisitUpdateIntegrationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateIntegration401ResponseHeaders struct {
+	WWWAuthenticate *string
+}
+
+type UpdateIntegration401JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers UpdateIntegration401ResponseHeaders
+}
+
+func (response UpdateIntegration401JSONResponse) VisitUpdateIntegrationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateIntegration403ResponseHeaders struct {
+	WWWAuthenticate *string
+}
+
+type UpdateIntegration403JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers UpdateIntegration403ResponseHeaders
+}
+
+func (response UpdateIntegration403JSONResponse) VisitUpdateIntegrationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateIntegration404JSONResponse ErrorEnvelope
+
+func (response UpdateIntegration404JSONResponse) VisitUpdateIntegrationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateIntegration412JSONResponse ErrorEnvelope
+
+func (response UpdateIntegration412JSONResponse) VisitUpdateIntegrationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(412)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateIntegration422JSONResponse ErrorEnvelope
+
+func (response UpdateIntegration422JSONResponse) VisitUpdateIntegrationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateIntegration429ResponseHeaders struct {
+	RetryAfter *int
+}
+
+type UpdateIntegration429JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers UpdateIntegration429ResponseHeaders
+}
+
+func (response UpdateIntegration429JSONResponse) VisitUpdateIntegrationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	w.WriteHeader(429)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateIntegration500JSONResponse ErrorEnvelope
+
+func (response UpdateIntegration500JSONResponse) VisitUpdateIntegrationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateIntegration503ResponseHeaders struct {
+	RetryAfter *int
+}
+
+type UpdateIntegration503JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers UpdateIntegration503ResponseHeaders
+}
+
+func (response UpdateIntegration503JSONResponse) VisitUpdateIntegrationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type GetAwsOnboardingRequestObject struct {
 	Params GetAwsOnboardingParams
 }
@@ -2186,6 +3735,24 @@ type StrictServerInterface interface {
 	// GetGcpDeployment Return one GCP deployment
 	// (GET /v1/deployments/gcp/{id})
 	GetGcpDeployment(ctx context.Context, request GetGcpDeploymentRequestObject) (GetGcpDeploymentResponseObject, error)
+	// ListIntegrationTypes List the integration types this tenant may install, their fields and which of them are secret
+	// (GET /v1/integration-types)
+	ListIntegrationTypes(ctx context.Context, request ListIntegrationTypesRequestObject) (ListIntegrationTypesResponseObject, error)
+	// ListIntegrations List the integrations installed in the calling tenant, the Act-owned email integration included, one page at a time
+	// (GET /v1/integrations)
+	ListIntegrations(ctx context.Context, request ListIntegrationsRequestObject) (ListIntegrationsResponseObject, error)
+	// CreateIntegration Install an integration. Secrets are write-only and are never returned
+	// (POST /v1/integrations)
+	CreateIntegration(ctx context.Context, request CreateIntegrationRequestObject) (CreateIntegrationResponseObject, error)
+	// DeleteIntegration Uninstall an integration and delete its secrets
+	// (DELETE /v1/integrations/{id})
+	DeleteIntegration(ctx context.Context, request DeleteIntegrationRequestObject) (DeleteIntegrationResponseObject, error)
+	// GetIntegration Return one installed integration
+	// (GET /v1/integrations/{id})
+	GetIntegration(ctx context.Context, request GetIntegrationRequestObject) (GetIntegrationResponseObject, error)
+	// UpdateIntegration Change an installed integration in place, keeping its id
+	// (PATCH /v1/integrations/{id})
+	UpdateIntegration(ctx context.Context, request UpdateIntegrationRequestObject) (UpdateIntegrationResponseObject, error)
 	// GetAwsOnboarding Return the values an AWS deployment needs before it is created
 	// (GET /v1/onboarding/aws)
 	GetAwsOnboarding(ctx context.Context, request GetAwsOnboardingRequestObject) (GetAwsOnboardingResponseObject, error)
@@ -2336,6 +3903,176 @@ func (sh *strictHandler) GetGcpDeployment(w http.ResponseWriter, r *http.Request
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(GetGcpDeploymentResponseObject); ok {
 		if err := validResponse.VisitGetGcpDeploymentResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListIntegrationTypes operation middleware
+func (sh *strictHandler) ListIntegrationTypes(w http.ResponseWriter, r *http.Request) {
+	var request ListIntegrationTypesRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListIntegrationTypes(ctx, request.(ListIntegrationTypesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListIntegrationTypes")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListIntegrationTypesResponseObject); ok {
+		if err := validResponse.VisitListIntegrationTypesResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListIntegrations operation middleware
+func (sh *strictHandler) ListIntegrations(w http.ResponseWriter, r *http.Request, params ListIntegrationsParams) {
+	var request ListIntegrationsRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListIntegrations(ctx, request.(ListIntegrationsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListIntegrations")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListIntegrationsResponseObject); ok {
+		if err := validResponse.VisitListIntegrationsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CreateIntegration operation middleware
+func (sh *strictHandler) CreateIntegration(w http.ResponseWriter, r *http.Request, params CreateIntegrationParams) {
+	var request CreateIntegrationRequestObject
+
+	request.Params = params
+
+	var body CreateIntegrationJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateIntegration(ctx, request.(CreateIntegrationRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateIntegration")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CreateIntegrationResponseObject); ok {
+		if err := validResponse.VisitCreateIntegrationResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeleteIntegration operation middleware
+func (sh *strictHandler) DeleteIntegration(w http.ResponseWriter, r *http.Request, id string, params DeleteIntegrationParams) {
+	var request DeleteIntegrationRequestObject
+
+	request.ID = id
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteIntegration(ctx, request.(DeleteIntegrationRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteIntegration")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteIntegrationResponseObject); ok {
+		if err := validResponse.VisitDeleteIntegrationResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetIntegration operation middleware
+func (sh *strictHandler) GetIntegration(w http.ResponseWriter, r *http.Request, id string) {
+	var request GetIntegrationRequestObject
+
+	request.ID = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetIntegration(ctx, request.(GetIntegrationRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetIntegration")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetIntegrationResponseObject); ok {
+		if err := validResponse.VisitGetIntegrationResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateIntegration operation middleware
+func (sh *strictHandler) UpdateIntegration(w http.ResponseWriter, r *http.Request, id string, params UpdateIntegrationParams) {
+	var request UpdateIntegrationRequestObject
+
+	request.ID = id
+	request.Params = params
+
+	var body UpdateIntegrationJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateIntegration(ctx, request.(UpdateIntegrationRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateIntegration")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdateIntegrationResponseObject); ok {
+		if err := validResponse.VisitUpdateIntegrationResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

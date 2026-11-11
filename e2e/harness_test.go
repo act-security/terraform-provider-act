@@ -214,8 +214,13 @@ type workspace struct {
 
 func newWorkspace(t *testing.T, w *world, overrides map[string]string) *workspace {
 	t.Helper()
+	return newWorkspaceWith(t, w, overrides, identityConfig())
+}
+
+func newWorkspaceWith(t *testing.T, w *world, overrides map[string]string, config string) *workspace {
+	t.Helper()
 	dir := t.TempDir()
-	if err := os.WriteFile(filepath.Join(dir, "main.tf"), []byte(identityConfig()), 0o600); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "main.tf"), []byte(config), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	vars := map[string]string{
@@ -258,6 +263,13 @@ func inherited(name string) bool {
 		return false
 	}
 	return true
+}
+
+func (ws *workspace) writeConfig(config string) {
+	ws.t.Helper()
+	if err := os.WriteFile(filepath.Join(ws.dir, "main.tf"), []byte(config), 0o600); err != nil {
+		ws.t.Fatal(err)
+	}
 }
 
 func (ws *workspace) run(args ...string) (stdout, stderr string, err error) {

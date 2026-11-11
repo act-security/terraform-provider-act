@@ -40,13 +40,14 @@ func DefaultConfig() Config {
 }
 
 type Fake struct {
-	cfg       Config
-	stsOrigin string
-	apiOrigin string
-	signer    *signer
-	script    *scriptQueue
-	recorder  *Recorder
-	now       func() time.Time
+	cfg          Config
+	stsOrigin    string
+	apiOrigin    string
+	signer       *signer
+	script       *scriptQueue
+	recorder     *Recorder
+	now          func() time.Time
+	integrations *integrationStore
 }
 
 func New(cfg Config, stsOrigin, apiOrigin string) (*Fake, error) {
@@ -58,13 +59,14 @@ func New(cfg Config, stsOrigin, apiOrigin string) (*Fake, error) {
 		return nil, err
 	}
 	return &Fake{
-		cfg:       cfg,
-		stsOrigin: stsOrigin,
-		apiOrigin: apiOrigin,
-		signer:    s,
-		script:    newScriptQueue(cfg.Script),
-		recorder:  &Recorder{},
-		now:       time.Now,
+		cfg:          cfg,
+		stsOrigin:    stsOrigin,
+		apiOrigin:    apiOrigin,
+		signer:       s,
+		script:       newScriptQueue(cfg.Script),
+		recorder:     &Recorder{},
+		now:          time.Now,
+		integrations: newIntegrationStore(time.Now().UTC()),
 	}, nil
 }
 
