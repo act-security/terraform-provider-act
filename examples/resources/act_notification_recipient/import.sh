@@ -1,0 +1,1 @@
+terraform import act_notification_recipient.platform 8d2e4f6a-1b3c-4d5e-8f7a-9b0c1d2e3f40

@@ -1,0 +1,26 @@
+---
+page_title: "{{ .Name }} {{ .Type }} - {{ .ProviderName }}"
+subcategory: ""
+description: |-
+{{ .Description | plainmarkdown | trimspace | prefixlines "  " }}
+---
+
+# {{ .Name }} ({{ .Type }})
+
+{{ .Description | trimspace }}
+
+A recipient needs an `email` block, a `slack` block, or both.
+
+## Example Usage
+
+{{ tffile .ExampleFile }}
+
+Reference it from a rule's `recipient_ids` with its `id`, so Terraform deletes the rule's reference before the recipient. Act refuses to delete a recipient while any rule names it, and the error lists those rules.
+
+{{ .SchemaMarkdown | trimspace }}
+
+## Import
+
+Import by recipient ID:
+
+{{ codefile "shell" .ImportFile }}
