@@ -1,0 +1,34 @@
+---
+page_title: "{{ .Name }} {{ .Type }} - {{ .ProviderName }}"
+subcategory: ""
+description: |-
+{{ .Description | plainmarkdown | trimspace | prefixlines "  " }}
+---
+
+# {{ .Name }} ({{ .Type }})
+
+{{ .Description | trimspace }}
+
+The rule's event types are joined by OR. A `condition` narrows one of them; event types without a condition always match. Act sends each matching event to every `email` address, every `slack` channel and every address-book entry in `recipient_ids`.
+
+## Example Usage
+
+{{ tffile .ExampleFile }}
+
+## How updates work
+
+Every apply sends the whole rule with the revision Terraform last read. If someone changed the rule in the Act console after the plan, Act refuses the update and nothing changes; run `terraform apply` again to plan against the current rule. Removing a `condition`, `email` or `slack` block, or `recipient_ids`, removes it in Act too.
+
+Act stores email addresses in lowercase and every list sorted. A plan never shows a change for a difference in case or order.
+
+When Act adds rule features this provider version does not know, `min_client_revision` goes above 1 and the provider warns. Act keeps those parts when Terraform updates the rule.
+
+{{ .SchemaMarkdown | trimspace }}
+
+## Import
+
+Import by rule ID:
+
+{{ codefile "shell" .ImportFile }}
+
+Imported email addresses are in lowercase. A configuration that spells them differently plans no change.

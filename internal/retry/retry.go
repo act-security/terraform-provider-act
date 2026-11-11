@@ -70,7 +70,7 @@ func (p Policy) withDefaults() Policy {
 func Do(doer Doer, req *http.Request, policy Policy) (*http.Response, error) {
 	p := policy.withDefaults()
 	ctx := req.Context()
-	retriable := p.RetryUnsafeMethods || idempotent(req.Method)
+	retriable := p.RetryUnsafeMethods || idempotent(req.Method) || req.Header.Get("Idempotency-Key") != ""
 	for attempt := 1; ; attempt++ {
 		r, err := forAttempt(req, attempt)
 		if err != nil {

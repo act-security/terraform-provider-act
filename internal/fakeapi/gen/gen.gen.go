@@ -354,6 +354,96 @@ func (e IntegrationType) Valid() bool {
 	}
 }
 
+// Defines values for NotificationActionType.
+const (
+	NotificationActionTypeEmail NotificationActionType = "email"
+	NotificationActionTypeSlack NotificationActionType = "slack"
+)
+
+// Valid indicates whether the value is a known member of the NotificationActionType enum.
+func (e NotificationActionType) Valid() bool {
+	switch e {
+	case NotificationActionTypeEmail:
+		return true
+	case NotificationActionTypeSlack:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for NotificationChangeSource.
+const (
+	NotificationChangeSourceAPI NotificationChangeSource = "api"
+	NotificationChangeSourceUI  NotificationChangeSource = "ui"
+)
+
+// Valid indicates whether the value is a known member of the NotificationChangeSource enum.
+func (e NotificationChangeSource) Valid() bool {
+	switch e {
+	case NotificationChangeSourceAPI:
+		return true
+	case NotificationChangeSourceUI:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for NotificationConditionField.
+const (
+	NotificationConditionFieldSource NotificationConditionField = "source"
+)
+
+// Valid indicates whether the value is a known member of the NotificationConditionField enum.
+func (e NotificationConditionField) Valid() bool {
+	switch e {
+	case NotificationConditionFieldSource:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for NotificationConditionOperator.
+const (
+	NotificationConditionOperatorIn NotificationConditionOperator = "in"
+)
+
+// Valid indicates whether the value is a known member of the NotificationConditionOperator enum.
+func (e NotificationConditionOperator) Valid() bool {
+	switch e {
+	case NotificationConditionOperatorIn:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for NotificationMatchResult.
+const (
+	NotificationMatchResultFailed        NotificationMatchResult = "failed"
+	NotificationMatchResultNotSent       NotificationMatchResult = "not_sent"
+	NotificationMatchResultPartiallySent NotificationMatchResult = "partially_sent"
+	NotificationMatchResultSent          NotificationMatchResult = "sent"
+)
+
+// Valid indicates whether the value is a known member of the NotificationMatchResult enum.
+func (e NotificationMatchResult) Valid() bool {
+	switch e {
+	case NotificationMatchResultFailed:
+		return true
+	case NotificationMatchResultNotSent:
+		return true
+	case NotificationMatchResultPartiallySent:
+		return true
+	case NotificationMatchResultSent:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for PrincipalKind.
 const (
 	PrincipalKindServiceAccount PrincipalKind = "service_account"
@@ -402,6 +492,24 @@ func (e TokenScope) Valid() bool {
 	case TokenScopeActRead:
 		return true
 	case TokenScopeActWrite:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ListNotificationRulesParamsEnabled.
+const (
+	ListNotificationRulesParamsEnabledFalse ListNotificationRulesParamsEnabled = "false"
+	ListNotificationRulesParamsEnabledTrue  ListNotificationRulesParamsEnabled = "true"
+)
+
+// Valid indicates whether the value is a known member of the ListNotificationRulesParamsEnabled enum.
+func (e ListNotificationRulesParamsEnabled) Valid() bool {
+	switch e {
+	case ListNotificationRulesParamsEnabledFalse:
+		return true
+	case ListNotificationRulesParamsEnabledTrue:
 		return true
 	default:
 		return false
@@ -705,6 +813,190 @@ type ModuleVersion struct {
 	Version           string `json:"version"`
 }
 
+// NotificationAction One delivery action. `type` names the member that carries its settings; the other member is absent.
+type NotificationAction struct {
+	Email *NotificationEmailAction `json:"email,omitempty"`
+	Slack *NotificationSlackAction `json:"slack,omitempty"`
+	Type  NotificationActionType   `json:"type"`
+}
+
+// NotificationActionType defines model for NotificationActionType.
+type NotificationActionType string
+
+// NotificationChangeSource defines model for NotificationChangeSource.
+type NotificationChangeSource string
+
+// NotificationCondition defines model for NotificationCondition.
+type NotificationCondition struct {
+	EventType string                        `json:"eventType"`
+	Field     NotificationConditionField    `json:"field"`
+	Operator  NotificationConditionOperator `json:"operator"`
+	Values    []string                      `json:"values"`
+}
+
+// NotificationConditionField defines model for NotificationConditionField.
+type NotificationConditionField string
+
+// NotificationConditionFieldInfo defines model for NotificationConditionFieldInfo.
+type NotificationConditionFieldInfo struct {
+	Field    NotificationConditionField    `json:"field"`
+	Operator NotificationConditionOperator `json:"operator"`
+	Values   []string                      `json:"values"`
+}
+
+// NotificationConditionOperator defines model for NotificationConditionOperator.
+type NotificationConditionOperator string
+
+// NotificationEmailAction defines model for NotificationEmailAction.
+type NotificationEmailAction struct {
+	IntegrationID string                `json:"integrationId"`
+	Recipients    []openapi_types.Email `json:"recipients"`
+}
+
+// NotificationEventTypeInfo defines model for NotificationEventTypeInfo.
+type NotificationEventTypeInfo struct {
+	ActionTypes     []NotificationActionType         `json:"actionTypes"`
+	Category        string                           `json:"category"`
+	ConditionFields []NotificationConditionFieldInfo `json:"conditionFields"`
+	Description     string                           `json:"description"`
+	EventType       string                           `json:"eventType"`
+	Title           string                           `json:"title"`
+}
+
+// NotificationEventTypeList defines model for NotificationEventTypeList.
+type NotificationEventTypeList struct {
+	Items  []NotificationEventTypeInfo `json:"items"`
+	Limits NotificationRuleLimits      `json:"limits"`
+}
+
+// NotificationLastDelivery defines model for NotificationLastDelivery.
+type NotificationLastDelivery struct {
+	At     time.Time               `json:"at"`
+	Result NotificationMatchResult `json:"result"`
+}
+
+// NotificationMatchResult defines model for NotificationMatchResult.
+type NotificationMatchResult string
+
+// NotificationRecipient defines model for NotificationRecipient.
+type NotificationRecipient struct {
+	CreatedAt       time.Time                `json:"createdAt"`
+	CreatedVia      NotificationChangeSource `json:"createdVia"`
+	ID              string                   `json:"id"`
+	LastModifiedVia NotificationChangeSource `json:"lastModifiedVia"`
+	Methods         []NotificationAction     `json:"methods"`
+	Name            string                   `json:"name"`
+	Revision        int                      `json:"revision"`
+	RuleIds         []string                 `json:"ruleIds"`
+	UpdatedAt       time.Time                `json:"updatedAt"`
+}
+
+// NotificationRecipientPage defines model for NotificationRecipientPage.
+type NotificationRecipientPage struct {
+	Items         []NotificationRecipient `json:"items"`
+	NextPageToken *string                 `json:"nextPageToken"`
+}
+
+// NotificationRecipientWrite A tenant-wide address-book entry: a name and the addresses it stands for, at most one method per type.
+type NotificationRecipientWrite struct {
+	Methods []NotificationAction `json:"methods"`
+	Name    string               `json:"name"`
+}
+
+// NotificationRule defines model for NotificationRule.
+type NotificationRule struct {
+	Actions           []NotificationAction      `json:"actions"`
+	Conditions        []NotificationCondition   `json:"conditions"`
+	CreatedAt         time.Time                 `json:"createdAt"`
+	CreatedVia        NotificationChangeSource  `json:"createdVia"`
+	Enabled           bool                      `json:"enabled"`
+	EventTypes        []string                  `json:"eventTypes"`
+	ID                string                    `json:"id"`
+	LastDelivery      *NotificationLastDelivery `json:"lastDelivery"`
+	LastModifiedVia   NotificationChangeSource  `json:"lastModifiedVia"`
+	MinClientRevision int                       `json:"minClientRevision"`
+	Name              string                    `json:"name"`
+	RecipientIds      []string                  `json:"recipientIds"`
+	Revision          int                       `json:"revision"`
+	UpdatedAt         time.Time                 `json:"updatedAt"`
+	WebURL            *string                   `json:"webUrl"`
+}
+
+// NotificationRuleActivity defines model for NotificationRuleActivity.
+type NotificationRuleActivity struct {
+	EventID   string                  `json:"eventId"`
+	EventType string                  `json:"eventType"`
+	ID        string                  `json:"id"`
+	MatchedAt time.Time               `json:"matchedAt"`
+	Reason    *string                 `json:"reason"`
+	Result    NotificationMatchResult `json:"result"`
+}
+
+// NotificationRuleActivityPage defines model for NotificationRuleActivityPage.
+type NotificationRuleActivityPage struct {
+	Items         []NotificationRuleActivity `json:"items"`
+	NextPageToken *string                    `json:"nextPageToken"`
+}
+
+// NotificationRuleLimits defines model for NotificationRuleLimits.
+type NotificationRuleLimits struct {
+	ActivityRetentionMonths     int `json:"activityRetentionMonths"`
+	MaxActionsPerRule           int `json:"maxActionsPerRule"`
+	MaxEmailRecipients          int `json:"maxEmailRecipients"`
+	MaxEnabledRulesPerEventType int `json:"maxEnabledRulesPerEventType"`
+	MaxEventTypesPerRule        int `json:"maxEventTypesPerRule"`
+	MaxNameLength               int `json:"maxNameLength"`
+	MaxRecipientNameLength      int `json:"maxRecipientNameLength"`
+	MaxRecipientsPerRule        int `json:"maxRecipientsPerRule"`
+	MaxSlackChannels            int `json:"maxSlackChannels"`
+}
+
+// NotificationRulePage defines model for NotificationRulePage.
+type NotificationRulePage struct {
+	Items         []NotificationRule `json:"items"`
+	NextPageToken *string            `json:"nextPageToken"`
+}
+
+// NotificationRuleValidate A rule to check without saving it. With `id`, it is checked as a replace of that rule.
+type NotificationRuleValidate struct {
+	Actions      *[]NotificationAction    `json:"actions,omitempty"`
+	Conditions   *[]NotificationCondition `json:"conditions,omitempty"`
+	Enabled      *bool                    `json:"enabled,omitempty"`
+	EventTypes   []string                 `json:"eventTypes"`
+	ID           *string                  `json:"id,omitempty"`
+	Name         string                   `json:"name"`
+	RecipientIds *[]string                `json:"recipientIds,omitempty"`
+}
+
+// NotificationRuleValidation defines model for NotificationRuleValidation.
+type NotificationRuleValidation struct {
+	Error *NotificationRuleValidationError `json:"error"`
+	Valid bool                             `json:"valid"`
+}
+
+// NotificationRuleValidationError defines model for NotificationRuleValidationError.
+type NotificationRuleValidationError struct {
+	Code    string  `json:"code"`
+	Pointer *string `json:"pointer"`
+	Reason  *string `json:"reason"`
+}
+
+// NotificationRuleWrite A notification rule. Event types are joined by OR. On create, a member left out takes its empty value (enabled defaults to true). On replace, a member left out keeps its stored value, so a client that does not know a member never clears it; send an empty array to clear a list.
+type NotificationRuleWrite struct {
+	Actions      *[]NotificationAction    `json:"actions,omitempty"`
+	Conditions   *[]NotificationCondition `json:"conditions,omitempty"`
+	Enabled      *bool                    `json:"enabled,omitempty"`
+	EventTypes   []string                 `json:"eventTypes"`
+	Name         string                   `json:"name"`
+	RecipientIds *[]string                `json:"recipientIds,omitempty"`
+}
+
+// NotificationSlackAction defines model for NotificationSlackAction.
+type NotificationSlackAction struct {
+	ChannelIds    []string `json:"channelIds"`
+	IntegrationID string   `json:"integrationId"`
+}
+
 // Principal defines model for Principal.
 type Principal struct {
 	ID   string        `json:"id"`
@@ -715,6 +1007,17 @@ type Principal struct {
 
 // PrincipalKind defines model for PrincipalKind.
 type PrincipalKind string
+
+// SlackChannel defines model for SlackChannel.
+type SlackChannel struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}
+
+// SlackChannelList defines model for SlackChannelList.
+type SlackChannelList struct {
+	Items []SlackChannel `json:"items"`
+}
 
 // SplunkTLSVerification defines model for SplunkTlsVerification.
 type SplunkTLSVerification string
@@ -758,6 +1061,12 @@ type CreateIntegrationParams struct {
 	IdempotencyKey *string `json:"idempotency-key,omitempty"`
 }
 
+// ListSlackChannelsParams defines parameters for ListSlackChannels.
+type ListSlackChannelsParams struct {
+	Name          string  `form:"name" json:"name"`
+	IntegrationID *string `form:"integrationId,omitempty" json:"integrationId,omitempty"`
+}
+
 // DeleteIntegrationParams defines parameters for DeleteIntegration.
 type DeleteIntegrationParams struct {
 	IfMatch *string `json:"if-match,omitempty"`
@@ -766,6 +1075,60 @@ type DeleteIntegrationParams struct {
 // UpdateIntegrationParams defines parameters for UpdateIntegration.
 type UpdateIntegrationParams struct {
 	IfMatch string `json:"if-match"`
+}
+
+// ListNotificationRecipientsParams defines parameters for ListNotificationRecipients.
+type ListNotificationRecipientsParams struct {
+	PageSize  *int    `form:"pageSize,omitempty" json:"pageSize,omitempty"`
+	PageToken *string `form:"pageToken,omitempty" json:"pageToken,omitempty"`
+}
+
+// CreateNotificationRecipientParams defines parameters for CreateNotificationRecipient.
+type CreateNotificationRecipientParams struct {
+	IdempotencyKey *string `json:"idempotency-key,omitempty"`
+}
+
+// DeleteNotificationRecipientParams defines parameters for DeleteNotificationRecipient.
+type DeleteNotificationRecipientParams struct {
+	IfMatch *string `json:"if-match,omitempty"`
+}
+
+// ReplaceNotificationRecipientParams defines parameters for ReplaceNotificationRecipient.
+type ReplaceNotificationRecipientParams struct {
+	IfMatch string `json:"if-match"`
+}
+
+// ListNotificationRulesParams defines parameters for ListNotificationRules.
+type ListNotificationRulesParams struct {
+	EventType  *string                             `form:"eventType,omitempty" json:"eventType,omitempty"`
+	Enabled    *ListNotificationRulesParamsEnabled `form:"enabled,omitempty" json:"enabled,omitempty"`
+	CreatedVia *NotificationChangeSource           `form:"createdVia,omitempty" json:"createdVia,omitempty"`
+	PageSize   *int                                `form:"pageSize,omitempty" json:"pageSize,omitempty"`
+	PageToken  *string                             `form:"pageToken,omitempty" json:"pageToken,omitempty"`
+}
+
+// ListNotificationRulesParamsEnabled defines parameters for ListNotificationRules.
+type ListNotificationRulesParamsEnabled string
+
+// CreateNotificationRuleParams defines parameters for CreateNotificationRule.
+type CreateNotificationRuleParams struct {
+	IdempotencyKey *string `json:"idempotency-key,omitempty"`
+}
+
+// DeleteNotificationRuleParams defines parameters for DeleteNotificationRule.
+type DeleteNotificationRuleParams struct {
+	IfMatch *string `json:"if-match,omitempty"`
+}
+
+// ReplaceNotificationRuleParams defines parameters for ReplaceNotificationRule.
+type ReplaceNotificationRuleParams struct {
+	IfMatch string `json:"if-match"`
+}
+
+// ListNotificationRuleActivityParams defines parameters for ListNotificationRuleActivity.
+type ListNotificationRuleActivityParams struct {
+	PageSize  *int    `form:"pageSize,omitempty" json:"pageSize,omitempty"`
+	PageToken *string `form:"pageToken,omitempty" json:"pageToken,omitempty"`
 }
 
 // GetAwsOnboardingParams defines parameters for GetAwsOnboarding.
@@ -778,6 +1141,21 @@ type CreateIntegrationJSONRequestBody = IntegrationCreate
 
 // UpdateIntegrationJSONRequestBody defines body for UpdateIntegration for application/json ContentType.
 type UpdateIntegrationJSONRequestBody = IntegrationPatch
+
+// CreateNotificationRecipientJSONRequestBody defines body for CreateNotificationRecipient for application/json ContentType.
+type CreateNotificationRecipientJSONRequestBody = NotificationRecipientWrite
+
+// ReplaceNotificationRecipientJSONRequestBody defines body for ReplaceNotificationRecipient for application/json ContentType.
+type ReplaceNotificationRecipientJSONRequestBody = NotificationRecipientWrite
+
+// CreateNotificationRuleJSONRequestBody defines body for CreateNotificationRule for application/json ContentType.
+type CreateNotificationRuleJSONRequestBody = NotificationRuleWrite
+
+// ValidateNotificationRuleJSONRequestBody defines body for ValidateNotificationRule for application/json ContentType.
+type ValidateNotificationRuleJSONRequestBody = NotificationRuleValidate
+
+// ReplaceNotificationRuleJSONRequestBody defines body for ReplaceNotificationRule for application/json ContentType.
+type ReplaceNotificationRuleJSONRequestBody = NotificationRuleWrite
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
@@ -802,6 +1180,12 @@ type ServerInterface interface {
 	// CreateIntegration Install an integration. Secrets are write-only and are never returned
 	// (POST /v1/integrations)
 	CreateIntegration(w http.ResponseWriter, r *http.Request, params CreateIntegrationParams)
+	// GetEmailIntegration Return the Act-managed email integration that email actions name
+	// (GET /v1/integrations/email)
+	GetEmailIntegration(w http.ResponseWriter, r *http.Request)
+	// ListSlackChannels Look up public Slack channels by exact name or ID, for actions that take channel IDs
+	// (GET /v1/integrations/slack/channels)
+	ListSlackChannels(w http.ResponseWriter, r *http.Request, params ListSlackChannelsParams)
 	// DeleteIntegration Uninstall an integration and delete its secrets
 	// (DELETE /v1/integrations/{id})
 	DeleteIntegration(w http.ResponseWriter, r *http.Request, id string, params DeleteIntegrationParams)
@@ -811,6 +1195,45 @@ type ServerInterface interface {
 	// UpdateIntegration Change an installed integration in place, keeping its id
 	// (PATCH /v1/integrations/{id})
 	UpdateIntegration(w http.ResponseWriter, r *http.Request, id string, params UpdateIntegrationParams)
+	// ListNotificationEventTypes List the event types a rule can match, the actions and conditions each takes, and the rule limits
+	// (GET /v1/notification-event-types)
+	ListNotificationEventTypes(w http.ResponseWriter, r *http.Request)
+	// ListNotificationRecipients List the address-book recipients rules can name, one page at a time
+	// (GET /v1/notification-recipients)
+	ListNotificationRecipients(w http.ResponseWriter, r *http.Request, params ListNotificationRecipientsParams)
+	// CreateNotificationRecipient Create an address-book recipient
+	// (POST /v1/notification-recipients)
+	CreateNotificationRecipient(w http.ResponseWriter, r *http.Request, params CreateNotificationRecipientParams)
+	// DeleteNotificationRecipient Delete an address-book recipient. Refused with 409 while a rule names it
+	// (DELETE /v1/notification-recipients/{id})
+	DeleteNotificationRecipient(w http.ResponseWriter, r *http.Request, id string, params DeleteNotificationRecipientParams)
+	// GetNotificationRecipient Return one address-book recipient
+	// (GET /v1/notification-recipients/{id})
+	GetNotificationRecipient(w http.ResponseWriter, r *http.Request, id string)
+	// ReplaceNotificationRecipient Replace an address-book recipient; the rules that name it send to its new addresses
+	// (PUT /v1/notification-recipients/{id})
+	ReplaceNotificationRecipient(w http.ResponseWriter, r *http.Request, id string, params ReplaceNotificationRecipientParams)
+	// ListNotificationRules List the notification rules of the calling tenant, one page at a time
+	// (GET /v1/notification-rules)
+	ListNotificationRules(w http.ResponseWriter, r *http.Request, params ListNotificationRulesParams)
+	// CreateNotificationRule Create a notification rule
+	// (POST /v1/notification-rules)
+	CreateNotificationRule(w http.ResponseWriter, r *http.Request, params CreateNotificationRuleParams)
+	// ValidateNotificationRule Check a rule as a create or a replace would, without saving it or sending anything
+	// (POST /v1/notification-rules/validate)
+	ValidateNotificationRule(w http.ResponseWriter, r *http.Request)
+	// DeleteNotificationRule Delete a notification rule. Its activity stays readable for six months
+	// (DELETE /v1/notification-rules/{id})
+	DeleteNotificationRule(w http.ResponseWriter, r *http.Request, id string, params DeleteNotificationRuleParams)
+	// GetNotificationRule Return one notification rule
+	// (GET /v1/notification-rules/{id})
+	GetNotificationRule(w http.ResponseWriter, r *http.Request, id string)
+	// ReplaceNotificationRule Replace a notification rule. A member left out keeps its stored value
+	// (PUT /v1/notification-rules/{id})
+	ReplaceNotificationRule(w http.ResponseWriter, r *http.Request, id string, params ReplaceNotificationRuleParams)
+	// ListNotificationRuleActivity List the events a rule matched in the last six months and what was sent, newest first
+	// (GET /v1/notification-rules/{id}/activity)
+	ListNotificationRuleActivity(w http.ResponseWriter, r *http.Request, id string, params ListNotificationRuleActivityParams)
 	// GetAwsOnboarding Return the values an AWS deployment needs before it is created
 	// (GET /v1/onboarding/aws)
 	GetAwsOnboarding(w http.ResponseWriter, r *http.Request, params GetAwsOnboardingParams)
@@ -1124,6 +1547,66 @@ func (siw *ServerInterfaceWrapper) CreateIntegration(w http.ResponseWriter, r *h
 	handler.ServeHTTP(w, r)
 }
 
+// GetEmailIntegration operation middleware
+func (siw *ServerInterfaceWrapper) GetEmailIntegration(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetEmailIntegration(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListSlackChannels operation middleware
+func (siw *ServerInterfaceWrapper) ListSlackChannels(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListSlackChannelsParams
+
+	// ------------- Required query parameter "name" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "name", r.URL.Query(), &params.Name, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "name"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "name", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "integrationId" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "integrationId", r.URL.Query(), &params.IntegrationID, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "integrationId"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "integrationId", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListSlackChannels(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // DeleteIntegration operation middleware
 func (siw *ServerInterfaceWrapper) DeleteIntegration(w http.ResponseWriter, r *http.Request) {
 
@@ -1245,6 +1728,562 @@ func (siw *ServerInterfaceWrapper) UpdateIntegration(w http.ResponseWriter, r *h
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UpdateIntegration(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListNotificationEventTypes operation middleware
+func (siw *ServerInterfaceWrapper) ListNotificationEventTypes(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListNotificationEventTypes(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListNotificationRecipients operation middleware
+func (siw *ServerInterfaceWrapper) ListNotificationRecipients(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListNotificationRecipientsParams
+
+	// ------------- Optional query parameter "pageSize" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "pageSize", r.URL.Query(), &params.PageSize, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "pageSize"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "pageSize", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "pageToken" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "pageToken", r.URL.Query(), &params.PageToken, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "pageToken"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "pageToken", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListNotificationRecipients(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateNotificationRecipient operation middleware
+func (siw *ServerInterfaceWrapper) CreateNotificationRecipient(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params CreateNotificationRecipientParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "idempotency-key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("idempotency-key")]; found {
+		var IdempotencyKey string
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "idempotency-key", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "idempotency-key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "idempotency-key", Err: err})
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateNotificationRecipient(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteNotificationRecipient operation middleware
+func (siw *ServerInterfaceWrapper) DeleteNotificationRecipient(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params DeleteNotificationRecipientParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "if-match" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("if-match")]; found {
+		var IfMatch string
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "if-match", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "if-match", valueList[0], &IfMatch, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "if-match", Err: err})
+			return
+		}
+
+		params.IfMatch = &IfMatch
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteNotificationRecipient(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetNotificationRecipient operation middleware
+func (siw *ServerInterfaceWrapper) GetNotificationRecipient(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetNotificationRecipient(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ReplaceNotificationRecipient operation middleware
+func (siw *ServerInterfaceWrapper) ReplaceNotificationRecipient(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ReplaceNotificationRecipientParams
+
+	headers := r.Header
+
+	// ------------- Required header parameter "if-match" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("if-match")]; found {
+		var IfMatch string
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "if-match", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "if-match", valueList[0], &IfMatch, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "if-match", Err: err})
+			return
+		}
+
+		params.IfMatch = IfMatch
+
+	} else {
+		err := fmt.Errorf("Header parameter if-match is required, but not found")
+		siw.ErrorHandlerFunc(w, r, &RequiredHeaderError{ParamName: "if-match", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ReplaceNotificationRecipient(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListNotificationRules operation middleware
+func (siw *ServerInterfaceWrapper) ListNotificationRules(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListNotificationRulesParams
+
+	// ------------- Optional query parameter "eventType" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "eventType", r.URL.Query(), &params.EventType, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "eventType"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "eventType", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "enabled" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "enabled", r.URL.Query(), &params.Enabled, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "enabled"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "enabled", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "createdVia" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "createdVia", r.URL.Query(), &params.CreatedVia, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "createdVia"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "createdVia", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "pageSize" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "pageSize", r.URL.Query(), &params.PageSize, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "pageSize"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "pageSize", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "pageToken" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "pageToken", r.URL.Query(), &params.PageToken, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "pageToken"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "pageToken", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListNotificationRules(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateNotificationRule operation middleware
+func (siw *ServerInterfaceWrapper) CreateNotificationRule(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params CreateNotificationRuleParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "idempotency-key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("idempotency-key")]; found {
+		var IdempotencyKey string
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "idempotency-key", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "idempotency-key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "idempotency-key", Err: err})
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateNotificationRule(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ValidateNotificationRule operation middleware
+func (siw *ServerInterfaceWrapper) ValidateNotificationRule(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ValidateNotificationRule(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteNotificationRule operation middleware
+func (siw *ServerInterfaceWrapper) DeleteNotificationRule(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params DeleteNotificationRuleParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "if-match" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("if-match")]; found {
+		var IfMatch string
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "if-match", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "if-match", valueList[0], &IfMatch, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "if-match", Err: err})
+			return
+		}
+
+		params.IfMatch = &IfMatch
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteNotificationRule(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetNotificationRule operation middleware
+func (siw *ServerInterfaceWrapper) GetNotificationRule(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetNotificationRule(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ReplaceNotificationRule operation middleware
+func (siw *ServerInterfaceWrapper) ReplaceNotificationRule(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ReplaceNotificationRuleParams
+
+	headers := r.Header
+
+	// ------------- Required header parameter "if-match" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("if-match")]; found {
+		var IfMatch string
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "if-match", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "if-match", valueList[0], &IfMatch, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "if-match", Err: err})
+			return
+		}
+
+		params.IfMatch = IfMatch
+
+	} else {
+		err := fmt.Errorf("Header parameter if-match is required, but not found")
+		siw.ErrorHandlerFunc(w, r, &RequiredHeaderError{ParamName: "if-match", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ReplaceNotificationRule(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListNotificationRuleActivity operation middleware
+func (siw *ServerInterfaceWrapper) ListNotificationRuleActivity(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListNotificationRuleActivityParams
+
+	// ------------- Optional query parameter "pageSize" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "pageSize", r.URL.Query(), &params.PageSize, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "pageSize"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "pageSize", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "pageToken" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "pageToken", r.URL.Query(), &params.PageToken, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "pageToken"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "pageToken", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListNotificationRuleActivity(w, r, id, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -1456,9 +2495,24 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/v1/integration-types", wrapper.ListIntegrationTypes)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/v1/integrations", wrapper.ListIntegrations)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/v1/integrations", wrapper.CreateIntegration)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/v1/integrations/email", wrapper.GetEmailIntegration)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/v1/integrations/slack/channels", wrapper.ListSlackChannels)
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/v1/integrations/{id}", wrapper.DeleteIntegration)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/v1/integrations/{id}", wrapper.GetIntegration)
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/v1/integrations/{id}", wrapper.UpdateIntegration)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/v1/notification-event-types", wrapper.ListNotificationEventTypes)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/v1/notification-recipients", wrapper.ListNotificationRecipients)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/v1/notification-recipients", wrapper.CreateNotificationRecipient)
+	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/v1/notification-recipients/{id}", wrapper.DeleteNotificationRecipient)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/v1/notification-recipients/{id}", wrapper.GetNotificationRecipient)
+	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/v1/notification-recipients/{id}", wrapper.ReplaceNotificationRecipient)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/v1/notification-rules", wrapper.ListNotificationRules)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/v1/notification-rules", wrapper.CreateNotificationRule)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/v1/notification-rules/validate", wrapper.ValidateNotificationRule)
+	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/v1/notification-rules/{id}", wrapper.DeleteNotificationRule)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/v1/notification-rules/{id}", wrapper.GetNotificationRule)
+	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/v1/notification-rules/{id}", wrapper.ReplaceNotificationRule)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/v1/notification-rules/{id}/activity", wrapper.ListNotificationRuleActivity)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/v1/onboarding/aws", wrapper.GetAwsOnboarding)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/v1/onboarding/azure", wrapper.GetAzureOnboarding)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/v1/onboarding/gcp", wrapper.GetGcpOnboarding)
@@ -2605,6 +3659,333 @@ func (response CreateIntegration503JSONResponse) VisitCreateIntegrationResponse(
 	return err
 }
 
+type GetEmailIntegrationRequestObject struct {
+}
+
+type GetEmailIntegrationResponseObject interface {
+	VisitGetEmailIntegrationResponse(w http.ResponseWriter) error
+}
+
+type GetEmailIntegration200ResponseHeaders struct {
+	ETag string
+}
+
+type GetEmailIntegration200JSONResponse struct {
+	Body    Integration
+	Headers GetEmailIntegration200ResponseHeaders
+}
+
+func (response GetEmailIntegration200JSONResponse) VisitGetEmailIntegrationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("ETag", fmt.Sprint(response.Headers.ETag))
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetEmailIntegration400JSONResponse ErrorEnvelope
+
+func (response GetEmailIntegration400JSONResponse) VisitGetEmailIntegrationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetEmailIntegration401ResponseHeaders struct {
+	WWWAuthenticate *string
+}
+
+type GetEmailIntegration401JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers GetEmailIntegration401ResponseHeaders
+}
+
+func (response GetEmailIntegration401JSONResponse) VisitGetEmailIntegrationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetEmailIntegration403ResponseHeaders struct {
+	WWWAuthenticate *string
+}
+
+type GetEmailIntegration403JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers GetEmailIntegration403ResponseHeaders
+}
+
+func (response GetEmailIntegration403JSONResponse) VisitGetEmailIntegrationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetEmailIntegration404JSONResponse ErrorEnvelope
+
+func (response GetEmailIntegration404JSONResponse) VisitGetEmailIntegrationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetEmailIntegration429ResponseHeaders struct {
+	RetryAfter *int
+}
+
+type GetEmailIntegration429JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers GetEmailIntegration429ResponseHeaders
+}
+
+func (response GetEmailIntegration429JSONResponse) VisitGetEmailIntegrationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	w.WriteHeader(429)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetEmailIntegration500JSONResponse ErrorEnvelope
+
+func (response GetEmailIntegration500JSONResponse) VisitGetEmailIntegrationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetEmailIntegration503ResponseHeaders struct {
+	RetryAfter *int
+}
+
+type GetEmailIntegration503JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers GetEmailIntegration503ResponseHeaders
+}
+
+func (response GetEmailIntegration503JSONResponse) VisitGetEmailIntegrationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListSlackChannelsRequestObject struct {
+	Params ListSlackChannelsParams
+}
+
+type ListSlackChannelsResponseObject interface {
+	VisitListSlackChannelsResponse(w http.ResponseWriter) error
+}
+
+type ListSlackChannels200JSONResponse SlackChannelList
+
+func (response ListSlackChannels200JSONResponse) VisitListSlackChannelsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListSlackChannels400JSONResponse ErrorEnvelope
+
+func (response ListSlackChannels400JSONResponse) VisitListSlackChannelsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListSlackChannels401ResponseHeaders struct {
+	WWWAuthenticate *string
+}
+
+type ListSlackChannels401JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers ListSlackChannels401ResponseHeaders
+}
+
+func (response ListSlackChannels401JSONResponse) VisitListSlackChannelsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListSlackChannels403ResponseHeaders struct {
+	WWWAuthenticate *string
+}
+
+type ListSlackChannels403JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers ListSlackChannels403ResponseHeaders
+}
+
+func (response ListSlackChannels403JSONResponse) VisitListSlackChannelsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListSlackChannels422JSONResponse ErrorEnvelope
+
+func (response ListSlackChannels422JSONResponse) VisitListSlackChannelsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListSlackChannels429ResponseHeaders struct {
+	RetryAfter *int
+}
+
+type ListSlackChannels429JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers ListSlackChannels429ResponseHeaders
+}
+
+func (response ListSlackChannels429JSONResponse) VisitListSlackChannelsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	w.WriteHeader(429)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListSlackChannels500JSONResponse ErrorEnvelope
+
+func (response ListSlackChannels500JSONResponse) VisitListSlackChannelsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListSlackChannels503ResponseHeaders struct {
+	RetryAfter *int
+}
+
+type ListSlackChannels503JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers ListSlackChannels503ResponseHeaders
+}
+
+func (response ListSlackChannels503JSONResponse) VisitListSlackChannelsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type DeleteIntegrationRequestObject struct {
 	ID     string `json:"id"`
 	Params DeleteIntegrationParams
@@ -3126,6 +4507,2228 @@ type UpdateIntegration503JSONResponse struct {
 }
 
 func (response UpdateIntegration503JSONResponse) VisitUpdateIntegrationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListNotificationEventTypesRequestObject struct {
+}
+
+type ListNotificationEventTypesResponseObject interface {
+	VisitListNotificationEventTypesResponse(w http.ResponseWriter) error
+}
+
+type ListNotificationEventTypes200JSONResponse NotificationEventTypeList
+
+func (response ListNotificationEventTypes200JSONResponse) VisitListNotificationEventTypesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListNotificationEventTypes400JSONResponse ErrorEnvelope
+
+func (response ListNotificationEventTypes400JSONResponse) VisitListNotificationEventTypesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListNotificationEventTypes401ResponseHeaders struct {
+	WWWAuthenticate *string
+}
+
+type ListNotificationEventTypes401JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers ListNotificationEventTypes401ResponseHeaders
+}
+
+func (response ListNotificationEventTypes401JSONResponse) VisitListNotificationEventTypesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListNotificationEventTypes403ResponseHeaders struct {
+	WWWAuthenticate *string
+}
+
+type ListNotificationEventTypes403JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers ListNotificationEventTypes403ResponseHeaders
+}
+
+func (response ListNotificationEventTypes403JSONResponse) VisitListNotificationEventTypesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListNotificationEventTypes429ResponseHeaders struct {
+	RetryAfter *int
+}
+
+type ListNotificationEventTypes429JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers ListNotificationEventTypes429ResponseHeaders
+}
+
+func (response ListNotificationEventTypes429JSONResponse) VisitListNotificationEventTypesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	w.WriteHeader(429)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListNotificationEventTypes500JSONResponse ErrorEnvelope
+
+func (response ListNotificationEventTypes500JSONResponse) VisitListNotificationEventTypesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListNotificationEventTypes503ResponseHeaders struct {
+	RetryAfter *int
+}
+
+type ListNotificationEventTypes503JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers ListNotificationEventTypes503ResponseHeaders
+}
+
+func (response ListNotificationEventTypes503JSONResponse) VisitListNotificationEventTypesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListNotificationRecipientsRequestObject struct {
+	Params ListNotificationRecipientsParams
+}
+
+type ListNotificationRecipientsResponseObject interface {
+	VisitListNotificationRecipientsResponse(w http.ResponseWriter) error
+}
+
+type ListNotificationRecipients200JSONResponse NotificationRecipientPage
+
+func (response ListNotificationRecipients200JSONResponse) VisitListNotificationRecipientsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListNotificationRecipients400JSONResponse ErrorEnvelope
+
+func (response ListNotificationRecipients400JSONResponse) VisitListNotificationRecipientsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListNotificationRecipients401ResponseHeaders struct {
+	WWWAuthenticate *string
+}
+
+type ListNotificationRecipients401JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers ListNotificationRecipients401ResponseHeaders
+}
+
+func (response ListNotificationRecipients401JSONResponse) VisitListNotificationRecipientsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListNotificationRecipients403ResponseHeaders struct {
+	WWWAuthenticate *string
+}
+
+type ListNotificationRecipients403JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers ListNotificationRecipients403ResponseHeaders
+}
+
+func (response ListNotificationRecipients403JSONResponse) VisitListNotificationRecipientsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListNotificationRecipients429ResponseHeaders struct {
+	RetryAfter *int
+}
+
+type ListNotificationRecipients429JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers ListNotificationRecipients429ResponseHeaders
+}
+
+func (response ListNotificationRecipients429JSONResponse) VisitListNotificationRecipientsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	w.WriteHeader(429)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListNotificationRecipients500JSONResponse ErrorEnvelope
+
+func (response ListNotificationRecipients500JSONResponse) VisitListNotificationRecipientsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListNotificationRecipients503ResponseHeaders struct {
+	RetryAfter *int
+}
+
+type ListNotificationRecipients503JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers ListNotificationRecipients503ResponseHeaders
+}
+
+func (response ListNotificationRecipients503JSONResponse) VisitListNotificationRecipientsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateNotificationRecipientRequestObject struct {
+	Params CreateNotificationRecipientParams
+	Body   *CreateNotificationRecipientJSONRequestBody
+}
+
+type CreateNotificationRecipientResponseObject interface {
+	VisitCreateNotificationRecipientResponse(w http.ResponseWriter) error
+}
+
+type CreateNotificationRecipient201ResponseHeaders struct {
+	ETag string
+}
+
+type CreateNotificationRecipient201JSONResponse struct {
+	Body    NotificationRecipient
+	Headers CreateNotificationRecipient201ResponseHeaders
+}
+
+func (response CreateNotificationRecipient201JSONResponse) VisitCreateNotificationRecipientResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("ETag", fmt.Sprint(response.Headers.ETag))
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateNotificationRecipient400JSONResponse ErrorEnvelope
+
+func (response CreateNotificationRecipient400JSONResponse) VisitCreateNotificationRecipientResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateNotificationRecipient401ResponseHeaders struct {
+	WWWAuthenticate *string
+}
+
+type CreateNotificationRecipient401JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers CreateNotificationRecipient401ResponseHeaders
+}
+
+func (response CreateNotificationRecipient401JSONResponse) VisitCreateNotificationRecipientResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateNotificationRecipient403ResponseHeaders struct {
+	WWWAuthenticate *string
+}
+
+type CreateNotificationRecipient403JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers CreateNotificationRecipient403ResponseHeaders
+}
+
+func (response CreateNotificationRecipient403JSONResponse) VisitCreateNotificationRecipientResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateNotificationRecipient409JSONResponse ErrorEnvelope
+
+func (response CreateNotificationRecipient409JSONResponse) VisitCreateNotificationRecipientResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateNotificationRecipient422JSONResponse ErrorEnvelope
+
+func (response CreateNotificationRecipient422JSONResponse) VisitCreateNotificationRecipientResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateNotificationRecipient429ResponseHeaders struct {
+	RetryAfter *int
+}
+
+type CreateNotificationRecipient429JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers CreateNotificationRecipient429ResponseHeaders
+}
+
+func (response CreateNotificationRecipient429JSONResponse) VisitCreateNotificationRecipientResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	w.WriteHeader(429)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateNotificationRecipient500JSONResponse ErrorEnvelope
+
+func (response CreateNotificationRecipient500JSONResponse) VisitCreateNotificationRecipientResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateNotificationRecipient503ResponseHeaders struct {
+	RetryAfter *int
+}
+
+type CreateNotificationRecipient503JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers CreateNotificationRecipient503ResponseHeaders
+}
+
+func (response CreateNotificationRecipient503JSONResponse) VisitCreateNotificationRecipientResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteNotificationRecipientRequestObject struct {
+	ID     string `json:"id"`
+	Params DeleteNotificationRecipientParams
+}
+
+type DeleteNotificationRecipientResponseObject interface {
+	VisitDeleteNotificationRecipientResponse(w http.ResponseWriter) error
+}
+
+type DeleteNotificationRecipient204Response struct {
+}
+
+func (response DeleteNotificationRecipient204Response) VisitDeleteNotificationRecipientResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DeleteNotificationRecipient400JSONResponse ErrorEnvelope
+
+func (response DeleteNotificationRecipient400JSONResponse) VisitDeleteNotificationRecipientResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteNotificationRecipient401ResponseHeaders struct {
+	WWWAuthenticate *string
+}
+
+type DeleteNotificationRecipient401JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers DeleteNotificationRecipient401ResponseHeaders
+}
+
+func (response DeleteNotificationRecipient401JSONResponse) VisitDeleteNotificationRecipientResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteNotificationRecipient403ResponseHeaders struct {
+	WWWAuthenticate *string
+}
+
+type DeleteNotificationRecipient403JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers DeleteNotificationRecipient403ResponseHeaders
+}
+
+func (response DeleteNotificationRecipient403JSONResponse) VisitDeleteNotificationRecipientResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteNotificationRecipient404JSONResponse ErrorEnvelope
+
+func (response DeleteNotificationRecipient404JSONResponse) VisitDeleteNotificationRecipientResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteNotificationRecipient409JSONResponse ErrorEnvelope
+
+func (response DeleteNotificationRecipient409JSONResponse) VisitDeleteNotificationRecipientResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteNotificationRecipient412JSONResponse ErrorEnvelope
+
+func (response DeleteNotificationRecipient412JSONResponse) VisitDeleteNotificationRecipientResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(412)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteNotificationRecipient429ResponseHeaders struct {
+	RetryAfter *int
+}
+
+type DeleteNotificationRecipient429JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers DeleteNotificationRecipient429ResponseHeaders
+}
+
+func (response DeleteNotificationRecipient429JSONResponse) VisitDeleteNotificationRecipientResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	w.WriteHeader(429)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteNotificationRecipient500JSONResponse ErrorEnvelope
+
+func (response DeleteNotificationRecipient500JSONResponse) VisitDeleteNotificationRecipientResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteNotificationRecipient503ResponseHeaders struct {
+	RetryAfter *int
+}
+
+type DeleteNotificationRecipient503JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers DeleteNotificationRecipient503ResponseHeaders
+}
+
+func (response DeleteNotificationRecipient503JSONResponse) VisitDeleteNotificationRecipientResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetNotificationRecipientRequestObject struct {
+	ID string `json:"id"`
+}
+
+type GetNotificationRecipientResponseObject interface {
+	VisitGetNotificationRecipientResponse(w http.ResponseWriter) error
+}
+
+type GetNotificationRecipient200ResponseHeaders struct {
+	ETag string
+}
+
+type GetNotificationRecipient200JSONResponse struct {
+	Body    NotificationRecipient
+	Headers GetNotificationRecipient200ResponseHeaders
+}
+
+func (response GetNotificationRecipient200JSONResponse) VisitGetNotificationRecipientResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("ETag", fmt.Sprint(response.Headers.ETag))
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetNotificationRecipient400JSONResponse ErrorEnvelope
+
+func (response GetNotificationRecipient400JSONResponse) VisitGetNotificationRecipientResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetNotificationRecipient401ResponseHeaders struct {
+	WWWAuthenticate *string
+}
+
+type GetNotificationRecipient401JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers GetNotificationRecipient401ResponseHeaders
+}
+
+func (response GetNotificationRecipient401JSONResponse) VisitGetNotificationRecipientResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetNotificationRecipient403ResponseHeaders struct {
+	WWWAuthenticate *string
+}
+
+type GetNotificationRecipient403JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers GetNotificationRecipient403ResponseHeaders
+}
+
+func (response GetNotificationRecipient403JSONResponse) VisitGetNotificationRecipientResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetNotificationRecipient404JSONResponse ErrorEnvelope
+
+func (response GetNotificationRecipient404JSONResponse) VisitGetNotificationRecipientResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetNotificationRecipient429ResponseHeaders struct {
+	RetryAfter *int
+}
+
+type GetNotificationRecipient429JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers GetNotificationRecipient429ResponseHeaders
+}
+
+func (response GetNotificationRecipient429JSONResponse) VisitGetNotificationRecipientResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	w.WriteHeader(429)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetNotificationRecipient500JSONResponse ErrorEnvelope
+
+func (response GetNotificationRecipient500JSONResponse) VisitGetNotificationRecipientResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetNotificationRecipient503ResponseHeaders struct {
+	RetryAfter *int
+}
+
+type GetNotificationRecipient503JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers GetNotificationRecipient503ResponseHeaders
+}
+
+func (response GetNotificationRecipient503JSONResponse) VisitGetNotificationRecipientResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReplaceNotificationRecipientRequestObject struct {
+	ID     string `json:"id"`
+	Params ReplaceNotificationRecipientParams
+	Body   *ReplaceNotificationRecipientJSONRequestBody
+}
+
+type ReplaceNotificationRecipientResponseObject interface {
+	VisitReplaceNotificationRecipientResponse(w http.ResponseWriter) error
+}
+
+type ReplaceNotificationRecipient200ResponseHeaders struct {
+	ETag string
+}
+
+type ReplaceNotificationRecipient200JSONResponse struct {
+	Body    NotificationRecipient
+	Headers ReplaceNotificationRecipient200ResponseHeaders
+}
+
+func (response ReplaceNotificationRecipient200JSONResponse) VisitReplaceNotificationRecipientResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("ETag", fmt.Sprint(response.Headers.ETag))
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReplaceNotificationRecipient400JSONResponse ErrorEnvelope
+
+func (response ReplaceNotificationRecipient400JSONResponse) VisitReplaceNotificationRecipientResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReplaceNotificationRecipient401ResponseHeaders struct {
+	WWWAuthenticate *string
+}
+
+type ReplaceNotificationRecipient401JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers ReplaceNotificationRecipient401ResponseHeaders
+}
+
+func (response ReplaceNotificationRecipient401JSONResponse) VisitReplaceNotificationRecipientResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReplaceNotificationRecipient403ResponseHeaders struct {
+	WWWAuthenticate *string
+}
+
+type ReplaceNotificationRecipient403JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers ReplaceNotificationRecipient403ResponseHeaders
+}
+
+func (response ReplaceNotificationRecipient403JSONResponse) VisitReplaceNotificationRecipientResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReplaceNotificationRecipient404JSONResponse ErrorEnvelope
+
+func (response ReplaceNotificationRecipient404JSONResponse) VisitReplaceNotificationRecipientResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReplaceNotificationRecipient409JSONResponse ErrorEnvelope
+
+func (response ReplaceNotificationRecipient409JSONResponse) VisitReplaceNotificationRecipientResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReplaceNotificationRecipient412JSONResponse ErrorEnvelope
+
+func (response ReplaceNotificationRecipient412JSONResponse) VisitReplaceNotificationRecipientResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(412)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReplaceNotificationRecipient422JSONResponse ErrorEnvelope
+
+func (response ReplaceNotificationRecipient422JSONResponse) VisitReplaceNotificationRecipientResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReplaceNotificationRecipient429ResponseHeaders struct {
+	RetryAfter *int
+}
+
+type ReplaceNotificationRecipient429JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers ReplaceNotificationRecipient429ResponseHeaders
+}
+
+func (response ReplaceNotificationRecipient429JSONResponse) VisitReplaceNotificationRecipientResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	w.WriteHeader(429)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReplaceNotificationRecipient500JSONResponse ErrorEnvelope
+
+func (response ReplaceNotificationRecipient500JSONResponse) VisitReplaceNotificationRecipientResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReplaceNotificationRecipient503ResponseHeaders struct {
+	RetryAfter *int
+}
+
+type ReplaceNotificationRecipient503JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers ReplaceNotificationRecipient503ResponseHeaders
+}
+
+func (response ReplaceNotificationRecipient503JSONResponse) VisitReplaceNotificationRecipientResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListNotificationRulesRequestObject struct {
+	Params ListNotificationRulesParams
+}
+
+type ListNotificationRulesResponseObject interface {
+	VisitListNotificationRulesResponse(w http.ResponseWriter) error
+}
+
+type ListNotificationRules200JSONResponse NotificationRulePage
+
+func (response ListNotificationRules200JSONResponse) VisitListNotificationRulesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListNotificationRules400JSONResponse ErrorEnvelope
+
+func (response ListNotificationRules400JSONResponse) VisitListNotificationRulesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListNotificationRules401ResponseHeaders struct {
+	WWWAuthenticate *string
+}
+
+type ListNotificationRules401JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers ListNotificationRules401ResponseHeaders
+}
+
+func (response ListNotificationRules401JSONResponse) VisitListNotificationRulesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListNotificationRules403ResponseHeaders struct {
+	WWWAuthenticate *string
+}
+
+type ListNotificationRules403JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers ListNotificationRules403ResponseHeaders
+}
+
+func (response ListNotificationRules403JSONResponse) VisitListNotificationRulesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListNotificationRules429ResponseHeaders struct {
+	RetryAfter *int
+}
+
+type ListNotificationRules429JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers ListNotificationRules429ResponseHeaders
+}
+
+func (response ListNotificationRules429JSONResponse) VisitListNotificationRulesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	w.WriteHeader(429)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListNotificationRules500JSONResponse ErrorEnvelope
+
+func (response ListNotificationRules500JSONResponse) VisitListNotificationRulesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListNotificationRules503ResponseHeaders struct {
+	RetryAfter *int
+}
+
+type ListNotificationRules503JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers ListNotificationRules503ResponseHeaders
+}
+
+func (response ListNotificationRules503JSONResponse) VisitListNotificationRulesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateNotificationRuleRequestObject struct {
+	Params CreateNotificationRuleParams
+	Body   *CreateNotificationRuleJSONRequestBody
+}
+
+type CreateNotificationRuleResponseObject interface {
+	VisitCreateNotificationRuleResponse(w http.ResponseWriter) error
+}
+
+type CreateNotificationRule201ResponseHeaders struct {
+	ETag string
+}
+
+type CreateNotificationRule201JSONResponse struct {
+	Body    NotificationRule
+	Headers CreateNotificationRule201ResponseHeaders
+}
+
+func (response CreateNotificationRule201JSONResponse) VisitCreateNotificationRuleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("ETag", fmt.Sprint(response.Headers.ETag))
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateNotificationRule400JSONResponse ErrorEnvelope
+
+func (response CreateNotificationRule400JSONResponse) VisitCreateNotificationRuleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateNotificationRule401ResponseHeaders struct {
+	WWWAuthenticate *string
+}
+
+type CreateNotificationRule401JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers CreateNotificationRule401ResponseHeaders
+}
+
+func (response CreateNotificationRule401JSONResponse) VisitCreateNotificationRuleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateNotificationRule403ResponseHeaders struct {
+	WWWAuthenticate *string
+}
+
+type CreateNotificationRule403JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers CreateNotificationRule403ResponseHeaders
+}
+
+func (response CreateNotificationRule403JSONResponse) VisitCreateNotificationRuleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateNotificationRule409JSONResponse ErrorEnvelope
+
+func (response CreateNotificationRule409JSONResponse) VisitCreateNotificationRuleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateNotificationRule422JSONResponse ErrorEnvelope
+
+func (response CreateNotificationRule422JSONResponse) VisitCreateNotificationRuleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateNotificationRule429ResponseHeaders struct {
+	RetryAfter *int
+}
+
+type CreateNotificationRule429JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers CreateNotificationRule429ResponseHeaders
+}
+
+func (response CreateNotificationRule429JSONResponse) VisitCreateNotificationRuleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	w.WriteHeader(429)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateNotificationRule500JSONResponse ErrorEnvelope
+
+func (response CreateNotificationRule500JSONResponse) VisitCreateNotificationRuleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateNotificationRule503ResponseHeaders struct {
+	RetryAfter *int
+}
+
+type CreateNotificationRule503JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers CreateNotificationRule503ResponseHeaders
+}
+
+func (response CreateNotificationRule503JSONResponse) VisitCreateNotificationRuleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ValidateNotificationRuleRequestObject struct {
+	Body *ValidateNotificationRuleJSONRequestBody
+}
+
+type ValidateNotificationRuleResponseObject interface {
+	VisitValidateNotificationRuleResponse(w http.ResponseWriter) error
+}
+
+type ValidateNotificationRule200JSONResponse NotificationRuleValidation
+
+func (response ValidateNotificationRule200JSONResponse) VisitValidateNotificationRuleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ValidateNotificationRule400JSONResponse ErrorEnvelope
+
+func (response ValidateNotificationRule400JSONResponse) VisitValidateNotificationRuleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ValidateNotificationRule401ResponseHeaders struct {
+	WWWAuthenticate *string
+}
+
+type ValidateNotificationRule401JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers ValidateNotificationRule401ResponseHeaders
+}
+
+func (response ValidateNotificationRule401JSONResponse) VisitValidateNotificationRuleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ValidateNotificationRule403ResponseHeaders struct {
+	WWWAuthenticate *string
+}
+
+type ValidateNotificationRule403JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers ValidateNotificationRule403ResponseHeaders
+}
+
+func (response ValidateNotificationRule403JSONResponse) VisitValidateNotificationRuleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ValidateNotificationRule404JSONResponse ErrorEnvelope
+
+func (response ValidateNotificationRule404JSONResponse) VisitValidateNotificationRuleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ValidateNotificationRule429ResponseHeaders struct {
+	RetryAfter *int
+}
+
+type ValidateNotificationRule429JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers ValidateNotificationRule429ResponseHeaders
+}
+
+func (response ValidateNotificationRule429JSONResponse) VisitValidateNotificationRuleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	w.WriteHeader(429)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ValidateNotificationRule500JSONResponse ErrorEnvelope
+
+func (response ValidateNotificationRule500JSONResponse) VisitValidateNotificationRuleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ValidateNotificationRule503ResponseHeaders struct {
+	RetryAfter *int
+}
+
+type ValidateNotificationRule503JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers ValidateNotificationRule503ResponseHeaders
+}
+
+func (response ValidateNotificationRule503JSONResponse) VisitValidateNotificationRuleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteNotificationRuleRequestObject struct {
+	ID     string `json:"id"`
+	Params DeleteNotificationRuleParams
+}
+
+type DeleteNotificationRuleResponseObject interface {
+	VisitDeleteNotificationRuleResponse(w http.ResponseWriter) error
+}
+
+type DeleteNotificationRule204Response struct {
+}
+
+func (response DeleteNotificationRule204Response) VisitDeleteNotificationRuleResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DeleteNotificationRule400JSONResponse ErrorEnvelope
+
+func (response DeleteNotificationRule400JSONResponse) VisitDeleteNotificationRuleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteNotificationRule401ResponseHeaders struct {
+	WWWAuthenticate *string
+}
+
+type DeleteNotificationRule401JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers DeleteNotificationRule401ResponseHeaders
+}
+
+func (response DeleteNotificationRule401JSONResponse) VisitDeleteNotificationRuleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteNotificationRule403ResponseHeaders struct {
+	WWWAuthenticate *string
+}
+
+type DeleteNotificationRule403JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers DeleteNotificationRule403ResponseHeaders
+}
+
+func (response DeleteNotificationRule403JSONResponse) VisitDeleteNotificationRuleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteNotificationRule404JSONResponse ErrorEnvelope
+
+func (response DeleteNotificationRule404JSONResponse) VisitDeleteNotificationRuleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteNotificationRule412JSONResponse ErrorEnvelope
+
+func (response DeleteNotificationRule412JSONResponse) VisitDeleteNotificationRuleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(412)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteNotificationRule429ResponseHeaders struct {
+	RetryAfter *int
+}
+
+type DeleteNotificationRule429JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers DeleteNotificationRule429ResponseHeaders
+}
+
+func (response DeleteNotificationRule429JSONResponse) VisitDeleteNotificationRuleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	w.WriteHeader(429)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteNotificationRule500JSONResponse ErrorEnvelope
+
+func (response DeleteNotificationRule500JSONResponse) VisitDeleteNotificationRuleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteNotificationRule503ResponseHeaders struct {
+	RetryAfter *int
+}
+
+type DeleteNotificationRule503JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers DeleteNotificationRule503ResponseHeaders
+}
+
+func (response DeleteNotificationRule503JSONResponse) VisitDeleteNotificationRuleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetNotificationRuleRequestObject struct {
+	ID string `json:"id"`
+}
+
+type GetNotificationRuleResponseObject interface {
+	VisitGetNotificationRuleResponse(w http.ResponseWriter) error
+}
+
+type GetNotificationRule200ResponseHeaders struct {
+	ETag string
+}
+
+type GetNotificationRule200JSONResponse struct {
+	Body    NotificationRule
+	Headers GetNotificationRule200ResponseHeaders
+}
+
+func (response GetNotificationRule200JSONResponse) VisitGetNotificationRuleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("ETag", fmt.Sprint(response.Headers.ETag))
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetNotificationRule400JSONResponse ErrorEnvelope
+
+func (response GetNotificationRule400JSONResponse) VisitGetNotificationRuleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetNotificationRule401ResponseHeaders struct {
+	WWWAuthenticate *string
+}
+
+type GetNotificationRule401JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers GetNotificationRule401ResponseHeaders
+}
+
+func (response GetNotificationRule401JSONResponse) VisitGetNotificationRuleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetNotificationRule403ResponseHeaders struct {
+	WWWAuthenticate *string
+}
+
+type GetNotificationRule403JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers GetNotificationRule403ResponseHeaders
+}
+
+func (response GetNotificationRule403JSONResponse) VisitGetNotificationRuleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetNotificationRule404JSONResponse ErrorEnvelope
+
+func (response GetNotificationRule404JSONResponse) VisitGetNotificationRuleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetNotificationRule429ResponseHeaders struct {
+	RetryAfter *int
+}
+
+type GetNotificationRule429JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers GetNotificationRule429ResponseHeaders
+}
+
+func (response GetNotificationRule429JSONResponse) VisitGetNotificationRuleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	w.WriteHeader(429)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetNotificationRule500JSONResponse ErrorEnvelope
+
+func (response GetNotificationRule500JSONResponse) VisitGetNotificationRuleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetNotificationRule503ResponseHeaders struct {
+	RetryAfter *int
+}
+
+type GetNotificationRule503JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers GetNotificationRule503ResponseHeaders
+}
+
+func (response GetNotificationRule503JSONResponse) VisitGetNotificationRuleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReplaceNotificationRuleRequestObject struct {
+	ID     string `json:"id"`
+	Params ReplaceNotificationRuleParams
+	Body   *ReplaceNotificationRuleJSONRequestBody
+}
+
+type ReplaceNotificationRuleResponseObject interface {
+	VisitReplaceNotificationRuleResponse(w http.ResponseWriter) error
+}
+
+type ReplaceNotificationRule200ResponseHeaders struct {
+	ETag string
+}
+
+type ReplaceNotificationRule200JSONResponse struct {
+	Body    NotificationRule
+	Headers ReplaceNotificationRule200ResponseHeaders
+}
+
+func (response ReplaceNotificationRule200JSONResponse) VisitReplaceNotificationRuleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("ETag", fmt.Sprint(response.Headers.ETag))
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReplaceNotificationRule400JSONResponse ErrorEnvelope
+
+func (response ReplaceNotificationRule400JSONResponse) VisitReplaceNotificationRuleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReplaceNotificationRule401ResponseHeaders struct {
+	WWWAuthenticate *string
+}
+
+type ReplaceNotificationRule401JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers ReplaceNotificationRule401ResponseHeaders
+}
+
+func (response ReplaceNotificationRule401JSONResponse) VisitReplaceNotificationRuleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReplaceNotificationRule403ResponseHeaders struct {
+	WWWAuthenticate *string
+}
+
+type ReplaceNotificationRule403JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers ReplaceNotificationRule403ResponseHeaders
+}
+
+func (response ReplaceNotificationRule403JSONResponse) VisitReplaceNotificationRuleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReplaceNotificationRule404JSONResponse ErrorEnvelope
+
+func (response ReplaceNotificationRule404JSONResponse) VisitReplaceNotificationRuleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReplaceNotificationRule409JSONResponse ErrorEnvelope
+
+func (response ReplaceNotificationRule409JSONResponse) VisitReplaceNotificationRuleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReplaceNotificationRule412JSONResponse ErrorEnvelope
+
+func (response ReplaceNotificationRule412JSONResponse) VisitReplaceNotificationRuleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(412)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReplaceNotificationRule422JSONResponse ErrorEnvelope
+
+func (response ReplaceNotificationRule422JSONResponse) VisitReplaceNotificationRuleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReplaceNotificationRule429ResponseHeaders struct {
+	RetryAfter *int
+}
+
+type ReplaceNotificationRule429JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers ReplaceNotificationRule429ResponseHeaders
+}
+
+func (response ReplaceNotificationRule429JSONResponse) VisitReplaceNotificationRuleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	w.WriteHeader(429)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReplaceNotificationRule500JSONResponse ErrorEnvelope
+
+func (response ReplaceNotificationRule500JSONResponse) VisitReplaceNotificationRuleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReplaceNotificationRule503ResponseHeaders struct {
+	RetryAfter *int
+}
+
+type ReplaceNotificationRule503JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers ReplaceNotificationRule503ResponseHeaders
+}
+
+func (response ReplaceNotificationRule503JSONResponse) VisitReplaceNotificationRuleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListNotificationRuleActivityRequestObject struct {
+	ID     string `json:"id"`
+	Params ListNotificationRuleActivityParams
+}
+
+type ListNotificationRuleActivityResponseObject interface {
+	VisitListNotificationRuleActivityResponse(w http.ResponseWriter) error
+}
+
+type ListNotificationRuleActivity200JSONResponse NotificationRuleActivityPage
+
+func (response ListNotificationRuleActivity200JSONResponse) VisitListNotificationRuleActivityResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListNotificationRuleActivity400JSONResponse ErrorEnvelope
+
+func (response ListNotificationRuleActivity400JSONResponse) VisitListNotificationRuleActivityResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListNotificationRuleActivity401ResponseHeaders struct {
+	WWWAuthenticate *string
+}
+
+type ListNotificationRuleActivity401JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers ListNotificationRuleActivity401ResponseHeaders
+}
+
+func (response ListNotificationRuleActivity401JSONResponse) VisitListNotificationRuleActivityResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListNotificationRuleActivity403ResponseHeaders struct {
+	WWWAuthenticate *string
+}
+
+type ListNotificationRuleActivity403JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers ListNotificationRuleActivity403ResponseHeaders
+}
+
+func (response ListNotificationRuleActivity403JSONResponse) VisitListNotificationRuleActivityResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListNotificationRuleActivity429ResponseHeaders struct {
+	RetryAfter *int
+}
+
+type ListNotificationRuleActivity429JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers ListNotificationRuleActivity429ResponseHeaders
+}
+
+func (response ListNotificationRuleActivity429JSONResponse) VisitListNotificationRuleActivityResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	w.WriteHeader(429)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListNotificationRuleActivity500JSONResponse ErrorEnvelope
+
+func (response ListNotificationRuleActivity500JSONResponse) VisitListNotificationRuleActivityResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListNotificationRuleActivity503ResponseHeaders struct {
+	RetryAfter *int
+}
+
+type ListNotificationRuleActivity503JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers ListNotificationRuleActivity503ResponseHeaders
+}
+
+func (response ListNotificationRuleActivity503JSONResponse) VisitListNotificationRuleActivityResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
@@ -3744,6 +7347,12 @@ type StrictServerInterface interface {
 	// CreateIntegration Install an integration. Secrets are write-only and are never returned
 	// (POST /v1/integrations)
 	CreateIntegration(ctx context.Context, request CreateIntegrationRequestObject) (CreateIntegrationResponseObject, error)
+	// GetEmailIntegration Return the Act-managed email integration that email actions name
+	// (GET /v1/integrations/email)
+	GetEmailIntegration(ctx context.Context, request GetEmailIntegrationRequestObject) (GetEmailIntegrationResponseObject, error)
+	// ListSlackChannels Look up public Slack channels by exact name or ID, for actions that take channel IDs
+	// (GET /v1/integrations/slack/channels)
+	ListSlackChannels(ctx context.Context, request ListSlackChannelsRequestObject) (ListSlackChannelsResponseObject, error)
 	// DeleteIntegration Uninstall an integration and delete its secrets
 	// (DELETE /v1/integrations/{id})
 	DeleteIntegration(ctx context.Context, request DeleteIntegrationRequestObject) (DeleteIntegrationResponseObject, error)
@@ -3753,6 +7362,45 @@ type StrictServerInterface interface {
 	// UpdateIntegration Change an installed integration in place, keeping its id
 	// (PATCH /v1/integrations/{id})
 	UpdateIntegration(ctx context.Context, request UpdateIntegrationRequestObject) (UpdateIntegrationResponseObject, error)
+	// ListNotificationEventTypes List the event types a rule can match, the actions and conditions each takes, and the rule limits
+	// (GET /v1/notification-event-types)
+	ListNotificationEventTypes(ctx context.Context, request ListNotificationEventTypesRequestObject) (ListNotificationEventTypesResponseObject, error)
+	// ListNotificationRecipients List the address-book recipients rules can name, one page at a time
+	// (GET /v1/notification-recipients)
+	ListNotificationRecipients(ctx context.Context, request ListNotificationRecipientsRequestObject) (ListNotificationRecipientsResponseObject, error)
+	// CreateNotificationRecipient Create an address-book recipient
+	// (POST /v1/notification-recipients)
+	CreateNotificationRecipient(ctx context.Context, request CreateNotificationRecipientRequestObject) (CreateNotificationRecipientResponseObject, error)
+	// DeleteNotificationRecipient Delete an address-book recipient. Refused with 409 while a rule names it
+	// (DELETE /v1/notification-recipients/{id})
+	DeleteNotificationRecipient(ctx context.Context, request DeleteNotificationRecipientRequestObject) (DeleteNotificationRecipientResponseObject, error)
+	// GetNotificationRecipient Return one address-book recipient
+	// (GET /v1/notification-recipients/{id})
+	GetNotificationRecipient(ctx context.Context, request GetNotificationRecipientRequestObject) (GetNotificationRecipientResponseObject, error)
+	// ReplaceNotificationRecipient Replace an address-book recipient; the rules that name it send to its new addresses
+	// (PUT /v1/notification-recipients/{id})
+	ReplaceNotificationRecipient(ctx context.Context, request ReplaceNotificationRecipientRequestObject) (ReplaceNotificationRecipientResponseObject, error)
+	// ListNotificationRules List the notification rules of the calling tenant, one page at a time
+	// (GET /v1/notification-rules)
+	ListNotificationRules(ctx context.Context, request ListNotificationRulesRequestObject) (ListNotificationRulesResponseObject, error)
+	// CreateNotificationRule Create a notification rule
+	// (POST /v1/notification-rules)
+	CreateNotificationRule(ctx context.Context, request CreateNotificationRuleRequestObject) (CreateNotificationRuleResponseObject, error)
+	// ValidateNotificationRule Check a rule as a create or a replace would, without saving it or sending anything
+	// (POST /v1/notification-rules/validate)
+	ValidateNotificationRule(ctx context.Context, request ValidateNotificationRuleRequestObject) (ValidateNotificationRuleResponseObject, error)
+	// DeleteNotificationRule Delete a notification rule. Its activity stays readable for six months
+	// (DELETE /v1/notification-rules/{id})
+	DeleteNotificationRule(ctx context.Context, request DeleteNotificationRuleRequestObject) (DeleteNotificationRuleResponseObject, error)
+	// GetNotificationRule Return one notification rule
+	// (GET /v1/notification-rules/{id})
+	GetNotificationRule(ctx context.Context, request GetNotificationRuleRequestObject) (GetNotificationRuleResponseObject, error)
+	// ReplaceNotificationRule Replace a notification rule. A member left out keeps its stored value
+	// (PUT /v1/notification-rules/{id})
+	ReplaceNotificationRule(ctx context.Context, request ReplaceNotificationRuleRequestObject) (ReplaceNotificationRuleResponseObject, error)
+	// ListNotificationRuleActivity List the events a rule matched in the last six months and what was sent, newest first
+	// (GET /v1/notification-rules/{id}/activity)
+	ListNotificationRuleActivity(ctx context.Context, request ListNotificationRuleActivityRequestObject) (ListNotificationRuleActivityResponseObject, error)
 	// GetAwsOnboarding Return the values an AWS deployment needs before it is created
 	// (GET /v1/onboarding/aws)
 	GetAwsOnboarding(ctx context.Context, request GetAwsOnboardingRequestObject) (GetAwsOnboardingResponseObject, error)
@@ -3993,6 +7641,56 @@ func (sh *strictHandler) CreateIntegration(w http.ResponseWriter, r *http.Reques
 	}
 }
 
+// GetEmailIntegration operation middleware
+func (sh *strictHandler) GetEmailIntegration(w http.ResponseWriter, r *http.Request) {
+	var request GetEmailIntegrationRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetEmailIntegration(ctx, request.(GetEmailIntegrationRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetEmailIntegration")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetEmailIntegrationResponseObject); ok {
+		if err := validResponse.VisitGetEmailIntegrationResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListSlackChannels operation middleware
+func (sh *strictHandler) ListSlackChannels(w http.ResponseWriter, r *http.Request, params ListSlackChannelsParams) {
+	var request ListSlackChannelsRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListSlackChannels(ctx, request.(ListSlackChannelsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListSlackChannels")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListSlackChannelsResponseObject); ok {
+		if err := validResponse.VisitListSlackChannelsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // DeleteIntegration operation middleware
 func (sh *strictHandler) DeleteIntegration(w http.ResponseWriter, r *http.Request, id string, params DeleteIntegrationParams) {
 	var request DeleteIntegrationRequestObject
@@ -4073,6 +7771,380 @@ func (sh *strictHandler) UpdateIntegration(w http.ResponseWriter, r *http.Reques
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(UpdateIntegrationResponseObject); ok {
 		if err := validResponse.VisitUpdateIntegrationResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListNotificationEventTypes operation middleware
+func (sh *strictHandler) ListNotificationEventTypes(w http.ResponseWriter, r *http.Request) {
+	var request ListNotificationEventTypesRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListNotificationEventTypes(ctx, request.(ListNotificationEventTypesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListNotificationEventTypes")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListNotificationEventTypesResponseObject); ok {
+		if err := validResponse.VisitListNotificationEventTypesResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListNotificationRecipients operation middleware
+func (sh *strictHandler) ListNotificationRecipients(w http.ResponseWriter, r *http.Request, params ListNotificationRecipientsParams) {
+	var request ListNotificationRecipientsRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListNotificationRecipients(ctx, request.(ListNotificationRecipientsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListNotificationRecipients")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListNotificationRecipientsResponseObject); ok {
+		if err := validResponse.VisitListNotificationRecipientsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CreateNotificationRecipient operation middleware
+func (sh *strictHandler) CreateNotificationRecipient(w http.ResponseWriter, r *http.Request, params CreateNotificationRecipientParams) {
+	var request CreateNotificationRecipientRequestObject
+
+	request.Params = params
+
+	var body CreateNotificationRecipientJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateNotificationRecipient(ctx, request.(CreateNotificationRecipientRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateNotificationRecipient")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CreateNotificationRecipientResponseObject); ok {
+		if err := validResponse.VisitCreateNotificationRecipientResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeleteNotificationRecipient operation middleware
+func (sh *strictHandler) DeleteNotificationRecipient(w http.ResponseWriter, r *http.Request, id string, params DeleteNotificationRecipientParams) {
+	var request DeleteNotificationRecipientRequestObject
+
+	request.ID = id
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteNotificationRecipient(ctx, request.(DeleteNotificationRecipientRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteNotificationRecipient")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteNotificationRecipientResponseObject); ok {
+		if err := validResponse.VisitDeleteNotificationRecipientResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetNotificationRecipient operation middleware
+func (sh *strictHandler) GetNotificationRecipient(w http.ResponseWriter, r *http.Request, id string) {
+	var request GetNotificationRecipientRequestObject
+
+	request.ID = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetNotificationRecipient(ctx, request.(GetNotificationRecipientRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetNotificationRecipient")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetNotificationRecipientResponseObject); ok {
+		if err := validResponse.VisitGetNotificationRecipientResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ReplaceNotificationRecipient operation middleware
+func (sh *strictHandler) ReplaceNotificationRecipient(w http.ResponseWriter, r *http.Request, id string, params ReplaceNotificationRecipientParams) {
+	var request ReplaceNotificationRecipientRequestObject
+
+	request.ID = id
+	request.Params = params
+
+	var body ReplaceNotificationRecipientJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ReplaceNotificationRecipient(ctx, request.(ReplaceNotificationRecipientRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ReplaceNotificationRecipient")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ReplaceNotificationRecipientResponseObject); ok {
+		if err := validResponse.VisitReplaceNotificationRecipientResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListNotificationRules operation middleware
+func (sh *strictHandler) ListNotificationRules(w http.ResponseWriter, r *http.Request, params ListNotificationRulesParams) {
+	var request ListNotificationRulesRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListNotificationRules(ctx, request.(ListNotificationRulesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListNotificationRules")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListNotificationRulesResponseObject); ok {
+		if err := validResponse.VisitListNotificationRulesResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CreateNotificationRule operation middleware
+func (sh *strictHandler) CreateNotificationRule(w http.ResponseWriter, r *http.Request, params CreateNotificationRuleParams) {
+	var request CreateNotificationRuleRequestObject
+
+	request.Params = params
+
+	var body CreateNotificationRuleJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateNotificationRule(ctx, request.(CreateNotificationRuleRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateNotificationRule")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CreateNotificationRuleResponseObject); ok {
+		if err := validResponse.VisitCreateNotificationRuleResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ValidateNotificationRule operation middleware
+func (sh *strictHandler) ValidateNotificationRule(w http.ResponseWriter, r *http.Request) {
+	var request ValidateNotificationRuleRequestObject
+
+	var body ValidateNotificationRuleJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ValidateNotificationRule(ctx, request.(ValidateNotificationRuleRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ValidateNotificationRule")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ValidateNotificationRuleResponseObject); ok {
+		if err := validResponse.VisitValidateNotificationRuleResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeleteNotificationRule operation middleware
+func (sh *strictHandler) DeleteNotificationRule(w http.ResponseWriter, r *http.Request, id string, params DeleteNotificationRuleParams) {
+	var request DeleteNotificationRuleRequestObject
+
+	request.ID = id
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteNotificationRule(ctx, request.(DeleteNotificationRuleRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteNotificationRule")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteNotificationRuleResponseObject); ok {
+		if err := validResponse.VisitDeleteNotificationRuleResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetNotificationRule operation middleware
+func (sh *strictHandler) GetNotificationRule(w http.ResponseWriter, r *http.Request, id string) {
+	var request GetNotificationRuleRequestObject
+
+	request.ID = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetNotificationRule(ctx, request.(GetNotificationRuleRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetNotificationRule")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetNotificationRuleResponseObject); ok {
+		if err := validResponse.VisitGetNotificationRuleResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ReplaceNotificationRule operation middleware
+func (sh *strictHandler) ReplaceNotificationRule(w http.ResponseWriter, r *http.Request, id string, params ReplaceNotificationRuleParams) {
+	var request ReplaceNotificationRuleRequestObject
+
+	request.ID = id
+	request.Params = params
+
+	var body ReplaceNotificationRuleJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ReplaceNotificationRule(ctx, request.(ReplaceNotificationRuleRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ReplaceNotificationRule")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ReplaceNotificationRuleResponseObject); ok {
+		if err := validResponse.VisitReplaceNotificationRuleResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListNotificationRuleActivity operation middleware
+func (sh *strictHandler) ListNotificationRuleActivity(w http.ResponseWriter, r *http.Request, id string, params ListNotificationRuleActivityParams) {
+	var request ListNotificationRuleActivityRequestObject
+
+	request.ID = id
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListNotificationRuleActivity(ctx, request.(ListNotificationRuleActivityRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListNotificationRuleActivity")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListNotificationRuleActivityResponseObject); ok {
+		if err := validResponse.VisitListNotificationRuleActivityResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
