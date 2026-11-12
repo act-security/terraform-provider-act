@@ -376,8 +376,22 @@ func (r *awsDeploymentResource[M, P]) Create(ctx context.Context, req resource.C
 	r.writeState(ctx, model, result.Deployment, diags)
 	diags.Append(resp.State.Set(ctx, &plan)...)
 	setPrivate(ctx, resp.Private, privateETag, result.ETag, diags)
-	diags.AddWarning("Act verified the role", proofOfLife(model.targetLabel(), result.Deployment, outcome))
+	diags.AddWarning("Act verified the role", proofOfLife(model.targetLabel(), result.Deployment, outcome)+r.coverageNote(ctx, result.Deployment.ID))
 	addDeploymentWarnings(diags, result.Deployment)
+}
+
+func (r *awsDeploymentResource[M, P]) coverageNote(ctx context.Context, id string) string {
+	if r.kind.scope != apigen.DeploymentScopeOrganization {
+		return ""
+	}
+	coverage, err := r.data.Client.GetDeploymentCoverage(ctx, id)
+	if err != nil {
+		return ""
+	}
+	return fmt.Sprintf(
+		"\n\nCoverage now: %d of %d accounts connected, %d pending, %d failed. Account discovery is %s. Read data.act_deployment_coverage to follow it; the resource does not store it.",
+		coverage.AccountsConnected, coverage.AccountsExpected, coverage.AccountsPending, coverage.AccountsFailed, coverage.DiscoveryState,
+	)
 }
 
 func (r *awsDeploymentResource[M, P]) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
