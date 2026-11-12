@@ -151,6 +151,8 @@ func (p *actProvider) Resources(context.Context) []func() resource.Resource {
 		NewJiraIntegrationResource,
 		NewWizIntegrationResource,
 		NewSplunkIntegrationResource,
+		NewAwsAccountDeploymentResource,
+		NewAwsOrganizationDeploymentResource,
 	}
 }
 
@@ -159,6 +161,11 @@ func (p *actProvider) DataSources(context.Context) []func() datasource.DataSourc
 		NewCurrentIdentityDataSource,
 		NewIntegrationDataSource,
 		NewIntegrationTypesDataSource,
+		NewAwsOnboardingParametersDataSource,
+		NewDeploymentDataSource,
+		NewDeploymentsDataSource,
+		NewDeploymentCoverageDataSource,
+		NewDeploymentAccountsDataSource,
 	}
 }
 

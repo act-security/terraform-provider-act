@@ -48,6 +48,7 @@ type Fake struct {
 	recorder     *Recorder
 	now          func() time.Time
 	integrations *integrationStore
+	deployments  *deploymentStore
 }
 
 func New(cfg Config, stsOrigin, apiOrigin string) (*Fake, error) {
@@ -67,6 +68,7 @@ func New(cfg Config, stsOrigin, apiOrigin string) (*Fake, error) {
 		recorder:     &Recorder{},
 		now:          time.Now,
 		integrations: newIntegrationStore(time.Now().UTC()),
+		deployments:  newDeploymentStore(),
 	}, nil
 }
 

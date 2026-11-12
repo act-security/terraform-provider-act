@@ -36,6 +36,21 @@ func (e AuthMethod) Valid() bool {
 	}
 }
 
+// Defines values for AwsCapability.
+const (
+	AwsCapabilityEksClusterAccess AwsCapability = "eks_cluster_access"
+)
+
+// Valid indicates whether the value is a known member of the AwsCapability enum.
+func (e AwsCapability) Valid() bool {
+	switch e {
+	case AwsCapabilityEksClusterAccess:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AwsDeploymentMethod.
 const (
 	AwsDeploymentMethodCloudformation AwsDeploymentMethod = "cloudformation"
@@ -48,24 +63,6 @@ func (e AwsDeploymentMethod) Valid() bool {
 	case AwsDeploymentMethodCloudformation:
 		return true
 	case AwsDeploymentMethodTerraform:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for AzureDeploymentCredentialType.
-const (
-	AzureDeploymentCredentialTypeCertificate  AzureDeploymentCredentialType = "certificate"
-	AzureDeploymentCredentialTypeClientSecret AzureDeploymentCredentialType = "client_secret"
-)
-
-// Valid indicates whether the value is a known member of the AzureDeploymentCredentialType enum.
-func (e AzureDeploymentCredentialType) Valid() bool {
-	switch e {
-	case AzureDeploymentCredentialTypeCertificate:
-		return true
-	case AzureDeploymentCredentialTypeClientSecret:
 		return true
 	default:
 		return false
@@ -114,6 +111,24 @@ func (e Cloud) Valid() bool {
 	}
 }
 
+// Defines values for DeploymentChangeSource.
+const (
+	DeploymentChangeSourceAPI DeploymentChangeSource = "api"
+	DeploymentChangeSourceUI  DeploymentChangeSource = "ui"
+)
+
+// Valid indicates whether the value is a known member of the DeploymentChangeSource enum.
+func (e DeploymentChangeSource) Valid() bool {
+	switch e {
+	case DeploymentChangeSourceAPI:
+		return true
+	case DeploymentChangeSourceUI:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for DeploymentScope.
 const (
 	DeploymentScopeAccount         DeploymentScope = "account"
@@ -143,8 +158,9 @@ func (e DeploymentScope) Valid() bool {
 
 // Defines values for DeploymentStatus.
 const (
-	DeploymentStatusActive DeploymentStatus = "active"
-	DeploymentStatusFailed DeploymentStatus = "failed"
+	DeploymentStatusActive         DeploymentStatus = "active"
+	DeploymentStatusFailed         DeploymentStatus = "failed"
+	DeploymentStatusPendingConsent DeploymentStatus = "pending_consent"
 )
 
 // Valid indicates whether the value is a known member of the DeploymentStatus enum.
@@ -153,6 +169,29 @@ func (e DeploymentStatus) Valid() bool {
 	case DeploymentStatusActive:
 		return true
 	case DeploymentStatusFailed:
+		return true
+	case DeploymentStatusPendingConsent:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for DiscoveryState.
+const (
+	DiscoveryStateComplete DiscoveryState = "complete"
+	DiscoveryStatePending  DiscoveryState = "pending"
+	DiscoveryStateRunning  DiscoveryState = "running"
+)
+
+// Valid indicates whether the value is a known member of the DiscoveryState enum.
+func (e DiscoveryState) Valid() bool {
+	switch e {
+	case DiscoveryStateComplete:
+		return true
+	case DiscoveryStatePending:
+		return true
+	case DiscoveryStateRunning:
 		return true
 	default:
 		return false
@@ -354,6 +393,30 @@ func (e IntegrationType) Valid() bool {
 	}
 }
 
+// Defines values for MemberAccountStatus.
+const (
+	MemberAccountStatusConnected MemberAccountStatus = "connected"
+	MemberAccountStatusExcluded  MemberAccountStatus = "excluded"
+	MemberAccountStatusFailed    MemberAccountStatus = "failed"
+	MemberAccountStatusPending   MemberAccountStatus = "pending"
+)
+
+// Valid indicates whether the value is a known member of the MemberAccountStatus enum.
+func (e MemberAccountStatus) Valid() bool {
+	switch e {
+	case MemberAccountStatusConnected:
+		return true
+	case MemberAccountStatusExcluded:
+		return true
+	case MemberAccountStatusFailed:
+		return true
+	case MemberAccountStatusPending:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for PrincipalKind.
 const (
 	PrincipalKindServiceAccount PrincipalKind = "service_account"
@@ -411,106 +474,249 @@ func (e TokenScope) Valid() bool {
 // AuthMethod defines model for AuthMethod.
 type AuthMethod string
 
+// AwsCapability defines model for AwsCapability.
+type AwsCapability string
+
 // AwsDeployment defines model for AwsDeployment.
 type AwsDeployment struct {
-	AccountID            *string              `json:"accountId"`
-	AllowedRegions       *[]string            `json:"allowedRegions"`
-	CreatedAt            time.Time            `json:"createdAt"`
-	DeletionProtection   bool                 `json:"deletionProtection"`
-	DeployedVersion      *string              `json:"deployedVersion"`
-	DeploymentMethod     *AwsDeploymentMethod `json:"deploymentMethod"`
-	ErrorCode            *string              `json:"errorCode"`
-	ErrorMessage         *string              `json:"errorMessage"`
-	ExternalID           string               `json:"externalId"`
-	ExternalIDKeyVersion int                  `json:"externalIdKeyVersion"`
-	ExternalIDSource     ExternalIDSource     `json:"externalIdSource"`
-	ID                   string               `json:"id"`
-	Name                 string               `json:"name"`
-	Organization         *AwsOrganization     `json:"organization"`
-	RoleArn              *string              `json:"roleArn"`
-	Status               DeploymentStatus     `json:"status"`
-	Tags                 map[string]string    `json:"tags"`
-	UpdateAvailable      bool                 `json:"updateAvailable"`
+	AccountID            *string                 `json:"accountId"`
+	AllowedRegions       *[]string               `json:"allowedRegions"`
+	ConsoleURL           string                  `json:"consoleUrl"`
+	CreatedAt            time.Time               `json:"createdAt"`
+	CreatedVia           *DeploymentChangeSource `json:"createdVia"`
+	DeletionProtection   bool                    `json:"deletionProtection"`
+	DeployedVersion      *string                 `json:"deployedVersion"`
+	DeploymentMethod     *AwsDeploymentMethod    `json:"deploymentMethod"`
+	DisabledCapabilities []AwsCapability         `json:"disabledCapabilities"`
+	ErrorCode            *string                 `json:"errorCode"`
+	ErrorMessage         *string                 `json:"errorMessage"`
+	ExternalID           string                  `json:"externalId"`
+	ExternalIDKeyVersion int                     `json:"externalIdKeyVersion"`
+	ExternalIDSource     ExternalIDSource        `json:"externalIdSource"`
+	ID                   string                  `json:"id"`
+	Name                 string                  `json:"name"`
+	Organization         *AwsOrganization        `json:"organization"`
+	RoleArn              string                  `json:"roleArn"`
+
+	// Status pending_consent: Azure only, waiting for an Entra admin to approve Act in the directory
+	Status          DeploymentStatus    `json:"status"`
+	Tags            map[string]string   `json:"tags"`
+	UpdateAvailable bool                `json:"updateAvailable"`
+	Warnings        []DeploymentWarning `json:"warnings"`
+}
+
+// AwsDeploymentCreate An AWS account or organization to connect. The deployment id comes from GET /v1/onboarding/aws. Act verifies the role before it stores anything.
+type AwsDeploymentCreate struct {
+	AccountID            *string               `json:"accountId,omitempty"`
+	AllowedRegions       *[]string             `json:"allowedRegions,omitempty"`
+	DeletionProtection   *bool                 `json:"deletionProtection,omitempty"`
+	DeploymentID         string                `json:"deploymentId"`
+	DeploymentMethod     *AwsDeploymentMethod  `json:"deploymentMethod,omitempty"`
+	DisabledCapabilities *[]AwsCapability      `json:"disabledCapabilities,omitempty"`
+	ExternalIDKeyVersion *int                  `json:"externalIdKeyVersion,omitempty"`
+	Name                 *string               `json:"name,omitempty"`
+	Organization         *AwsOrganizationInput `json:"organization,omitempty"`
+	RoleArn              string                `json:"roleArn"`
+	Tags                 *map[string]string    `json:"tags,omitempty"`
 }
 
 // AwsDeploymentMethod defines model for AwsDeploymentMethod.
 type AwsDeploymentMethod string
 
+// AwsDeploymentPatch Merge patch. A member left out keeps its value; null clears it. Role and target changes re-verify.
+type AwsDeploymentPatch struct {
+	AllowedRegions       *[]string             `json:"allowedRegions,omitempty"`
+	DeletionProtection   *bool                 `json:"deletionProtection,omitempty"`
+	DeploymentMethod     *AwsDeploymentMethod  `json:"deploymentMethod,omitempty"`
+	DisabledCapabilities *[]AwsCapability      `json:"disabledCapabilities,omitempty"`
+	Name                 *string               `json:"name,omitempty"`
+	Organization         *AwsOrganizationPatch `json:"organization,omitempty"`
+	RoleArn              *string               `json:"roleArn,omitempty"`
+	Tags                 *map[string]string    `json:"tags,omitempty"`
+}
+
 // AwsOnboarding defines model for AwsOnboarding.
 type AwsOnboarding struct {
-	ActPrincipalArn              string           `json:"actPrincipalArn"`
-	AssumeRolePolicyJSON         string           `json:"assumeRolePolicyJson"`
-	CloudformationTemplateSha256 string           `json:"cloudformationTemplateSha256"`
-	CloudformationTemplateURL    string           `json:"cloudformationTemplateUrl"`
-	DeploymentID                 string           `json:"deploymentId"`
-	DeploymentVersion            string           `json:"deploymentVersion"`
-	DeprecatedPrincipalArns      []string         `json:"deprecatedPrincipalArns"`
-	ExternalID                   string           `json:"externalId"`
-	ExternalIDKeyVersion         int              `json:"externalIdKeyVersion"`
-	ExternalIDSource             ExternalIDSource `json:"externalIdSource"`
-	ManagedPolicyArns            []string         `json:"managedPolicyArns"`
-	ModuleSha256                 string           `json:"moduleSha256"`
-	ModuleSource                 string           `json:"moduleSource"`
-	ModuleVersion                string           `json:"moduleVersion"`
-	ModuleVersions               []ModuleVersion  `json:"moduleVersions"`
-	PermissionsHash              string           `json:"permissionsHash"`
-	RoleName                     string           `json:"roleName"`
-	TargetExternalID             string           `json:"targetExternalId"`
+	ActPrincipalArn              string            `json:"actPrincipalArn"`
+	AssumeRolePolicyJSON         string            `json:"assumeRolePolicyJson"`
+	CloudformationTemplateSha256 string            `json:"cloudformationTemplateSha256"`
+	CloudformationTemplateURL    string            `json:"cloudformationTemplateUrl"`
+	CustomPolicyDocuments        map[string]string `json:"customPolicyDocuments"`
+
+	// DeploymentID Derived by Act from the tenant and the target; stable, unpredictable to others
+	DeploymentID         string                `json:"deploymentId"`
+	DeploymentVersion    string                `json:"deploymentVersion"`
+	DeprecatedPrincipals []DeprecatedPrincipal `json:"deprecatedPrincipals"`
+
+	// ExistingDeployment The live deployment already holding this target, if any; import it instead of creating a new one
+	ExistingDeployment   *ExistingDeployment `json:"existingDeployment"`
+	ExternalID           string              `json:"externalId"`
+	ExternalIDKeyVersion int                 `json:"externalIdKeyVersion"`
+	ExternalIDSource     ExternalIDSource    `json:"externalIdSource"`
+	ManagedPolicyArns    []string            `json:"managedPolicyArns"`
+	MemberRoleName       string              `json:"memberRoleName"`
+	MemberRolePath       string              `json:"memberRolePath"`
+	ModuleSha256         string              `json:"moduleSha256"`
+	ModuleSource         string              `json:"moduleSource"`
+	ModuleVersion        string              `json:"moduleVersion"`
+	ModuleVersions       []ModuleVersion     `json:"moduleVersions"`
+	PermissionsHash      string              `json:"permissionsHash"`
+
+	// RoleArn Known before the role exists in account mode; null for organizations
+	RoleArn          *string `json:"roleArn"`
+	RoleName         string  `json:"roleName"`
+	TargetExternalID string  `json:"targetExternalId"`
 }
 
 // AwsOrganization defines model for AwsOrganization.
 type AwsOrganization struct {
-	ExcludedAccountIds            *[]string `json:"excludedAccountIds"`
-	ExcludedOrganizationalUnitIds *[]string `json:"excludedOrganizationalUnitIds"`
-	MemberRoleName                string    `json:"memberRoleName"`
-	MemberRolePath                string    `json:"memberRolePath"`
-	OrganizationalUnitIds         *[]string `json:"organizationalUnitIds"`
-	RootID                        *string   `json:"rootId"`
+	ExcludedAccountIds    *[]string `json:"excludedAccountIds"`
+	ManagementAccountID   string    `json:"managementAccountId"`
+	MemberRoleName        string    `json:"memberRoleName"`
+	MemberRolePath        string    `json:"memberRolePath"`
+	OrganizationID        string    `json:"organizationId"`
+	OrganizationalUnitIds *[]string `json:"organizationalUnitIds"`
+	RootID                *string   `json:"rootId"`
+}
+
+// AwsOrganizationInput defines model for AwsOrganizationInput.
+type AwsOrganizationInput struct {
+	ExcludedAccountIds    *[]string `json:"excludedAccountIds,omitempty"`
+	MemberRoleName        *string   `json:"memberRoleName,omitempty"`
+	MemberRolePath        *string   `json:"memberRolePath,omitempty"`
+	OrganizationID        string    `json:"organizationId"`
+	OrganizationalUnitIds *[]string `json:"organizationalUnitIds,omitempty"`
+	RootID                *string   `json:"rootId,omitempty"`
+}
+
+// AwsOrganizationPatch defines model for AwsOrganizationPatch.
+type AwsOrganizationPatch struct {
+	ExcludedAccountIds    *[]string `json:"excludedAccountIds,omitempty"`
+	MemberRoleName        *string   `json:"memberRoleName,omitempty"`
+	MemberRolePath        *string   `json:"memberRolePath,omitempty"`
+	OrganizationalUnitIds *[]string `json:"organizationalUnitIds,omitempty"`
+	RootID                *string   `json:"rootId,omitempty"`
 }
 
 // AzureDeployment defines model for AzureDeployment.
 type AzureDeployment struct {
-	AzureTenantID      *string                       `json:"azureTenantId"`
-	ClientID           *string                       `json:"clientId"`
-	CreatedAt          time.Time                     `json:"createdAt"`
-	CredentialType     AzureDeploymentCredentialType `json:"credentialType"`
-	DeletionProtection bool                          `json:"deletionProtection"`
-	DeployedVersion    *string                       `json:"deployedVersion"`
-	DeploymentMethod   *AzureDeploymentMethod        `json:"deploymentMethod"`
-	ErrorCode          *string                       `json:"errorCode"`
-	ErrorMessage       *string                       `json:"errorMessage"`
-	ID                 string                        `json:"id"`
-	ManagementGroupID  *string                       `json:"managementGroupId"`
-	Name               string                        `json:"name"`
-	RotationRequired   bool                          `json:"rotationRequired"`
-	ServicePrincipalID *string                       `json:"servicePrincipalId"`
-	Status             DeploymentStatus              `json:"status"`
-	SubscriptionID     *string                       `json:"subscriptionId"`
-	Tags               map[string]string             `json:"tags"`
-	UpdateAvailable    bool                          `json:"updateAvailable"`
+	AzureTenantID string `json:"azureTenantId"`
+
+	// ConsentURL Set while the deployment is pending_consent
+	ConsentURL         *string                 `json:"consentUrl"`
+	ConsoleURL         string                  `json:"consoleUrl"`
+	CreatedAt          time.Time               `json:"createdAt"`
+	CreatedVia         *DeploymentChangeSource `json:"createdVia"`
+	DeletionProtection bool                    `json:"deletionProtection"`
+	DeployedVersion    *string                 `json:"deployedVersion"`
+	DeploymentMethod   *AzureDeploymentMethod  `json:"deploymentMethod"`
+	ErrorCode          *string                 `json:"errorCode"`
+	ErrorMessage       *string                 `json:"errorMessage"`
+	ID                 string                  `json:"id"`
+	IncludeEntraID     bool                    `json:"includeEntraId"`
+	ManagementGroupID  *string                 `json:"managementGroupId"`
+	Name               string                  `json:"name"`
+	ServicePrincipalID *string                 `json:"servicePrincipalId"`
+
+	// Status pending_consent: Azure only, waiting for an Entra admin to approve Act in the directory
+	Status          DeploymentStatus    `json:"status"`
+	SubscriptionID  *string             `json:"subscriptionId"`
+	Tags            map[string]string   `json:"tags"`
+	UpdateAvailable bool                `json:"updateAvailable"`
+	Warnings        []DeploymentWarning `json:"warnings"`
 }
 
-// AzureDeploymentCredentialType defines model for AzureDeployment.CredentialType.
-type AzureDeploymentCredentialType string
+// AzureDeploymentCreate An Azure subscription or management group to connect through Act's app. Before consent the deployment is created as pending_consent.
+type AzureDeploymentCreate struct {
+	AzureTenantID      string                 `json:"azureTenantId"`
+	DeletionProtection *bool                  `json:"deletionProtection,omitempty"`
+	DeploymentID       string                 `json:"deploymentId"`
+	DeploymentMethod   *AzureDeploymentMethod `json:"deploymentMethod,omitempty"`
+	IncludeEntraID     *bool                  `json:"includeEntraId,omitempty"`
+	ManagementGroupID  *string                `json:"managementGroupId,omitempty"`
+	Name               *string                `json:"name,omitempty"`
+	ServicePrincipalID string                 `json:"servicePrincipalId"`
+	SubscriptionID     *string                `json:"subscriptionId,omitempty"`
+	Tags               *map[string]string     `json:"tags,omitempty"`
+}
 
 // AzureDeploymentMethod defines model for AzureDeploymentMethod.
 type AzureDeploymentMethod string
 
+// AzureDeploymentPatch Merge patch. A member left out keeps its value. Identity changes re-verify.
+type AzureDeploymentPatch struct {
+	DeletionProtection *bool                  `json:"deletionProtection,omitempty"`
+	DeploymentMethod   *AzureDeploymentMethod `json:"deploymentMethod,omitempty"`
+	IncludeEntraID     *bool                  `json:"includeEntraId,omitempty"`
+	Name               *string                `json:"name,omitempty"`
+	ServicePrincipalID *string                `json:"servicePrincipalId,omitempty"`
+	Tags               *map[string]string     `json:"tags,omitempty"`
+}
+
 // AzureOnboarding defines model for AzureOnboarding.
 type AzureOnboarding struct {
-	CustomRoleName        string          `json:"customRoleName"`
-	DeploymentVersion     string          `json:"deploymentVersion"`
-	ModuleSha256          string          `json:"moduleSha256"`
-	ModuleSource          string          `json:"moduleSource"`
-	ModuleVersion         string          `json:"moduleVersion"`
-	ModuleVersions        []ModuleVersion `json:"moduleVersions"`
-	PermissionsHash       string          `json:"permissionsHash"`
-	RequiredBuiltinRoles  []string        `json:"requiredBuiltinRoles"`
-	RequiredGraphAppRoles []string        `json:"requiredGraphAppRoles"`
+	ActAppClientID string `json:"actAppClientId"`
+
+	// ActServicePrincipalID Act's service principal in the directory, once consented
+	ActServicePrincipalID *string `json:"actServicePrincipalId"`
+
+	// AdminConsentURL Stable link for an Entra admin; opening it starts consent, reading it does not
+	AdminConsentURL string `json:"adminConsentUrl"`
+	AzureTenantID   string `json:"azureTenantId"`
+
+	// BindingMarker Put this text in the custom role description; verification checks it
+	BindingMarker     string   `json:"bindingMarker"`
+	CustomRoleActions []string `json:"customRoleActions"`
+	CustomRoleName    string   `json:"customRoleName"`
+
+	// DeploymentID Derived by Act from the tenant and the target; stable, unpredictable to others
+	DeploymentID      string `json:"deploymentId"`
+	DeploymentVersion string `json:"deploymentVersion"`
+
+	// ExistingDeployment The live deployment already holding this target, if any; import it instead of creating a new one
+	ExistingDeployment      *ExistingDeployment `json:"existingDeployment"`
+	ModuleSha256            string              `json:"moduleSha256"`
+	ModuleSource            string              `json:"moduleSource"`
+	ModuleVersion           string              `json:"moduleVersion"`
+	ModuleVersions          []ModuleVersion     `json:"moduleVersions"`
+	PermissionsHash         string              `json:"permissionsHash"`
+	RequiredBuiltinRoleIds  []string            `json:"requiredBuiltinRoleIds"`
+	RequiredGraphAppRoleIds []string            `json:"requiredGraphAppRoleIds"`
+
+	// TenantConsented Whether an Entra admin has approved Act for this tenant in this directory
+	TenantConsented bool `json:"tenantConsented"`
+}
+
+// CleanupItem defines model for CleanupItem.
+type CleanupItem struct {
+	Description string `json:"description"`
+	Resource    string `json:"resource"`
 }
 
 // Cloud defines model for Cloud.
 type Cloud string
+
+// DeploymentChangeSource defines model for DeploymentChangeSource.
+type DeploymentChangeSource string
+
+// DeploymentCoverage defines model for DeploymentCoverage.
+type DeploymentCoverage struct {
+	AccountsConnected int                   `json:"accountsConnected"`
+	AccountsExpected  int                   `json:"accountsExpected"`
+	AccountsFailed    int                   `json:"accountsFailed"`
+	AccountsPending   int                   `json:"accountsPending"`
+	DeploymentID      string                `json:"deploymentId"`
+	DiscoveryState    DiscoveryState        `json:"discoveryState"`
+	FailedAccounts    []FailedMemberAccount `json:"failedAccounts"`
+	LastDiscoveryAt   *time.Time            `json:"lastDiscoveryAt"`
+}
+
+// DeploymentDeletion defines model for DeploymentDeletion.
+type DeploymentDeletion struct {
+	// CleanupRequired Cloud-side resources that still trust Act; remove them
+	CleanupRequired []CleanupItem `json:"cleanupRequired"`
+	ID              string        `json:"id"`
+}
 
 // DeploymentPage defines model for DeploymentPage.
 type DeploymentPage struct {
@@ -521,22 +727,39 @@ type DeploymentPage struct {
 // DeploymentScope defines model for DeploymentScope.
 type DeploymentScope string
 
-// DeploymentStatus defines model for DeploymentStatus.
+// DeploymentStatus pending_consent: Azure only, waiting for an Entra admin to approve Act in the directory
 type DeploymentStatus string
 
 // DeploymentSummary defines model for DeploymentSummary.
 type DeploymentSummary struct {
-	Cloud              Cloud             `json:"cloud"`
-	CreatedAt          time.Time         `json:"createdAt"`
-	DeletionProtection bool              `json:"deletionProtection"`
-	ID                 string            `json:"id"`
-	Name               string            `json:"name"`
-	Scope              DeploymentScope   `json:"scope"`
-	Status             DeploymentStatus  `json:"status"`
-	Tags               map[string]string `json:"tags"`
-	Targets            []string          `json:"targets"`
-	UpdateAvailable    bool              `json:"updateAvailable"`
+	Cloud              Cloud           `json:"cloud"`
+	CreatedAt          time.Time       `json:"createdAt"`
+	DeletionProtection bool            `json:"deletionProtection"`
+	ID                 string          `json:"id"`
+	Name               string          `json:"name"`
+	Scope              DeploymentScope `json:"scope"`
+
+	// Status pending_consent: Azure only, waiting for an Entra admin to approve Act in the directory
+	Status          DeploymentStatus  `json:"status"`
+	Tags            map[string]string `json:"tags"`
+	Targets         []string          `json:"targets"`
+	UpdateAvailable bool              `json:"updateAvailable"`
 }
+
+// DeploymentWarning defines model for DeploymentWarning.
+type DeploymentWarning struct {
+	Code    string `json:"code"`
+	Message string `json:"message"`
+}
+
+// DeprecatedPrincipal defines model for DeprecatedPrincipal.
+type DeprecatedPrincipal struct {
+	Arn       string    `json:"arn"`
+	ExpiresAt time.Time `json:"expiresAt"`
+}
+
+// DiscoveryState defines model for DiscoveryState.
+type DiscoveryState string
 
 // ErrorEnvelope defines model for ErrorEnvelope.
 type ErrorEnvelope struct {
@@ -552,8 +775,25 @@ type ErrorEnvelope struct {
 // ErrorEnvelopeErrorCode defines model for ErrorEnvelope.Error.Code.
 type ErrorEnvelopeErrorCode string
 
+// ExistingDeployment defines model for ExistingDeployment.
+type ExistingDeployment struct {
+	CreatedVia *DeploymentChangeSource `json:"createdVia"`
+	ID         string                  `json:"id"`
+
+	// Status pending_consent: Azure only, waiting for an Entra admin to approve Act in the directory
+	Status DeploymentStatus `json:"status"`
+}
+
 // ExternalIDSource defines model for ExternalIdSource.
 type ExternalIDSource string
+
+// FailedMemberAccount defines model for FailedMemberAccount.
+type FailedMemberAccount struct {
+	AccountID    string    `json:"accountId"`
+	Cause        *string   `json:"cause"`
+	ErrorCode    string    `json:"errorCode"`
+	FailingSince time.Time `json:"failingSince"`
+}
 
 // Federation defines model for Federation.
 type Federation struct {
@@ -563,40 +803,82 @@ type Federation struct {
 
 // GcpDeployment defines model for GcpDeployment.
 type GcpDeployment struct {
-	ActPrincipal            string              `json:"actPrincipal"`
-	CreatedAt               time.Time           `json:"createdAt"`
-	DeletionProtection      bool                `json:"deletionProtection"`
-	DeployedVersion         *string             `json:"deployedVersion"`
-	DeploymentMethod        GcpDeploymentMethod `json:"deploymentMethod"`
-	ErrorCode               *string             `json:"errorCode"`
-	ErrorMessage            *string             `json:"errorMessage"`
-	ID                      string              `json:"id"`
-	Name                    string              `json:"name"`
-	OrganizationID          *string             `json:"organizationId"`
-	ProjectID               *string             `json:"projectId"`
-	ServiceAccountEmail     *string             `json:"serviceAccountEmail"`
-	ServiceAccountID        string              `json:"serviceAccountId"`
-	ServiceAccountProjectID *string             `json:"serviceAccountProjectId"`
-	Status                  DeploymentStatus    `json:"status"`
-	Tags                    map[string]string   `json:"tags"`
-	UpdateAvailable         bool                `json:"updateAvailable"`
-	WorkloadIdentityPool    string              `json:"workloadIdentityPool"`
+	ConsoleURL                  string                  `json:"consoleUrl"`
+	CreatedAt                   time.Time               `json:"createdAt"`
+	CreatedVia                  *DeploymentChangeSource `json:"createdVia"`
+	DeletionProtection          bool                    `json:"deletionProtection"`
+	DeployedVersion             *string                 `json:"deployedVersion"`
+	DeploymentMethod            GcpDeploymentMethod     `json:"deploymentMethod"`
+	ErrorCode                   *string                 `json:"errorCode"`
+	ErrorMessage                *string                 `json:"errorMessage"`
+	ID                          string                  `json:"id"`
+	Name                        string                  `json:"name"`
+	OrganizationID              *string                 `json:"organizationId"`
+	ProjectID                   *string                 `json:"projectId"`
+	ServiceAccountEmail         string                  `json:"serviceAccountEmail"`
+	ServiceAccountProjectID     string                  `json:"serviceAccountProjectId"`
+	ServiceAccountProjectNumber string                  `json:"serviceAccountProjectNumber"`
+
+	// Status pending_consent: Azure only, waiting for an Entra admin to approve Act in the directory
+	Status                   DeploymentStatus    `json:"status"`
+	Tags                     map[string]string   `json:"tags"`
+	UpdateAvailable          bool                `json:"updateAvailable"`
+	Warnings                 []DeploymentWarning `json:"warnings"`
+	WorkloadIdentityProvider string              `json:"workloadIdentityProvider"`
+}
+
+// GcpDeploymentCreate A GCP project or organization to connect. Act derives the service account and workload identity provider from the deployment id; it never takes them from the request.
+type GcpDeploymentCreate struct {
+	DeletionProtection          *bool                `json:"deletionProtection,omitempty"`
+	DeploymentID                string               `json:"deploymentId"`
+	DeploymentMethod            *GcpDeploymentMethod `json:"deploymentMethod,omitempty"`
+	Name                        *string              `json:"name,omitempty"`
+	OrganizationID              *string              `json:"organizationId,omitempty"`
+	ProjectID                   *string              `json:"projectId,omitempty"`
+	ServiceAccountProjectID     *string              `json:"serviceAccountProjectId,omitempty"`
+	ServiceAccountProjectNumber string               `json:"serviceAccountProjectNumber"`
+	Tags                        *map[string]string   `json:"tags,omitempty"`
 }
 
 // GcpDeploymentMethod defines model for GcpDeploymentMethod.
 type GcpDeploymentMethod string
 
+// GcpDeploymentPatch Merge patch. A member left out keeps its value.
+type GcpDeploymentPatch struct {
+	DeletionProtection *bool                `json:"deletionProtection,omitempty"`
+	DeploymentMethod   *GcpDeploymentMethod `json:"deploymentMethod,omitempty"`
+	Name               *string              `json:"name,omitempty"`
+	Tags               *map[string]string   `json:"tags,omitempty"`
+}
+
 // GcpOnboarding defines model for GcpOnboarding.
 type GcpOnboarding struct {
-	ActAwsRoleName        string          `json:"actAwsRoleName"`
-	DeploymentVersion     string          `json:"deploymentVersion"`
-	ModuleSha256          string          `json:"moduleSha256"`
-	ModuleSource          string          `json:"moduleSource"`
-	ModuleVersion         string          `json:"moduleVersion"`
-	ModuleVersions        []ModuleVersion `json:"moduleVersions"`
-	PermissionsHash       string          `json:"permissionsHash"`
-	PoolHostProjectID     string          `json:"poolHostProjectId"`
-	PoolHostProjectNumber string          `json:"poolHostProjectNumber"`
+	// ActAwsAccountID AWS account of the Act federation role the customer pool trusts
+	ActAwsAccountID string `json:"actAwsAccountId"`
+
+	// AttributeCondition Ready-made CEL condition for the workload identity pool provider
+	AttributeCondition    string   `json:"attributeCondition"`
+	CustomRolePermissions []string `json:"customRolePermissions"`
+
+	// DeploymentID Derived by Act from the tenant and the target; stable, unpredictable to others
+	DeploymentID      string `json:"deploymentId"`
+	DeploymentVersion string `json:"deploymentVersion"`
+
+	// ExistingDeployment The live deployment already holding this target, if any; import it instead of creating a new one
+	ExistingDeployment *ExistingDeployment `json:"existingDeployment"`
+	FederationRoleName string              `json:"federationRoleName"`
+	ModuleSha256       string              `json:"moduleSha256"`
+	ModuleSource       string              `json:"moduleSource"`
+	ModuleVersion      string              `json:"moduleVersion"`
+	ModuleVersions     []ModuleVersion     `json:"moduleVersions"`
+	PermissionsHash    string              `json:"permissionsHash"`
+	PredefinedRoles    []string            `json:"predefinedRoles"`
+	ServiceAccountID   string              `json:"serviceAccountId"`
+
+	// SessionBinding Role session name Act uses for this deployment; the pool admits only it
+	SessionBinding             string `json:"sessionBinding"`
+	WorkloadIdentityPoolID     string `json:"workloadIdentityPoolId"`
+	WorkloadIdentityProviderID string `json:"workloadIdentityProviderId"`
 }
 
 // InstallableIntegrationType defines model for InstallableIntegrationType.
@@ -697,6 +979,23 @@ type IntegrationTypeList struct {
 	Items []IntegrationTypeInfo `json:"items"`
 }
 
+// MemberAccount defines model for MemberAccount.
+type MemberAccount struct {
+	AccountID string              `json:"accountId"`
+	ErrorCode *string             `json:"errorCode"`
+	Name      *string             `json:"name"`
+	Status    MemberAccountStatus `json:"status"`
+}
+
+// MemberAccountPage defines model for MemberAccountPage.
+type MemberAccountPage struct {
+	Items         []MemberAccount `json:"items"`
+	NextPageToken *string         `json:"nextPageToken"`
+}
+
+// MemberAccountStatus defines model for MemberAccountStatus.
+type MemberAccountStatus string
+
 // ModuleVersion defines model for ModuleVersion.
 type ModuleVersion struct {
 	DeploymentVersion string `json:"deploymentVersion"`
@@ -740,9 +1039,82 @@ type Whoami struct {
 type ListDeploymentsParams struct {
 	Cloud     *Cloud             `form:"cloud,omitempty" json:"cloud,omitempty"`
 	Status    *DeploymentStatus  `form:"status,omitempty" json:"status,omitempty"`
+	Target    *string            `form:"target,omitempty" json:"target,omitempty"`
 	Tag       *map[string]string `json:"tag,omitempty"`
 	PageSize  *int               `form:"pageSize,omitempty" json:"pageSize,omitempty"`
 	PageToken *string            `form:"pageToken,omitempty" json:"pageToken,omitempty"`
+}
+
+// CreateAwsDeploymentParams defines parameters for CreateAwsDeployment.
+type CreateAwsDeploymentParams struct {
+	IdempotencyKey string `json:"idempotency-key"`
+}
+
+// DeleteAwsDeploymentParams defines parameters for DeleteAwsDeployment.
+type DeleteAwsDeploymentParams struct {
+	IfMatch *string `json:"if-match,omitempty"`
+}
+
+// UpdateAwsDeploymentParams defines parameters for UpdateAwsDeployment.
+type UpdateAwsDeploymentParams struct {
+	IfMatch string `json:"if-match"`
+}
+
+// RotateAwsExternalIDParams defines parameters for RotateAwsExternalID.
+type RotateAwsExternalIDParams struct {
+	IfMatch string `json:"if-match"`
+}
+
+// VerifyAwsDeploymentParams defines parameters for VerifyAwsDeployment.
+type VerifyAwsDeploymentParams struct {
+	IfMatch string `json:"if-match"`
+}
+
+// CreateAzureDeploymentParams defines parameters for CreateAzureDeployment.
+type CreateAzureDeploymentParams struct {
+	IdempotencyKey string `json:"idempotency-key"`
+}
+
+// DeleteAzureDeploymentParams defines parameters for DeleteAzureDeployment.
+type DeleteAzureDeploymentParams struct {
+	IfMatch *string `json:"if-match,omitempty"`
+}
+
+// UpdateAzureDeploymentParams defines parameters for UpdateAzureDeployment.
+type UpdateAzureDeploymentParams struct {
+	IfMatch string `json:"if-match"`
+}
+
+// VerifyAzureDeploymentParams defines parameters for VerifyAzureDeployment.
+type VerifyAzureDeploymentParams struct {
+	IfMatch string `json:"if-match"`
+}
+
+// CreateGcpDeploymentParams defines parameters for CreateGcpDeployment.
+type CreateGcpDeploymentParams struct {
+	IdempotencyKey string `json:"idempotency-key"`
+}
+
+// DeleteGcpDeploymentParams defines parameters for DeleteGcpDeployment.
+type DeleteGcpDeploymentParams struct {
+	IfMatch *string `json:"if-match,omitempty"`
+}
+
+// UpdateGcpDeploymentParams defines parameters for UpdateGcpDeployment.
+type UpdateGcpDeploymentParams struct {
+	IfMatch string `json:"if-match"`
+}
+
+// VerifyGcpDeploymentParams defines parameters for VerifyGcpDeployment.
+type VerifyGcpDeploymentParams struct {
+	IfMatch string `json:"if-match"`
+}
+
+// ListDeploymentAccountsParams defines parameters for ListDeploymentAccounts.
+type ListDeploymentAccountsParams struct {
+	Status    *MemberAccountStatus `form:"status,omitempty" json:"status,omitempty"`
+	PageSize  *int                 `form:"pageSize,omitempty" json:"pageSize,omitempty"`
+	PageToken *string              `form:"pageToken,omitempty" json:"pageToken,omitempty"`
 }
 
 // ListIntegrationsParams defines parameters for ListIntegrations.
@@ -770,8 +1142,44 @@ type UpdateIntegrationParams struct {
 
 // GetAwsOnboardingParams defines parameters for GetAwsOnboarding.
 type GetAwsOnboardingParams struct {
-	DeploymentID string `form:"deploymentId" json:"deploymentId"`
+	AccountID      *string `form:"accountId,omitempty" json:"accountId,omitempty"`
+	OrganizationID *string `form:"organizationId,omitempty" json:"organizationId,omitempty"`
+	Variant        *string `form:"variant,omitempty" json:"variant,omitempty"`
 }
+
+// GetAzureOnboardingParams defines parameters for GetAzureOnboarding.
+type GetAzureOnboardingParams struct {
+	DirectoryID       string  `form:"directoryId" json:"directoryId"`
+	SubscriptionID    *string `form:"subscriptionId,omitempty" json:"subscriptionId,omitempty"`
+	ManagementGroupID *string `form:"managementGroupId,omitempty" json:"managementGroupId,omitempty"`
+	Variant           *string `form:"variant,omitempty" json:"variant,omitempty"`
+}
+
+// GetGcpOnboardingParams defines parameters for GetGcpOnboarding.
+type GetGcpOnboardingParams struct {
+	ProjectID               *string `form:"projectId,omitempty" json:"projectId,omitempty"`
+	OrganizationID          *string `form:"organizationId,omitempty" json:"organizationId,omitempty"`
+	ServiceAccountProjectID *string `form:"serviceAccountProjectId,omitempty" json:"serviceAccountProjectId,omitempty"`
+	Variant                 *string `form:"variant,omitempty" json:"variant,omitempty"`
+}
+
+// CreateAwsDeploymentJSONRequestBody defines body for CreateAwsDeployment for application/json ContentType.
+type CreateAwsDeploymentJSONRequestBody = AwsDeploymentCreate
+
+// UpdateAwsDeploymentJSONRequestBody defines body for UpdateAwsDeployment for application/json ContentType.
+type UpdateAwsDeploymentJSONRequestBody = AwsDeploymentPatch
+
+// CreateAzureDeploymentJSONRequestBody defines body for CreateAzureDeployment for application/json ContentType.
+type CreateAzureDeploymentJSONRequestBody = AzureDeploymentCreate
+
+// UpdateAzureDeploymentJSONRequestBody defines body for UpdateAzureDeployment for application/json ContentType.
+type UpdateAzureDeploymentJSONRequestBody = AzureDeploymentPatch
+
+// CreateGcpDeploymentJSONRequestBody defines body for CreateGcpDeployment for application/json ContentType.
+type CreateGcpDeploymentJSONRequestBody = GcpDeploymentCreate
+
+// UpdateGcpDeploymentJSONRequestBody defines body for UpdateGcpDeployment for application/json ContentType.
+type UpdateGcpDeploymentJSONRequestBody = GcpDeploymentPatch
 
 // CreateIntegrationJSONRequestBody defines body for CreateIntegration for application/json ContentType.
 type CreateIntegrationJSONRequestBody = IntegrationCreate
@@ -858,20 +1266,149 @@ type ClientInterface interface {
 	// Corresponds with GET /v1/deployments (the `ListDeployments` operationId).
 	ListDeployments(ctx context.Context, params *ListDeploymentsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	// GetAwsDeployment Return one AWS deployment
+	// CreateAwsDeploymentWithBody Connect an AWS account or organization to Act. Act verifies access before it stores anything
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with POST /v1/deployments/aws (the `CreateAwsDeployment` operationId).
+	CreateAwsDeploymentWithBody(ctx context.Context, params *CreateAwsDeploymentParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// CreateAwsDeployment Connect an AWS account or organization to Act. Act verifies access before it stores anything
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with POST /v1/deployments/aws (the `CreateAwsDeployment` operationId).
+	CreateAwsDeployment(ctx context.Context, params *CreateAwsDeploymentParams, body CreateAwsDeploymentJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// DeleteAwsDeployment Disconnect a an AWS account or organization deployment: stop scans, purge the credentials Act holds, and list what still trusts Act
+	//
+	// Corresponds with DELETE /v1/deployments/aws/{id} (the `DeleteAwsDeployment` operationId).
+	DeleteAwsDeployment(ctx context.Context, id string, params *DeleteAwsDeploymentParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetAwsDeployment Return one an AWS account or organization deployment
 	//
 	// Corresponds with GET /v1/deployments/aws/{id} (the `GetAwsDeployment` operationId).
 	GetAwsDeployment(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	// GetAzureDeployment Return one Azure deployment
+	// UpdateAwsDeploymentWithBody Change a an AWS account or organization deployment in place, keeping its id
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with PATCH /v1/deployments/aws/{id} (the `UpdateAwsDeployment` operationId).
+	UpdateAwsDeploymentWithBody(ctx context.Context, id string, params *UpdateAwsDeploymentParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// UpdateAwsDeployment Change a an AWS account or organization deployment in place, keeping its id
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with PATCH /v1/deployments/aws/{id} (the `UpdateAwsDeployment` operationId).
+	UpdateAwsDeployment(ctx context.Context, id string, params *UpdateAwsDeploymentParams, body UpdateAwsDeploymentJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// RotateAwsExternalID Move a legacy AWS deployment to its derived external ID, after verifying the role trusts it
+	//
+	// Corresponds with POST /v1/deployments/aws/{id}/rotate-external-id (the `RotateAwsExternalID` operationId).
+	RotateAwsExternalID(ctx context.Context, id string, params *RotateAwsExternalIDParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// VerifyAwsDeployment Check that Act can use a an AWS account or organization deployment again, after its cloud side was fixed
+	//
+	// Corresponds with POST /v1/deployments/aws/{id}/verify (the `VerifyAwsDeployment` operationId).
+	VerifyAwsDeployment(ctx context.Context, id string, params *VerifyAwsDeploymentParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// CreateAzureDeploymentWithBody Connect an Azure subscription or management group to Act. Act verifies access before it stores anything
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with POST /v1/deployments/azure (the `CreateAzureDeployment` operationId).
+	CreateAzureDeploymentWithBody(ctx context.Context, params *CreateAzureDeploymentParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// CreateAzureDeployment Connect an Azure subscription or management group to Act. Act verifies access before it stores anything
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with POST /v1/deployments/azure (the `CreateAzureDeployment` operationId).
+	CreateAzureDeployment(ctx context.Context, params *CreateAzureDeploymentParams, body CreateAzureDeploymentJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// DeleteAzureDeployment Disconnect a an Azure subscription or management group deployment: stop scans, purge the credentials Act holds, and list what still trusts Act
+	//
+	// Corresponds with DELETE /v1/deployments/azure/{id} (the `DeleteAzureDeployment` operationId).
+	DeleteAzureDeployment(ctx context.Context, id string, params *DeleteAzureDeploymentParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetAzureDeployment Return one an Azure subscription or management group deployment
 	//
 	// Corresponds with GET /v1/deployments/azure/{id} (the `GetAzureDeployment` operationId).
 	GetAzureDeployment(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	// GetGcpDeployment Return one GCP deployment
+	// UpdateAzureDeploymentWithBody Change a an Azure subscription or management group deployment in place, keeping its id
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with PATCH /v1/deployments/azure/{id} (the `UpdateAzureDeployment` operationId).
+	UpdateAzureDeploymentWithBody(ctx context.Context, id string, params *UpdateAzureDeploymentParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// UpdateAzureDeployment Change a an Azure subscription or management group deployment in place, keeping its id
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with PATCH /v1/deployments/azure/{id} (the `UpdateAzureDeployment` operationId).
+	UpdateAzureDeployment(ctx context.Context, id string, params *UpdateAzureDeploymentParams, body UpdateAzureDeploymentJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// VerifyAzureDeployment Check that Act can use a an Azure subscription or management group deployment again, after its cloud side was fixed
+	//
+	// Corresponds with POST /v1/deployments/azure/{id}/verify (the `VerifyAzureDeployment` operationId).
+	VerifyAzureDeployment(ctx context.Context, id string, params *VerifyAzureDeploymentParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// CreateGcpDeploymentWithBody Connect a GCP project or organization to Act. Act verifies access before it stores anything
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with POST /v1/deployments/gcp (the `CreateGcpDeployment` operationId).
+	CreateGcpDeploymentWithBody(ctx context.Context, params *CreateGcpDeploymentParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// CreateGcpDeployment Connect a GCP project or organization to Act. Act verifies access before it stores anything
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with POST /v1/deployments/gcp (the `CreateGcpDeployment` operationId).
+	CreateGcpDeployment(ctx context.Context, params *CreateGcpDeploymentParams, body CreateGcpDeploymentJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// DeleteGcpDeployment Disconnect a a GCP project or organization deployment: stop scans, purge the credentials Act holds, and list what still trusts Act
+	//
+	// Corresponds with DELETE /v1/deployments/gcp/{id} (the `DeleteGcpDeployment` operationId).
+	DeleteGcpDeployment(ctx context.Context, id string, params *DeleteGcpDeploymentParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetGcpDeployment Return one a GCP project or organization deployment
 	//
 	// Corresponds with GET /v1/deployments/gcp/{id} (the `GetGcpDeployment` operationId).
 	GetGcpDeployment(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// UpdateGcpDeploymentWithBody Change a a GCP project or organization deployment in place, keeping its id
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with PATCH /v1/deployments/gcp/{id} (the `UpdateGcpDeployment` operationId).
+	UpdateGcpDeploymentWithBody(ctx context.Context, id string, params *UpdateGcpDeploymentParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// UpdateGcpDeployment Change a a GCP project or organization deployment in place, keeping its id
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with PATCH /v1/deployments/gcp/{id} (the `UpdateGcpDeployment` operationId).
+	UpdateGcpDeployment(ctx context.Context, id string, params *UpdateGcpDeploymentParams, body UpdateGcpDeploymentJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// VerifyGcpDeployment Check that Act can use a a GCP project or organization deployment again, after its cloud side was fixed
+	//
+	// Corresponds with POST /v1/deployments/gcp/{id}/verify (the `VerifyGcpDeployment` operationId).
+	VerifyGcpDeployment(ctx context.Context, id string, params *VerifyGcpDeploymentParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ListDeploymentAccounts List the member accounts, subscriptions or projects of one deployment, one page at a time
+	//
+	// Corresponds with GET /v1/deployments/{id}/accounts (the `ListDeploymentAccounts` operationId).
+	ListDeploymentAccounts(ctx context.Context, id string, params *ListDeploymentAccountsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetDeploymentCoverage Return how many member accounts, subscriptions or projects Act reaches through one deployment
+	//
+	// Corresponds with GET /v1/deployments/{id}/coverage (the `GetDeploymentCoverage` operationId).
+	GetDeploymentCoverage(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ListIntegrationTypes List the integration types this tenant may install, their fields and which of them are secret
 	//
@@ -921,20 +1458,20 @@ type ClientInterface interface {
 	// Corresponds with PATCH /v1/integrations/{id} (the `UpdateIntegration` operationId).
 	UpdateIntegration(ctx context.Context, id string, params *UpdateIntegrationParams, body UpdateIntegrationJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	// GetAwsOnboarding Return the values an AWS deployment needs before it is created
+	// GetAwsOnboarding Return what an AWS account or organization needs before it is connected, derived from the target
 	//
 	// Corresponds with GET /v1/onboarding/aws (the `GetAwsOnboarding` operationId).
 	GetAwsOnboarding(ctx context.Context, params *GetAwsOnboardingParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	// GetAzureOnboarding Return the values an Azure deployment needs before it is created
+	// GetAzureOnboarding Return what an Azure subscription or management group needs before it is connected
 	//
 	// Corresponds with GET /v1/onboarding/azure (the `GetAzureOnboarding` operationId).
-	GetAzureOnboarding(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
+	GetAzureOnboarding(ctx context.Context, params *GetAzureOnboardingParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	// GetGcpOnboarding Return the values a GCP deployment needs before it is reserved
+	// GetGcpOnboarding Return what a GCP project or organization needs before it is connected
 	//
 	// Corresponds with GET /v1/onboarding/gcp (the `GetGcpOnboarding` operationId).
-	GetGcpOnboarding(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
+	GetGcpOnboarding(ctx context.Context, params *GetGcpOnboardingParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetWhoami Return the tenant, region and principal of the calling token
 	//
@@ -957,7 +1494,56 @@ func (c *Client) ListDeployments(ctx context.Context, params *ListDeploymentsPar
 	return c.Client.Do(req)
 }
 
-// GetAwsDeployment Return one AWS deployment
+// CreateAwsDeploymentWithBody Connect an AWS account or organization to Act. Act verifies access before it stores anything
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with POST /v1/deployments/aws (the `CreateAwsDeployment` operationId).
+func (c *Client) CreateAwsDeploymentWithBody(ctx context.Context, params *CreateAwsDeploymentParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateAwsDeploymentRequestWithBody(c.Server, params, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// CreateAwsDeployment Connect an AWS account or organization to Act. Act verifies access before it stores anything
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with POST /v1/deployments/aws (the `CreateAwsDeployment` operationId).
+func (c *Client) CreateAwsDeployment(ctx context.Context, params *CreateAwsDeploymentParams, body CreateAwsDeploymentJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateAwsDeploymentRequest(c.Server, params, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// DeleteAwsDeployment Disconnect a an AWS account or organization deployment: stop scans, purge the credentials Act holds, and list what still trusts Act
+//
+// Corresponds with DELETE /v1/deployments/aws/{id} (the `DeleteAwsDeployment` operationId).
+func (c *Client) DeleteAwsDeployment(ctx context.Context, id string, params *DeleteAwsDeploymentParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewDeleteAwsDeploymentRequest(c.Server, id, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// GetAwsDeployment Return one an AWS account or organization deployment
 //
 // Corresponds with GET /v1/deployments/aws/{id} (the `GetAwsDeployment` operationId).
 func (c *Client) GetAwsDeployment(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*http.Response, error) {
@@ -972,7 +1558,120 @@ func (c *Client) GetAwsDeployment(ctx context.Context, id string, reqEditors ...
 	return c.Client.Do(req)
 }
 
-// GetAzureDeployment Return one Azure deployment
+// UpdateAwsDeploymentWithBody Change a an AWS account or organization deployment in place, keeping its id
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with PATCH /v1/deployments/aws/{id} (the `UpdateAwsDeployment` operationId).
+func (c *Client) UpdateAwsDeploymentWithBody(ctx context.Context, id string, params *UpdateAwsDeploymentParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUpdateAwsDeploymentRequestWithBody(c.Server, id, params, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// UpdateAwsDeployment Change a an AWS account or organization deployment in place, keeping its id
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with PATCH /v1/deployments/aws/{id} (the `UpdateAwsDeployment` operationId).
+func (c *Client) UpdateAwsDeployment(ctx context.Context, id string, params *UpdateAwsDeploymentParams, body UpdateAwsDeploymentJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUpdateAwsDeploymentRequest(c.Server, id, params, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// RotateAwsExternalID Move a legacy AWS deployment to its derived external ID, after verifying the role trusts it
+//
+// Corresponds with POST /v1/deployments/aws/{id}/rotate-external-id (the `RotateAwsExternalID` operationId).
+func (c *Client) RotateAwsExternalID(ctx context.Context, id string, params *RotateAwsExternalIDParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewRotateAwsExternalIDRequest(c.Server, id, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// VerifyAwsDeployment Check that Act can use a an AWS account or organization deployment again, after its cloud side was fixed
+//
+// Corresponds with POST /v1/deployments/aws/{id}/verify (the `VerifyAwsDeployment` operationId).
+func (c *Client) VerifyAwsDeployment(ctx context.Context, id string, params *VerifyAwsDeploymentParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewVerifyAwsDeploymentRequest(c.Server, id, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// CreateAzureDeploymentWithBody Connect an Azure subscription or management group to Act. Act verifies access before it stores anything
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with POST /v1/deployments/azure (the `CreateAzureDeployment` operationId).
+func (c *Client) CreateAzureDeploymentWithBody(ctx context.Context, params *CreateAzureDeploymentParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateAzureDeploymentRequestWithBody(c.Server, params, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// CreateAzureDeployment Connect an Azure subscription or management group to Act. Act verifies access before it stores anything
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with POST /v1/deployments/azure (the `CreateAzureDeployment` operationId).
+func (c *Client) CreateAzureDeployment(ctx context.Context, params *CreateAzureDeploymentParams, body CreateAzureDeploymentJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateAzureDeploymentRequest(c.Server, params, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// DeleteAzureDeployment Disconnect a an Azure subscription or management group deployment: stop scans, purge the credentials Act holds, and list what still trusts Act
+//
+// Corresponds with DELETE /v1/deployments/azure/{id} (the `DeleteAzureDeployment` operationId).
+func (c *Client) DeleteAzureDeployment(ctx context.Context, id string, params *DeleteAzureDeploymentParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewDeleteAzureDeploymentRequest(c.Server, id, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// GetAzureDeployment Return one an Azure subscription or management group deployment
 //
 // Corresponds with GET /v1/deployments/azure/{id} (the `GetAzureDeployment` operationId).
 func (c *Client) GetAzureDeployment(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*http.Response, error) {
@@ -987,11 +1686,188 @@ func (c *Client) GetAzureDeployment(ctx context.Context, id string, reqEditors .
 	return c.Client.Do(req)
 }
 
-// GetGcpDeployment Return one GCP deployment
+// UpdateAzureDeploymentWithBody Change a an Azure subscription or management group deployment in place, keeping its id
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with PATCH /v1/deployments/azure/{id} (the `UpdateAzureDeployment` operationId).
+func (c *Client) UpdateAzureDeploymentWithBody(ctx context.Context, id string, params *UpdateAzureDeploymentParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUpdateAzureDeploymentRequestWithBody(c.Server, id, params, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// UpdateAzureDeployment Change a an Azure subscription or management group deployment in place, keeping its id
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with PATCH /v1/deployments/azure/{id} (the `UpdateAzureDeployment` operationId).
+func (c *Client) UpdateAzureDeployment(ctx context.Context, id string, params *UpdateAzureDeploymentParams, body UpdateAzureDeploymentJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUpdateAzureDeploymentRequest(c.Server, id, params, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// VerifyAzureDeployment Check that Act can use a an Azure subscription or management group deployment again, after its cloud side was fixed
+//
+// Corresponds with POST /v1/deployments/azure/{id}/verify (the `VerifyAzureDeployment` operationId).
+func (c *Client) VerifyAzureDeployment(ctx context.Context, id string, params *VerifyAzureDeploymentParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewVerifyAzureDeploymentRequest(c.Server, id, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// CreateGcpDeploymentWithBody Connect a GCP project or organization to Act. Act verifies access before it stores anything
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with POST /v1/deployments/gcp (the `CreateGcpDeployment` operationId).
+func (c *Client) CreateGcpDeploymentWithBody(ctx context.Context, params *CreateGcpDeploymentParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateGcpDeploymentRequestWithBody(c.Server, params, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// CreateGcpDeployment Connect a GCP project or organization to Act. Act verifies access before it stores anything
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with POST /v1/deployments/gcp (the `CreateGcpDeployment` operationId).
+func (c *Client) CreateGcpDeployment(ctx context.Context, params *CreateGcpDeploymentParams, body CreateGcpDeploymentJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateGcpDeploymentRequest(c.Server, params, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// DeleteGcpDeployment Disconnect a a GCP project or organization deployment: stop scans, purge the credentials Act holds, and list what still trusts Act
+//
+// Corresponds with DELETE /v1/deployments/gcp/{id} (the `DeleteGcpDeployment` operationId).
+func (c *Client) DeleteGcpDeployment(ctx context.Context, id string, params *DeleteGcpDeploymentParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewDeleteGcpDeploymentRequest(c.Server, id, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// GetGcpDeployment Return one a GCP project or organization deployment
 //
 // Corresponds with GET /v1/deployments/gcp/{id} (the `GetGcpDeployment` operationId).
 func (c *Client) GetGcpDeployment(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetGcpDeploymentRequest(c.Server, id)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// UpdateGcpDeploymentWithBody Change a a GCP project or organization deployment in place, keeping its id
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with PATCH /v1/deployments/gcp/{id} (the `UpdateGcpDeployment` operationId).
+func (c *Client) UpdateGcpDeploymentWithBody(ctx context.Context, id string, params *UpdateGcpDeploymentParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUpdateGcpDeploymentRequestWithBody(c.Server, id, params, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// UpdateGcpDeployment Change a a GCP project or organization deployment in place, keeping its id
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with PATCH /v1/deployments/gcp/{id} (the `UpdateGcpDeployment` operationId).
+func (c *Client) UpdateGcpDeployment(ctx context.Context, id string, params *UpdateGcpDeploymentParams, body UpdateGcpDeploymentJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUpdateGcpDeploymentRequest(c.Server, id, params, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// VerifyGcpDeployment Check that Act can use a a GCP project or organization deployment again, after its cloud side was fixed
+//
+// Corresponds with POST /v1/deployments/gcp/{id}/verify (the `VerifyGcpDeployment` operationId).
+func (c *Client) VerifyGcpDeployment(ctx context.Context, id string, params *VerifyGcpDeploymentParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewVerifyGcpDeploymentRequest(c.Server, id, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// ListDeploymentAccounts List the member accounts, subscriptions or projects of one deployment, one page at a time
+//
+// Corresponds with GET /v1/deployments/{id}/accounts (the `ListDeploymentAccounts` operationId).
+func (c *Client) ListDeploymentAccounts(ctx context.Context, id string, params *ListDeploymentAccountsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewListDeploymentAccountsRequest(c.Server, id, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// GetDeploymentCoverage Return how many member accounts, subscriptions or projects Act reaches through one deployment
+//
+// Corresponds with GET /v1/deployments/{id}/coverage (the `GetDeploymentCoverage` operationId).
+func (c *Client) GetDeploymentCoverage(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetDeploymentCoverageRequest(c.Server, id)
 	if err != nil {
 		return nil, err
 	}
@@ -1130,7 +2006,7 @@ func (c *Client) UpdateIntegration(ctx context.Context, id string, params *Updat
 	return c.Client.Do(req)
 }
 
-// GetAwsOnboarding Return the values an AWS deployment needs before it is created
+// GetAwsOnboarding Return what an AWS account or organization needs before it is connected, derived from the target
 //
 // Corresponds with GET /v1/onboarding/aws (the `GetAwsOnboarding` operationId).
 func (c *Client) GetAwsOnboarding(ctx context.Context, params *GetAwsOnboardingParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
@@ -1145,11 +2021,11 @@ func (c *Client) GetAwsOnboarding(ctx context.Context, params *GetAwsOnboardingP
 	return c.Client.Do(req)
 }
 
-// GetAzureOnboarding Return the values an Azure deployment needs before it is created
+// GetAzureOnboarding Return what an Azure subscription or management group needs before it is connected
 //
 // Corresponds with GET /v1/onboarding/azure (the `GetAzureOnboarding` operationId).
-func (c *Client) GetAzureOnboarding(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewGetAzureOnboardingRequest(c.Server)
+func (c *Client) GetAzureOnboarding(ctx context.Context, params *GetAzureOnboardingParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetAzureOnboardingRequest(c.Server, params)
 	if err != nil {
 		return nil, err
 	}
@@ -1160,11 +2036,11 @@ func (c *Client) GetAzureOnboarding(ctx context.Context, reqEditors ...RequestEd
 	return c.Client.Do(req)
 }
 
-// GetGcpOnboarding Return the values a GCP deployment needs before it is reserved
+// GetGcpOnboarding Return what a GCP project or organization needs before it is connected
 //
 // Corresponds with GET /v1/onboarding/gcp (the `GetGcpOnboarding` operationId).
-func (c *Client) GetGcpOnboarding(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewGetGcpOnboardingRequest(c.Server)
+func (c *Client) GetGcpOnboarding(ctx context.Context, params *GetGcpOnboardingParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetGcpOnboardingRequest(c.Server, params)
 	if err != nil {
 		return nil, err
 	}
@@ -1242,6 +2118,18 @@ func NewListDeploymentsRequest(server string, params *ListDeploymentsParams) (*h
 
 		}
 
+		if params.Target != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "target", *params.Target, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
 		if params.Tag != nil {
 
 			if queryFrag, err := runtime.StyleParamWithOptions("deepObject", true, "tag", *params.Tag, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "object", Format: ""}); err != nil {
@@ -1292,6 +2180,108 @@ func NewListDeploymentsRequest(server string, params *ListDeploymentsParams) (*h
 	return req, nil
 }
 
+// NewCreateAwsDeploymentRequest calls the generic CreateAwsDeployment builder with application/json body
+func NewCreateAwsDeploymentRequest(server string, params *CreateAwsDeploymentParams, body CreateAwsDeploymentJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewCreateAwsDeploymentRequestWithBody(server, params, "application/json", bodyReader)
+}
+
+// NewCreateAwsDeploymentRequestWithBody constructs an http.Request for the CreateAwsDeployment method, with any body, and a specified content type
+func NewCreateAwsDeploymentRequestWithBody(server string, params *CreateAwsDeploymentParams, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/deployments/aws")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "idempotency-key", params.IdempotencyKey, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("idempotency-key", headerParam0)
+
+	}
+
+	return req, nil
+}
+
+// NewDeleteAwsDeploymentRequest constructs an http.Request for the DeleteAwsDeployment method
+func NewDeleteAwsDeploymentRequest(server string, id string, params *DeleteAwsDeploymentParams) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "id", id, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: "uuid"})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/deployments/aws/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodDelete, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+
+		if params.IfMatch != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "if-match", *params.IfMatch, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("if-match", headerParam0)
+		}
+
+	}
+
+	return req, nil
+}
+
 // NewGetAwsDeploymentRequest constructs an http.Request for the GetAwsDeployment method
 func NewGetAwsDeploymentRequest(server string, id string) (*http.Request, error) {
 	var err error
@@ -1321,6 +2311,262 @@ func NewGetAwsDeploymentRequest(server string, id string) (*http.Request, error)
 	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
 	if err != nil {
 		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewUpdateAwsDeploymentRequest calls the generic UpdateAwsDeployment builder with application/json body
+func NewUpdateAwsDeploymentRequest(server string, id string, params *UpdateAwsDeploymentParams, body UpdateAwsDeploymentJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewUpdateAwsDeploymentRequestWithBody(server, id, params, "application/json", bodyReader)
+}
+
+// NewUpdateAwsDeploymentRequestWithBody constructs an http.Request for the UpdateAwsDeployment method, with any body, and a specified content type
+func NewUpdateAwsDeploymentRequestWithBody(server string, id string, params *UpdateAwsDeploymentParams, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "id", id, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: "uuid"})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/deployments/aws/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPatch, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "if-match", params.IfMatch, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("if-match", headerParam0)
+
+	}
+
+	return req, nil
+}
+
+// NewRotateAwsExternalIDRequest constructs an http.Request for the RotateAwsExternalID method
+func NewRotateAwsExternalIDRequest(server string, id string, params *RotateAwsExternalIDParams) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "id", id, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: "uuid"})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/deployments/aws/%s/rotate-external-id", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "if-match", params.IfMatch, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("if-match", headerParam0)
+
+	}
+
+	return req, nil
+}
+
+// NewVerifyAwsDeploymentRequest constructs an http.Request for the VerifyAwsDeployment method
+func NewVerifyAwsDeploymentRequest(server string, id string, params *VerifyAwsDeploymentParams) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "id", id, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: "uuid"})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/deployments/aws/%s/verify", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "if-match", params.IfMatch, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("if-match", headerParam0)
+
+	}
+
+	return req, nil
+}
+
+// NewCreateAzureDeploymentRequest calls the generic CreateAzureDeployment builder with application/json body
+func NewCreateAzureDeploymentRequest(server string, params *CreateAzureDeploymentParams, body CreateAzureDeploymentJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewCreateAzureDeploymentRequestWithBody(server, params, "application/json", bodyReader)
+}
+
+// NewCreateAzureDeploymentRequestWithBody constructs an http.Request for the CreateAzureDeployment method, with any body, and a specified content type
+func NewCreateAzureDeploymentRequestWithBody(server string, params *CreateAzureDeploymentParams, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/deployments/azure")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "idempotency-key", params.IdempotencyKey, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("idempotency-key", headerParam0)
+
+	}
+
+	return req, nil
+}
+
+// NewDeleteAzureDeploymentRequest constructs an http.Request for the DeleteAzureDeployment method
+func NewDeleteAzureDeploymentRequest(server string, id string, params *DeleteAzureDeploymentParams) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "id", id, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: "uuid"})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/deployments/azure/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodDelete, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+
+		if params.IfMatch != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "if-match", *params.IfMatch, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("if-match", headerParam0)
+		}
+
 	}
 
 	return req, nil
@@ -1360,6 +2606,215 @@ func NewGetAzureDeploymentRequest(server string, id string) (*http.Request, erro
 	return req, nil
 }
 
+// NewUpdateAzureDeploymentRequest calls the generic UpdateAzureDeployment builder with application/json body
+func NewUpdateAzureDeploymentRequest(server string, id string, params *UpdateAzureDeploymentParams, body UpdateAzureDeploymentJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewUpdateAzureDeploymentRequestWithBody(server, id, params, "application/json", bodyReader)
+}
+
+// NewUpdateAzureDeploymentRequestWithBody constructs an http.Request for the UpdateAzureDeployment method, with any body, and a specified content type
+func NewUpdateAzureDeploymentRequestWithBody(server string, id string, params *UpdateAzureDeploymentParams, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "id", id, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: "uuid"})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/deployments/azure/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPatch, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "if-match", params.IfMatch, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("if-match", headerParam0)
+
+	}
+
+	return req, nil
+}
+
+// NewVerifyAzureDeploymentRequest constructs an http.Request for the VerifyAzureDeployment method
+func NewVerifyAzureDeploymentRequest(server string, id string, params *VerifyAzureDeploymentParams) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "id", id, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: "uuid"})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/deployments/azure/%s/verify", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "if-match", params.IfMatch, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("if-match", headerParam0)
+
+	}
+
+	return req, nil
+}
+
+// NewCreateGcpDeploymentRequest calls the generic CreateGcpDeployment builder with application/json body
+func NewCreateGcpDeploymentRequest(server string, params *CreateGcpDeploymentParams, body CreateGcpDeploymentJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewCreateGcpDeploymentRequestWithBody(server, params, "application/json", bodyReader)
+}
+
+// NewCreateGcpDeploymentRequestWithBody constructs an http.Request for the CreateGcpDeployment method, with any body, and a specified content type
+func NewCreateGcpDeploymentRequestWithBody(server string, params *CreateGcpDeploymentParams, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/deployments/gcp")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "idempotency-key", params.IdempotencyKey, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("idempotency-key", headerParam0)
+
+	}
+
+	return req, nil
+}
+
+// NewDeleteGcpDeploymentRequest constructs an http.Request for the DeleteGcpDeployment method
+func NewDeleteGcpDeploymentRequest(server string, id string, params *DeleteGcpDeploymentParams) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "id", id, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: "uuid"})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/deployments/gcp/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodDelete, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+
+		if params.IfMatch != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "if-match", *params.IfMatch, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("if-match", headerParam0)
+		}
+
+	}
+
+	return req, nil
+}
+
 // NewGetGcpDeploymentRequest constructs an http.Request for the GetGcpDeployment method
 func NewGetGcpDeploymentRequest(server string, id string) (*http.Request, error) {
 	var err error
@@ -1377,6 +2832,232 @@ func NewGetGcpDeploymentRequest(server string, id string) (*http.Request, error)
 	}
 
 	operationPath := fmt.Sprintf("/v1/deployments/gcp/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewUpdateGcpDeploymentRequest calls the generic UpdateGcpDeployment builder with application/json body
+func NewUpdateGcpDeploymentRequest(server string, id string, params *UpdateGcpDeploymentParams, body UpdateGcpDeploymentJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewUpdateGcpDeploymentRequestWithBody(server, id, params, "application/json", bodyReader)
+}
+
+// NewUpdateGcpDeploymentRequestWithBody constructs an http.Request for the UpdateGcpDeployment method, with any body, and a specified content type
+func NewUpdateGcpDeploymentRequestWithBody(server string, id string, params *UpdateGcpDeploymentParams, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "id", id, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: "uuid"})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/deployments/gcp/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPatch, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "if-match", params.IfMatch, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("if-match", headerParam0)
+
+	}
+
+	return req, nil
+}
+
+// NewVerifyGcpDeploymentRequest constructs an http.Request for the VerifyGcpDeployment method
+func NewVerifyGcpDeploymentRequest(server string, id string, params *VerifyGcpDeploymentParams) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "id", id, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: "uuid"})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/deployments/gcp/%s/verify", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "if-match", params.IfMatch, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("if-match", headerParam0)
+
+	}
+
+	return req, nil
+}
+
+// NewListDeploymentAccountsRequest constructs an http.Request for the ListDeploymentAccounts method
+func NewListDeploymentAccountsRequest(server string, id string, params *ListDeploymentAccountsParams) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "id", id, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: "uuid"})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/deployments/%s/accounts", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		// queryValues collects non-styled parameters (passthrough, JSON)
+		// that are safe to round-trip through url.Values.Encode().
+		queryValues := queryURL.Query()
+		// rawQueryFragments collects pre-encoded query fragments from
+		// styled parameters, preserving literal commas as delimiters
+		// per the OpenAPI spec (e.g. "color=blue,black,brown").
+		var rawQueryFragments []string
+
+		if params.Status != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "status", *params.Status, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.PageSize != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "pageSize", *params.PageSize, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.PageToken != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "pageToken", *params.PageToken, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if encoded := queryValues.Encode(); encoded != "" {
+			rawQueryFragments = append(rawQueryFragments, encoded)
+		}
+		queryURL.RawQuery = strings.Join(rawQueryFragments, "&")
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewGetDeploymentCoverageRequest constructs an http.Request for the GetDeploymentCoverage method
+func NewGetDeploymentCoverageRequest(server string, id string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "id", id, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: "uuid"})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/deployments/%s/coverage", pathParam0)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -1737,12 +3418,40 @@ func NewGetAwsOnboardingRequest(server string, params *GetAwsOnboardingParams) (
 		// per the OpenAPI spec (e.g. "color=blue,black,brown").
 		var rawQueryFragments []string
 
-		if queryFrag, err := runtime.StyleParamWithOptions("form", true, "deploymentId", params.DeploymentID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: "uuid"}); err != nil {
-			return nil, err
-		} else {
-			for _, qp := range strings.Split(queryFrag, "&") {
-				rawQueryFragments = append(rawQueryFragments, qp)
+		if params.AccountID != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "accountId", *params.AccountID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
 			}
+
+		}
+
+		if params.OrganizationID != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "organizationId", *params.OrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.Variant != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "variant", *params.Variant, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
 		}
 
 		if encoded := queryValues.Encode(); encoded != "" {
@@ -1760,7 +3469,7 @@ func NewGetAwsOnboardingRequest(server string, params *GetAwsOnboardingParams) (
 }
 
 // NewGetAzureOnboardingRequest constructs an http.Request for the GetAzureOnboarding method
-func NewGetAzureOnboardingRequest(server string) (*http.Request, error) {
+func NewGetAzureOnboardingRequest(server string, params *GetAzureOnboardingParams) (*http.Request, error) {
 	var err error
 
 	serverURL, err := url.Parse(server)
@@ -1778,6 +3487,65 @@ func NewGetAzureOnboardingRequest(server string) (*http.Request, error) {
 		return nil, err
 	}
 
+	if params != nil {
+		// queryValues collects non-styled parameters (passthrough, JSON)
+		// that are safe to round-trip through url.Values.Encode().
+		queryValues := queryURL.Query()
+		// rawQueryFragments collects pre-encoded query fragments from
+		// styled parameters, preserving literal commas as delimiters
+		// per the OpenAPI spec (e.g. "color=blue,black,brown").
+		var rawQueryFragments []string
+
+		if queryFrag, err := runtime.StyleParamWithOptions("form", true, "directoryId", params.DirectoryID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: "uuid"}); err != nil {
+			return nil, err
+		} else {
+			for _, qp := range strings.Split(queryFrag, "&") {
+				rawQueryFragments = append(rawQueryFragments, qp)
+			}
+		}
+
+		if params.SubscriptionID != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "subscriptionId", *params.SubscriptionID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: "uuid"}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.ManagementGroupID != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "managementGroupId", *params.ManagementGroupID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.Variant != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "variant", *params.Variant, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if encoded := queryValues.Encode(); encoded != "" {
+			rawQueryFragments = append(rawQueryFragments, encoded)
+		}
+		queryURL.RawQuery = strings.Join(rawQueryFragments, "&")
+	}
+
 	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
 	if err != nil {
 		return nil, err
@@ -1787,7 +3555,7 @@ func NewGetAzureOnboardingRequest(server string) (*http.Request, error) {
 }
 
 // NewGetGcpOnboardingRequest constructs an http.Request for the GetGcpOnboarding method
-func NewGetGcpOnboardingRequest(server string) (*http.Request, error) {
+func NewGetGcpOnboardingRequest(server string, params *GetGcpOnboardingParams) (*http.Request, error) {
 	var err error
 
 	serverURL, err := url.Parse(server)
@@ -1803,6 +3571,69 @@ func NewGetGcpOnboardingRequest(server string) (*http.Request, error) {
 	queryURL, err := serverURL.Parse(operationPath)
 	if err != nil {
 		return nil, err
+	}
+
+	if params != nil {
+		// queryValues collects non-styled parameters (passthrough, JSON)
+		// that are safe to round-trip through url.Values.Encode().
+		queryValues := queryURL.Query()
+		// rawQueryFragments collects pre-encoded query fragments from
+		// styled parameters, preserving literal commas as delimiters
+		// per the OpenAPI spec (e.g. "color=blue,black,brown").
+		var rawQueryFragments []string
+
+		if params.ProjectID != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "projectId", *params.ProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.OrganizationID != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "organizationId", *params.OrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.ServiceAccountProjectID != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "serviceAccountProjectId", *params.ServiceAccountProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.Variant != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "variant", *params.Variant, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if encoded := queryValues.Encode(); encoded != "" {
+			rawQueryFragments = append(rawQueryFragments, encoded)
+		}
+		queryURL.RawQuery = strings.Join(rawQueryFragments, "&")
 	}
 
 	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
@@ -1891,26 +3722,173 @@ type ClientWithResponsesInterface interface {
 	// Corresponds with GET /v1/deployments (the `ListDeployments` operationId).
 	ListDeploymentsWithResponse(ctx context.Context, params *ListDeploymentsParams, reqEditors ...RequestEditorFn) (*ListDeploymentsResponse, error)
 
-	// GetAwsDeploymentWithResponse Return one AWS deployment
+	// CreateAwsDeploymentWithBodyWithResponse Connect an AWS account or organization to Act. Act verifies access before it stores anything
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /v1/deployments/aws (the `CreateAwsDeployment` operationId).
+	CreateAwsDeploymentWithBodyWithResponse(ctx context.Context, params *CreateAwsDeploymentParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateAwsDeploymentResponse, error)
+
+	// CreateAwsDeploymentWithResponse Connect an AWS account or organization to Act. Act verifies access before it stores anything
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /v1/deployments/aws (the `CreateAwsDeployment` operationId).
+	CreateAwsDeploymentWithResponse(ctx context.Context, params *CreateAwsDeploymentParams, body CreateAwsDeploymentJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateAwsDeploymentResponse, error)
+
+	// DeleteAwsDeploymentWithResponse Disconnect a an AWS account or organization deployment: stop scans, purge the credentials Act holds, and list what still trusts Act
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with DELETE /v1/deployments/aws/{id} (the `DeleteAwsDeployment` operationId).
+	DeleteAwsDeploymentWithResponse(ctx context.Context, id string, params *DeleteAwsDeploymentParams, reqEditors ...RequestEditorFn) (*DeleteAwsDeploymentResponse, error)
+
+	// GetAwsDeploymentWithResponse Return one an AWS account or organization deployment
 	//
 	// Returns a wrapper object for the known response body format(s).
 	//
 	// Corresponds with GET /v1/deployments/aws/{id} (the `GetAwsDeployment` operationId).
 	GetAwsDeploymentWithResponse(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*GetAwsDeploymentResponse, error)
 
-	// GetAzureDeploymentWithResponse Return one Azure deployment
+	// UpdateAwsDeploymentWithBodyWithResponse Change a an AWS account or organization deployment in place, keeping its id
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with PATCH /v1/deployments/aws/{id} (the `UpdateAwsDeployment` operationId).
+	UpdateAwsDeploymentWithBodyWithResponse(ctx context.Context, id string, params *UpdateAwsDeploymentParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateAwsDeploymentResponse, error)
+
+	// UpdateAwsDeploymentWithResponse Change a an AWS account or organization deployment in place, keeping its id
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with PATCH /v1/deployments/aws/{id} (the `UpdateAwsDeployment` operationId).
+	UpdateAwsDeploymentWithResponse(ctx context.Context, id string, params *UpdateAwsDeploymentParams, body UpdateAwsDeploymentJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateAwsDeploymentResponse, error)
+
+	// RotateAwsExternalIDWithResponse Move a legacy AWS deployment to its derived external ID, after verifying the role trusts it
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /v1/deployments/aws/{id}/rotate-external-id (the `RotateAwsExternalID` operationId).
+	RotateAwsExternalIDWithResponse(ctx context.Context, id string, params *RotateAwsExternalIDParams, reqEditors ...RequestEditorFn) (*RotateAwsExternalIDResponse, error)
+
+	// VerifyAwsDeploymentWithResponse Check that Act can use a an AWS account or organization deployment again, after its cloud side was fixed
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /v1/deployments/aws/{id}/verify (the `VerifyAwsDeployment` operationId).
+	VerifyAwsDeploymentWithResponse(ctx context.Context, id string, params *VerifyAwsDeploymentParams, reqEditors ...RequestEditorFn) (*VerifyAwsDeploymentResponse, error)
+
+	// CreateAzureDeploymentWithBodyWithResponse Connect an Azure subscription or management group to Act. Act verifies access before it stores anything
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /v1/deployments/azure (the `CreateAzureDeployment` operationId).
+	CreateAzureDeploymentWithBodyWithResponse(ctx context.Context, params *CreateAzureDeploymentParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateAzureDeploymentResponse, error)
+
+	// CreateAzureDeploymentWithResponse Connect an Azure subscription or management group to Act. Act verifies access before it stores anything
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /v1/deployments/azure (the `CreateAzureDeployment` operationId).
+	CreateAzureDeploymentWithResponse(ctx context.Context, params *CreateAzureDeploymentParams, body CreateAzureDeploymentJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateAzureDeploymentResponse, error)
+
+	// DeleteAzureDeploymentWithResponse Disconnect a an Azure subscription or management group deployment: stop scans, purge the credentials Act holds, and list what still trusts Act
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with DELETE /v1/deployments/azure/{id} (the `DeleteAzureDeployment` operationId).
+	DeleteAzureDeploymentWithResponse(ctx context.Context, id string, params *DeleteAzureDeploymentParams, reqEditors ...RequestEditorFn) (*DeleteAzureDeploymentResponse, error)
+
+	// GetAzureDeploymentWithResponse Return one an Azure subscription or management group deployment
 	//
 	// Returns a wrapper object for the known response body format(s).
 	//
 	// Corresponds with GET /v1/deployments/azure/{id} (the `GetAzureDeployment` operationId).
 	GetAzureDeploymentWithResponse(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*GetAzureDeploymentResponse, error)
 
-	// GetGcpDeploymentWithResponse Return one GCP deployment
+	// UpdateAzureDeploymentWithBodyWithResponse Change a an Azure subscription or management group deployment in place, keeping its id
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with PATCH /v1/deployments/azure/{id} (the `UpdateAzureDeployment` operationId).
+	UpdateAzureDeploymentWithBodyWithResponse(ctx context.Context, id string, params *UpdateAzureDeploymentParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateAzureDeploymentResponse, error)
+
+	// UpdateAzureDeploymentWithResponse Change a an Azure subscription or management group deployment in place, keeping its id
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with PATCH /v1/deployments/azure/{id} (the `UpdateAzureDeployment` operationId).
+	UpdateAzureDeploymentWithResponse(ctx context.Context, id string, params *UpdateAzureDeploymentParams, body UpdateAzureDeploymentJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateAzureDeploymentResponse, error)
+
+	// VerifyAzureDeploymentWithResponse Check that Act can use a an Azure subscription or management group deployment again, after its cloud side was fixed
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /v1/deployments/azure/{id}/verify (the `VerifyAzureDeployment` operationId).
+	VerifyAzureDeploymentWithResponse(ctx context.Context, id string, params *VerifyAzureDeploymentParams, reqEditors ...RequestEditorFn) (*VerifyAzureDeploymentResponse, error)
+
+	// CreateGcpDeploymentWithBodyWithResponse Connect a GCP project or organization to Act. Act verifies access before it stores anything
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /v1/deployments/gcp (the `CreateGcpDeployment` operationId).
+	CreateGcpDeploymentWithBodyWithResponse(ctx context.Context, params *CreateGcpDeploymentParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateGcpDeploymentResponse, error)
+
+	// CreateGcpDeploymentWithResponse Connect a GCP project or organization to Act. Act verifies access before it stores anything
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /v1/deployments/gcp (the `CreateGcpDeployment` operationId).
+	CreateGcpDeploymentWithResponse(ctx context.Context, params *CreateGcpDeploymentParams, body CreateGcpDeploymentJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateGcpDeploymentResponse, error)
+
+	// DeleteGcpDeploymentWithResponse Disconnect a a GCP project or organization deployment: stop scans, purge the credentials Act holds, and list what still trusts Act
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with DELETE /v1/deployments/gcp/{id} (the `DeleteGcpDeployment` operationId).
+	DeleteGcpDeploymentWithResponse(ctx context.Context, id string, params *DeleteGcpDeploymentParams, reqEditors ...RequestEditorFn) (*DeleteGcpDeploymentResponse, error)
+
+	// GetGcpDeploymentWithResponse Return one a GCP project or organization deployment
 	//
 	// Returns a wrapper object for the known response body format(s).
 	//
 	// Corresponds with GET /v1/deployments/gcp/{id} (the `GetGcpDeployment` operationId).
 	GetGcpDeploymentWithResponse(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*GetGcpDeploymentResponse, error)
+
+	// UpdateGcpDeploymentWithBodyWithResponse Change a a GCP project or organization deployment in place, keeping its id
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with PATCH /v1/deployments/gcp/{id} (the `UpdateGcpDeployment` operationId).
+	UpdateGcpDeploymentWithBodyWithResponse(ctx context.Context, id string, params *UpdateGcpDeploymentParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateGcpDeploymentResponse, error)
+
+	// UpdateGcpDeploymentWithResponse Change a a GCP project or organization deployment in place, keeping its id
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with PATCH /v1/deployments/gcp/{id} (the `UpdateGcpDeployment` operationId).
+	UpdateGcpDeploymentWithResponse(ctx context.Context, id string, params *UpdateGcpDeploymentParams, body UpdateGcpDeploymentJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateGcpDeploymentResponse, error)
+
+	// VerifyGcpDeploymentWithResponse Check that Act can use a a GCP project or organization deployment again, after its cloud side was fixed
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /v1/deployments/gcp/{id}/verify (the `VerifyGcpDeployment` operationId).
+	VerifyGcpDeploymentWithResponse(ctx context.Context, id string, params *VerifyGcpDeploymentParams, reqEditors ...RequestEditorFn) (*VerifyGcpDeploymentResponse, error)
+
+	// ListDeploymentAccountsWithResponse List the member accounts, subscriptions or projects of one deployment, one page at a time
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with GET /v1/deployments/{id}/accounts (the `ListDeploymentAccounts` operationId).
+	ListDeploymentAccountsWithResponse(ctx context.Context, id string, params *ListDeploymentAccountsParams, reqEditors ...RequestEditorFn) (*ListDeploymentAccountsResponse, error)
+
+	// GetDeploymentCoverageWithResponse Return how many member accounts, subscriptions or projects Act reaches through one deployment
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with GET /v1/deployments/{id}/coverage (the `GetDeploymentCoverage` operationId).
+	GetDeploymentCoverageWithResponse(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*GetDeploymentCoverageResponse, error)
 
 	// ListIntegrationTypesWithResponse List the integration types this tenant may install, their fields and which of them are secret
 	//
@@ -1968,26 +3946,26 @@ type ClientWithResponsesInterface interface {
 	// Corresponds with PATCH /v1/integrations/{id} (the `UpdateIntegration` operationId).
 	UpdateIntegrationWithResponse(ctx context.Context, id string, params *UpdateIntegrationParams, body UpdateIntegrationJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateIntegrationResponse, error)
 
-	// GetAwsOnboardingWithResponse Return the values an AWS deployment needs before it is created
+	// GetAwsOnboardingWithResponse Return what an AWS account or organization needs before it is connected, derived from the target
 	//
 	// Returns a wrapper object for the known response body format(s).
 	//
 	// Corresponds with GET /v1/onboarding/aws (the `GetAwsOnboarding` operationId).
 	GetAwsOnboardingWithResponse(ctx context.Context, params *GetAwsOnboardingParams, reqEditors ...RequestEditorFn) (*GetAwsOnboardingResponse, error)
 
-	// GetAzureOnboardingWithResponse Return the values an Azure deployment needs before it is created
+	// GetAzureOnboardingWithResponse Return what an Azure subscription or management group needs before it is connected
 	//
 	// Returns a wrapper object for the known response body format(s).
 	//
 	// Corresponds with GET /v1/onboarding/azure (the `GetAzureOnboarding` operationId).
-	GetAzureOnboardingWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetAzureOnboardingResponse, error)
+	GetAzureOnboardingWithResponse(ctx context.Context, params *GetAzureOnboardingParams, reqEditors ...RequestEditorFn) (*GetAzureOnboardingResponse, error)
 
-	// GetGcpOnboardingWithResponse Return the values a GCP deployment needs before it is reserved
+	// GetGcpOnboardingWithResponse Return what a GCP project or organization needs before it is connected
 	//
 	// Returns a wrapper object for the known response body format(s).
 	//
 	// Corresponds with GET /v1/onboarding/gcp (the `GetGcpOnboarding` operationId).
-	GetGcpOnboardingWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetGcpOnboardingResponse, error)
+	GetGcpOnboardingWithResponse(ctx context.Context, params *GetGcpOnboardingParams, reqEditors ...RequestEditorFn) (*GetGcpOnboardingResponse, error)
 
 	// GetWhoamiWithResponse Return the tenant, region and principal of the calling token
 	//
@@ -2102,6 +4080,270 @@ func (r ListDeploymentsResponse) StatusCode() int {
 
 // ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
 func (r ListDeploymentsResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+// CreateAwsDeploymentResponse201Headers the declared response headers of an HTTP 201 response for CreateAwsDeployment
+type CreateAwsDeploymentResponse201Headers struct {
+	ETag string
+}
+
+// CreateAwsDeploymentResponse401Headers the declared response headers of an HTTP 401 response for CreateAwsDeployment
+type CreateAwsDeploymentResponse401Headers struct {
+	WWWAuthenticate *string
+}
+
+// CreateAwsDeploymentResponse403Headers the declared response headers of an HTTP 403 response for CreateAwsDeployment
+type CreateAwsDeploymentResponse403Headers struct {
+	WWWAuthenticate *string
+}
+
+// CreateAwsDeploymentResponse429Headers the declared response headers of an HTTP 429 response for CreateAwsDeployment
+type CreateAwsDeploymentResponse429Headers struct {
+	RetryAfter *int
+}
+
+// CreateAwsDeploymentResponse503Headers the declared response headers of an HTTP 503 response for CreateAwsDeployment
+type CreateAwsDeploymentResponse503Headers struct {
+	RetryAfter *int
+}
+
+type CreateAwsDeploymentResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON201 the response for an HTTP 201 `application/json` response
+	JSON201 *AwsDeployment
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *ErrorEnvelope
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *ErrorEnvelope
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *ErrorEnvelope
+	// JSON409 the response for an HTTP 409 `application/json` response
+	JSON409 *ErrorEnvelope
+	// JSON422 the response for an HTTP 422 `application/json` response
+	JSON422 *ErrorEnvelope
+	// JSON429 the response for an HTTP 429 `application/json` response
+	JSON429 *ErrorEnvelope
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *ErrorEnvelope
+	// JSON503 the response for an HTTP 503 `application/json` response
+	JSON503 *ErrorEnvelope
+	// Headers201 the parsed response headers for an HTTP 201 response
+	Headers201 *CreateAwsDeploymentResponse201Headers
+	// Headers401 the parsed response headers for an HTTP 401 response
+	Headers401 *CreateAwsDeploymentResponse401Headers
+	// Headers403 the parsed response headers for an HTTP 403 response
+	Headers403 *CreateAwsDeploymentResponse403Headers
+	// Headers429 the parsed response headers for an HTTP 429 response
+	Headers429 *CreateAwsDeploymentResponse429Headers
+	// Headers503 the parsed response headers for an HTTP 503 response
+	Headers503 *CreateAwsDeploymentResponse503Headers
+}
+
+// GetJSON201 returns the response for an HTTP 201 `application/json` response
+func (r CreateAwsDeploymentResponse) GetJSON201() *AwsDeployment {
+	return r.JSON201
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r CreateAwsDeploymentResponse) GetJSON400() *ErrorEnvelope {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r CreateAwsDeploymentResponse) GetJSON401() *ErrorEnvelope {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r CreateAwsDeploymentResponse) GetJSON403() *ErrorEnvelope {
+	return r.JSON403
+}
+
+// GetJSON409 returns the response for an HTTP 409 `application/json` response
+func (r CreateAwsDeploymentResponse) GetJSON409() *ErrorEnvelope {
+	return r.JSON409
+}
+
+// GetJSON422 returns the response for an HTTP 422 `application/json` response
+func (r CreateAwsDeploymentResponse) GetJSON422() *ErrorEnvelope {
+	return r.JSON422
+}
+
+// GetJSON429 returns the response for an HTTP 429 `application/json` response
+func (r CreateAwsDeploymentResponse) GetJSON429() *ErrorEnvelope {
+	return r.JSON429
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r CreateAwsDeploymentResponse) GetJSON500() *ErrorEnvelope {
+	return r.JSON500
+}
+
+// GetJSON503 returns the response for an HTTP 503 `application/json` response
+func (r CreateAwsDeploymentResponse) GetJSON503() *ErrorEnvelope {
+	return r.JSON503
+}
+
+// GetBody returns the raw response body bytes
+func (r CreateAwsDeploymentResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r CreateAwsDeploymentResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r CreateAwsDeploymentResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r CreateAwsDeploymentResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+// DeleteAwsDeploymentResponse401Headers the declared response headers of an HTTP 401 response for DeleteAwsDeployment
+type DeleteAwsDeploymentResponse401Headers struct {
+	WWWAuthenticate *string
+}
+
+// DeleteAwsDeploymentResponse403Headers the declared response headers of an HTTP 403 response for DeleteAwsDeployment
+type DeleteAwsDeploymentResponse403Headers struct {
+	WWWAuthenticate *string
+}
+
+// DeleteAwsDeploymentResponse429Headers the declared response headers of an HTTP 429 response for DeleteAwsDeployment
+type DeleteAwsDeploymentResponse429Headers struct {
+	RetryAfter *int
+}
+
+// DeleteAwsDeploymentResponse503Headers the declared response headers of an HTTP 503 response for DeleteAwsDeployment
+type DeleteAwsDeploymentResponse503Headers struct {
+	RetryAfter *int
+}
+
+type DeleteAwsDeploymentResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *DeploymentDeletion
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *ErrorEnvelope
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *ErrorEnvelope
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *ErrorEnvelope
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *ErrorEnvelope
+	// JSON409 the response for an HTTP 409 `application/json` response
+	JSON409 *ErrorEnvelope
+	// JSON412 the response for an HTTP 412 `application/json` response
+	JSON412 *ErrorEnvelope
+	// JSON429 the response for an HTTP 429 `application/json` response
+	JSON429 *ErrorEnvelope
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *ErrorEnvelope
+	// JSON503 the response for an HTTP 503 `application/json` response
+	JSON503 *ErrorEnvelope
+	// Headers401 the parsed response headers for an HTTP 401 response
+	Headers401 *DeleteAwsDeploymentResponse401Headers
+	// Headers403 the parsed response headers for an HTTP 403 response
+	Headers403 *DeleteAwsDeploymentResponse403Headers
+	// Headers429 the parsed response headers for an HTTP 429 response
+	Headers429 *DeleteAwsDeploymentResponse429Headers
+	// Headers503 the parsed response headers for an HTTP 503 response
+	Headers503 *DeleteAwsDeploymentResponse503Headers
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r DeleteAwsDeploymentResponse) GetJSON200() *DeploymentDeletion {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r DeleteAwsDeploymentResponse) GetJSON400() *ErrorEnvelope {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r DeleteAwsDeploymentResponse) GetJSON401() *ErrorEnvelope {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r DeleteAwsDeploymentResponse) GetJSON403() *ErrorEnvelope {
+	return r.JSON403
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r DeleteAwsDeploymentResponse) GetJSON404() *ErrorEnvelope {
+	return r.JSON404
+}
+
+// GetJSON409 returns the response for an HTTP 409 `application/json` response
+func (r DeleteAwsDeploymentResponse) GetJSON409() *ErrorEnvelope {
+	return r.JSON409
+}
+
+// GetJSON412 returns the response for an HTTP 412 `application/json` response
+func (r DeleteAwsDeploymentResponse) GetJSON412() *ErrorEnvelope {
+	return r.JSON412
+}
+
+// GetJSON429 returns the response for an HTTP 429 `application/json` response
+func (r DeleteAwsDeploymentResponse) GetJSON429() *ErrorEnvelope {
+	return r.JSON429
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r DeleteAwsDeploymentResponse) GetJSON500() *ErrorEnvelope {
+	return r.JSON500
+}
+
+// GetJSON503 returns the response for an HTTP 503 `application/json` response
+func (r DeleteAwsDeploymentResponse) GetJSON503() *ErrorEnvelope {
+	return r.JSON503
+}
+
+// GetBody returns the raw response body bytes
+func (r DeleteAwsDeploymentResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r DeleteAwsDeploymentResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r DeleteAwsDeploymentResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r DeleteAwsDeploymentResponse) ContentType() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Header.Get("Content-Type")
 	}
@@ -2233,6 +4475,687 @@ func (r GetAwsDeploymentResponse) ContentType() string {
 	return ""
 }
 
+// UpdateAwsDeploymentResponse200Headers the declared response headers of an HTTP 200 response for UpdateAwsDeployment
+type UpdateAwsDeploymentResponse200Headers struct {
+	ETag string
+}
+
+// UpdateAwsDeploymentResponse401Headers the declared response headers of an HTTP 401 response for UpdateAwsDeployment
+type UpdateAwsDeploymentResponse401Headers struct {
+	WWWAuthenticate *string
+}
+
+// UpdateAwsDeploymentResponse403Headers the declared response headers of an HTTP 403 response for UpdateAwsDeployment
+type UpdateAwsDeploymentResponse403Headers struct {
+	WWWAuthenticate *string
+}
+
+// UpdateAwsDeploymentResponse429Headers the declared response headers of an HTTP 429 response for UpdateAwsDeployment
+type UpdateAwsDeploymentResponse429Headers struct {
+	RetryAfter *int
+}
+
+// UpdateAwsDeploymentResponse503Headers the declared response headers of an HTTP 503 response for UpdateAwsDeployment
+type UpdateAwsDeploymentResponse503Headers struct {
+	RetryAfter *int
+}
+
+type UpdateAwsDeploymentResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *AwsDeployment
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *ErrorEnvelope
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *ErrorEnvelope
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *ErrorEnvelope
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *ErrorEnvelope
+	// JSON412 the response for an HTTP 412 `application/json` response
+	JSON412 *ErrorEnvelope
+	// JSON422 the response for an HTTP 422 `application/json` response
+	JSON422 *ErrorEnvelope
+	// JSON429 the response for an HTTP 429 `application/json` response
+	JSON429 *ErrorEnvelope
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *ErrorEnvelope
+	// JSON503 the response for an HTTP 503 `application/json` response
+	JSON503 *ErrorEnvelope
+	// Headers200 the parsed response headers for an HTTP 200 response
+	Headers200 *UpdateAwsDeploymentResponse200Headers
+	// Headers401 the parsed response headers for an HTTP 401 response
+	Headers401 *UpdateAwsDeploymentResponse401Headers
+	// Headers403 the parsed response headers for an HTTP 403 response
+	Headers403 *UpdateAwsDeploymentResponse403Headers
+	// Headers429 the parsed response headers for an HTTP 429 response
+	Headers429 *UpdateAwsDeploymentResponse429Headers
+	// Headers503 the parsed response headers for an HTTP 503 response
+	Headers503 *UpdateAwsDeploymentResponse503Headers
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r UpdateAwsDeploymentResponse) GetJSON200() *AwsDeployment {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r UpdateAwsDeploymentResponse) GetJSON400() *ErrorEnvelope {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r UpdateAwsDeploymentResponse) GetJSON401() *ErrorEnvelope {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r UpdateAwsDeploymentResponse) GetJSON403() *ErrorEnvelope {
+	return r.JSON403
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r UpdateAwsDeploymentResponse) GetJSON404() *ErrorEnvelope {
+	return r.JSON404
+}
+
+// GetJSON412 returns the response for an HTTP 412 `application/json` response
+func (r UpdateAwsDeploymentResponse) GetJSON412() *ErrorEnvelope {
+	return r.JSON412
+}
+
+// GetJSON422 returns the response for an HTTP 422 `application/json` response
+func (r UpdateAwsDeploymentResponse) GetJSON422() *ErrorEnvelope {
+	return r.JSON422
+}
+
+// GetJSON429 returns the response for an HTTP 429 `application/json` response
+func (r UpdateAwsDeploymentResponse) GetJSON429() *ErrorEnvelope {
+	return r.JSON429
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r UpdateAwsDeploymentResponse) GetJSON500() *ErrorEnvelope {
+	return r.JSON500
+}
+
+// GetJSON503 returns the response for an HTTP 503 `application/json` response
+func (r UpdateAwsDeploymentResponse) GetJSON503() *ErrorEnvelope {
+	return r.JSON503
+}
+
+// GetBody returns the raw response body bytes
+func (r UpdateAwsDeploymentResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r UpdateAwsDeploymentResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r UpdateAwsDeploymentResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r UpdateAwsDeploymentResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+// RotateAwsExternalIDResponse200Headers the declared response headers of an HTTP 200 response for RotateAwsExternalID
+type RotateAwsExternalIDResponse200Headers struct {
+	ETag string
+}
+
+// RotateAwsExternalIDResponse401Headers the declared response headers of an HTTP 401 response for RotateAwsExternalID
+type RotateAwsExternalIDResponse401Headers struct {
+	WWWAuthenticate *string
+}
+
+// RotateAwsExternalIDResponse403Headers the declared response headers of an HTTP 403 response for RotateAwsExternalID
+type RotateAwsExternalIDResponse403Headers struct {
+	WWWAuthenticate *string
+}
+
+// RotateAwsExternalIDResponse429Headers the declared response headers of an HTTP 429 response for RotateAwsExternalID
+type RotateAwsExternalIDResponse429Headers struct {
+	RetryAfter *int
+}
+
+// RotateAwsExternalIDResponse503Headers the declared response headers of an HTTP 503 response for RotateAwsExternalID
+type RotateAwsExternalIDResponse503Headers struct {
+	RetryAfter *int
+}
+
+type RotateAwsExternalIDResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *AwsDeployment
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *ErrorEnvelope
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *ErrorEnvelope
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *ErrorEnvelope
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *ErrorEnvelope
+	// JSON412 the response for an HTTP 412 `application/json` response
+	JSON412 *ErrorEnvelope
+	// JSON422 the response for an HTTP 422 `application/json` response
+	JSON422 *ErrorEnvelope
+	// JSON429 the response for an HTTP 429 `application/json` response
+	JSON429 *ErrorEnvelope
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *ErrorEnvelope
+	// JSON503 the response for an HTTP 503 `application/json` response
+	JSON503 *ErrorEnvelope
+	// Headers200 the parsed response headers for an HTTP 200 response
+	Headers200 *RotateAwsExternalIDResponse200Headers
+	// Headers401 the parsed response headers for an HTTP 401 response
+	Headers401 *RotateAwsExternalIDResponse401Headers
+	// Headers403 the parsed response headers for an HTTP 403 response
+	Headers403 *RotateAwsExternalIDResponse403Headers
+	// Headers429 the parsed response headers for an HTTP 429 response
+	Headers429 *RotateAwsExternalIDResponse429Headers
+	// Headers503 the parsed response headers for an HTTP 503 response
+	Headers503 *RotateAwsExternalIDResponse503Headers
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r RotateAwsExternalIDResponse) GetJSON200() *AwsDeployment {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r RotateAwsExternalIDResponse) GetJSON400() *ErrorEnvelope {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r RotateAwsExternalIDResponse) GetJSON401() *ErrorEnvelope {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r RotateAwsExternalIDResponse) GetJSON403() *ErrorEnvelope {
+	return r.JSON403
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r RotateAwsExternalIDResponse) GetJSON404() *ErrorEnvelope {
+	return r.JSON404
+}
+
+// GetJSON412 returns the response for an HTTP 412 `application/json` response
+func (r RotateAwsExternalIDResponse) GetJSON412() *ErrorEnvelope {
+	return r.JSON412
+}
+
+// GetJSON422 returns the response for an HTTP 422 `application/json` response
+func (r RotateAwsExternalIDResponse) GetJSON422() *ErrorEnvelope {
+	return r.JSON422
+}
+
+// GetJSON429 returns the response for an HTTP 429 `application/json` response
+func (r RotateAwsExternalIDResponse) GetJSON429() *ErrorEnvelope {
+	return r.JSON429
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r RotateAwsExternalIDResponse) GetJSON500() *ErrorEnvelope {
+	return r.JSON500
+}
+
+// GetJSON503 returns the response for an HTTP 503 `application/json` response
+func (r RotateAwsExternalIDResponse) GetJSON503() *ErrorEnvelope {
+	return r.JSON503
+}
+
+// GetBody returns the raw response body bytes
+func (r RotateAwsExternalIDResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r RotateAwsExternalIDResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r RotateAwsExternalIDResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r RotateAwsExternalIDResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+// VerifyAwsDeploymentResponse200Headers the declared response headers of an HTTP 200 response for VerifyAwsDeployment
+type VerifyAwsDeploymentResponse200Headers struct {
+	ETag string
+}
+
+// VerifyAwsDeploymentResponse401Headers the declared response headers of an HTTP 401 response for VerifyAwsDeployment
+type VerifyAwsDeploymentResponse401Headers struct {
+	WWWAuthenticate *string
+}
+
+// VerifyAwsDeploymentResponse403Headers the declared response headers of an HTTP 403 response for VerifyAwsDeployment
+type VerifyAwsDeploymentResponse403Headers struct {
+	WWWAuthenticate *string
+}
+
+// VerifyAwsDeploymentResponse429Headers the declared response headers of an HTTP 429 response for VerifyAwsDeployment
+type VerifyAwsDeploymentResponse429Headers struct {
+	RetryAfter *int
+}
+
+// VerifyAwsDeploymentResponse503Headers the declared response headers of an HTTP 503 response for VerifyAwsDeployment
+type VerifyAwsDeploymentResponse503Headers struct {
+	RetryAfter *int
+}
+
+type VerifyAwsDeploymentResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *AwsDeployment
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *ErrorEnvelope
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *ErrorEnvelope
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *ErrorEnvelope
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *ErrorEnvelope
+	// JSON412 the response for an HTTP 412 `application/json` response
+	JSON412 *ErrorEnvelope
+	// JSON422 the response for an HTTP 422 `application/json` response
+	JSON422 *ErrorEnvelope
+	// JSON429 the response for an HTTP 429 `application/json` response
+	JSON429 *ErrorEnvelope
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *ErrorEnvelope
+	// JSON503 the response for an HTTP 503 `application/json` response
+	JSON503 *ErrorEnvelope
+	// Headers200 the parsed response headers for an HTTP 200 response
+	Headers200 *VerifyAwsDeploymentResponse200Headers
+	// Headers401 the parsed response headers for an HTTP 401 response
+	Headers401 *VerifyAwsDeploymentResponse401Headers
+	// Headers403 the parsed response headers for an HTTP 403 response
+	Headers403 *VerifyAwsDeploymentResponse403Headers
+	// Headers429 the parsed response headers for an HTTP 429 response
+	Headers429 *VerifyAwsDeploymentResponse429Headers
+	// Headers503 the parsed response headers for an HTTP 503 response
+	Headers503 *VerifyAwsDeploymentResponse503Headers
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r VerifyAwsDeploymentResponse) GetJSON200() *AwsDeployment {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r VerifyAwsDeploymentResponse) GetJSON400() *ErrorEnvelope {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r VerifyAwsDeploymentResponse) GetJSON401() *ErrorEnvelope {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r VerifyAwsDeploymentResponse) GetJSON403() *ErrorEnvelope {
+	return r.JSON403
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r VerifyAwsDeploymentResponse) GetJSON404() *ErrorEnvelope {
+	return r.JSON404
+}
+
+// GetJSON412 returns the response for an HTTP 412 `application/json` response
+func (r VerifyAwsDeploymentResponse) GetJSON412() *ErrorEnvelope {
+	return r.JSON412
+}
+
+// GetJSON422 returns the response for an HTTP 422 `application/json` response
+func (r VerifyAwsDeploymentResponse) GetJSON422() *ErrorEnvelope {
+	return r.JSON422
+}
+
+// GetJSON429 returns the response for an HTTP 429 `application/json` response
+func (r VerifyAwsDeploymentResponse) GetJSON429() *ErrorEnvelope {
+	return r.JSON429
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r VerifyAwsDeploymentResponse) GetJSON500() *ErrorEnvelope {
+	return r.JSON500
+}
+
+// GetJSON503 returns the response for an HTTP 503 `application/json` response
+func (r VerifyAwsDeploymentResponse) GetJSON503() *ErrorEnvelope {
+	return r.JSON503
+}
+
+// GetBody returns the raw response body bytes
+func (r VerifyAwsDeploymentResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r VerifyAwsDeploymentResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r VerifyAwsDeploymentResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r VerifyAwsDeploymentResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+// CreateAzureDeploymentResponse201Headers the declared response headers of an HTTP 201 response for CreateAzureDeployment
+type CreateAzureDeploymentResponse201Headers struct {
+	ETag string
+}
+
+// CreateAzureDeploymentResponse401Headers the declared response headers of an HTTP 401 response for CreateAzureDeployment
+type CreateAzureDeploymentResponse401Headers struct {
+	WWWAuthenticate *string
+}
+
+// CreateAzureDeploymentResponse403Headers the declared response headers of an HTTP 403 response for CreateAzureDeployment
+type CreateAzureDeploymentResponse403Headers struct {
+	WWWAuthenticate *string
+}
+
+// CreateAzureDeploymentResponse429Headers the declared response headers of an HTTP 429 response for CreateAzureDeployment
+type CreateAzureDeploymentResponse429Headers struct {
+	RetryAfter *int
+}
+
+// CreateAzureDeploymentResponse503Headers the declared response headers of an HTTP 503 response for CreateAzureDeployment
+type CreateAzureDeploymentResponse503Headers struct {
+	RetryAfter *int
+}
+
+type CreateAzureDeploymentResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON201 the response for an HTTP 201 `application/json` response
+	JSON201 *AzureDeployment
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *ErrorEnvelope
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *ErrorEnvelope
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *ErrorEnvelope
+	// JSON409 the response for an HTTP 409 `application/json` response
+	JSON409 *ErrorEnvelope
+	// JSON422 the response for an HTTP 422 `application/json` response
+	JSON422 *ErrorEnvelope
+	// JSON429 the response for an HTTP 429 `application/json` response
+	JSON429 *ErrorEnvelope
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *ErrorEnvelope
+	// JSON503 the response for an HTTP 503 `application/json` response
+	JSON503 *ErrorEnvelope
+	// Headers201 the parsed response headers for an HTTP 201 response
+	Headers201 *CreateAzureDeploymentResponse201Headers
+	// Headers401 the parsed response headers for an HTTP 401 response
+	Headers401 *CreateAzureDeploymentResponse401Headers
+	// Headers403 the parsed response headers for an HTTP 403 response
+	Headers403 *CreateAzureDeploymentResponse403Headers
+	// Headers429 the parsed response headers for an HTTP 429 response
+	Headers429 *CreateAzureDeploymentResponse429Headers
+	// Headers503 the parsed response headers for an HTTP 503 response
+	Headers503 *CreateAzureDeploymentResponse503Headers
+}
+
+// GetJSON201 returns the response for an HTTP 201 `application/json` response
+func (r CreateAzureDeploymentResponse) GetJSON201() *AzureDeployment {
+	return r.JSON201
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r CreateAzureDeploymentResponse) GetJSON400() *ErrorEnvelope {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r CreateAzureDeploymentResponse) GetJSON401() *ErrorEnvelope {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r CreateAzureDeploymentResponse) GetJSON403() *ErrorEnvelope {
+	return r.JSON403
+}
+
+// GetJSON409 returns the response for an HTTP 409 `application/json` response
+func (r CreateAzureDeploymentResponse) GetJSON409() *ErrorEnvelope {
+	return r.JSON409
+}
+
+// GetJSON422 returns the response for an HTTP 422 `application/json` response
+func (r CreateAzureDeploymentResponse) GetJSON422() *ErrorEnvelope {
+	return r.JSON422
+}
+
+// GetJSON429 returns the response for an HTTP 429 `application/json` response
+func (r CreateAzureDeploymentResponse) GetJSON429() *ErrorEnvelope {
+	return r.JSON429
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r CreateAzureDeploymentResponse) GetJSON500() *ErrorEnvelope {
+	return r.JSON500
+}
+
+// GetJSON503 returns the response for an HTTP 503 `application/json` response
+func (r CreateAzureDeploymentResponse) GetJSON503() *ErrorEnvelope {
+	return r.JSON503
+}
+
+// GetBody returns the raw response body bytes
+func (r CreateAzureDeploymentResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r CreateAzureDeploymentResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r CreateAzureDeploymentResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r CreateAzureDeploymentResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+// DeleteAzureDeploymentResponse401Headers the declared response headers of an HTTP 401 response for DeleteAzureDeployment
+type DeleteAzureDeploymentResponse401Headers struct {
+	WWWAuthenticate *string
+}
+
+// DeleteAzureDeploymentResponse403Headers the declared response headers of an HTTP 403 response for DeleteAzureDeployment
+type DeleteAzureDeploymentResponse403Headers struct {
+	WWWAuthenticate *string
+}
+
+// DeleteAzureDeploymentResponse429Headers the declared response headers of an HTTP 429 response for DeleteAzureDeployment
+type DeleteAzureDeploymentResponse429Headers struct {
+	RetryAfter *int
+}
+
+// DeleteAzureDeploymentResponse503Headers the declared response headers of an HTTP 503 response for DeleteAzureDeployment
+type DeleteAzureDeploymentResponse503Headers struct {
+	RetryAfter *int
+}
+
+type DeleteAzureDeploymentResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *DeploymentDeletion
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *ErrorEnvelope
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *ErrorEnvelope
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *ErrorEnvelope
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *ErrorEnvelope
+	// JSON409 the response for an HTTP 409 `application/json` response
+	JSON409 *ErrorEnvelope
+	// JSON412 the response for an HTTP 412 `application/json` response
+	JSON412 *ErrorEnvelope
+	// JSON429 the response for an HTTP 429 `application/json` response
+	JSON429 *ErrorEnvelope
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *ErrorEnvelope
+	// JSON503 the response for an HTTP 503 `application/json` response
+	JSON503 *ErrorEnvelope
+	// Headers401 the parsed response headers for an HTTP 401 response
+	Headers401 *DeleteAzureDeploymentResponse401Headers
+	// Headers403 the parsed response headers for an HTTP 403 response
+	Headers403 *DeleteAzureDeploymentResponse403Headers
+	// Headers429 the parsed response headers for an HTTP 429 response
+	Headers429 *DeleteAzureDeploymentResponse429Headers
+	// Headers503 the parsed response headers for an HTTP 503 response
+	Headers503 *DeleteAzureDeploymentResponse503Headers
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r DeleteAzureDeploymentResponse) GetJSON200() *DeploymentDeletion {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r DeleteAzureDeploymentResponse) GetJSON400() *ErrorEnvelope {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r DeleteAzureDeploymentResponse) GetJSON401() *ErrorEnvelope {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r DeleteAzureDeploymentResponse) GetJSON403() *ErrorEnvelope {
+	return r.JSON403
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r DeleteAzureDeploymentResponse) GetJSON404() *ErrorEnvelope {
+	return r.JSON404
+}
+
+// GetJSON409 returns the response for an HTTP 409 `application/json` response
+func (r DeleteAzureDeploymentResponse) GetJSON409() *ErrorEnvelope {
+	return r.JSON409
+}
+
+// GetJSON412 returns the response for an HTTP 412 `application/json` response
+func (r DeleteAzureDeploymentResponse) GetJSON412() *ErrorEnvelope {
+	return r.JSON412
+}
+
+// GetJSON429 returns the response for an HTTP 429 `application/json` response
+func (r DeleteAzureDeploymentResponse) GetJSON429() *ErrorEnvelope {
+	return r.JSON429
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r DeleteAzureDeploymentResponse) GetJSON500() *ErrorEnvelope {
+	return r.JSON500
+}
+
+// GetJSON503 returns the response for an HTTP 503 `application/json` response
+func (r DeleteAzureDeploymentResponse) GetJSON503() *ErrorEnvelope {
+	return r.JSON503
+}
+
+// GetBody returns the raw response body bytes
+func (r DeleteAzureDeploymentResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r DeleteAzureDeploymentResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r DeleteAzureDeploymentResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r DeleteAzureDeploymentResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
 // GetAzureDeploymentResponse200Headers the declared response headers of an HTTP 200 response for GetAzureDeployment
 type GetAzureDeploymentResponse200Headers struct {
 	ETag string
@@ -2358,6 +5281,548 @@ func (r GetAzureDeploymentResponse) ContentType() string {
 	return ""
 }
 
+// UpdateAzureDeploymentResponse200Headers the declared response headers of an HTTP 200 response for UpdateAzureDeployment
+type UpdateAzureDeploymentResponse200Headers struct {
+	ETag string
+}
+
+// UpdateAzureDeploymentResponse401Headers the declared response headers of an HTTP 401 response for UpdateAzureDeployment
+type UpdateAzureDeploymentResponse401Headers struct {
+	WWWAuthenticate *string
+}
+
+// UpdateAzureDeploymentResponse403Headers the declared response headers of an HTTP 403 response for UpdateAzureDeployment
+type UpdateAzureDeploymentResponse403Headers struct {
+	WWWAuthenticate *string
+}
+
+// UpdateAzureDeploymentResponse429Headers the declared response headers of an HTTP 429 response for UpdateAzureDeployment
+type UpdateAzureDeploymentResponse429Headers struct {
+	RetryAfter *int
+}
+
+// UpdateAzureDeploymentResponse503Headers the declared response headers of an HTTP 503 response for UpdateAzureDeployment
+type UpdateAzureDeploymentResponse503Headers struct {
+	RetryAfter *int
+}
+
+type UpdateAzureDeploymentResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *AzureDeployment
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *ErrorEnvelope
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *ErrorEnvelope
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *ErrorEnvelope
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *ErrorEnvelope
+	// JSON412 the response for an HTTP 412 `application/json` response
+	JSON412 *ErrorEnvelope
+	// JSON422 the response for an HTTP 422 `application/json` response
+	JSON422 *ErrorEnvelope
+	// JSON429 the response for an HTTP 429 `application/json` response
+	JSON429 *ErrorEnvelope
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *ErrorEnvelope
+	// JSON503 the response for an HTTP 503 `application/json` response
+	JSON503 *ErrorEnvelope
+	// Headers200 the parsed response headers for an HTTP 200 response
+	Headers200 *UpdateAzureDeploymentResponse200Headers
+	// Headers401 the parsed response headers for an HTTP 401 response
+	Headers401 *UpdateAzureDeploymentResponse401Headers
+	// Headers403 the parsed response headers for an HTTP 403 response
+	Headers403 *UpdateAzureDeploymentResponse403Headers
+	// Headers429 the parsed response headers for an HTTP 429 response
+	Headers429 *UpdateAzureDeploymentResponse429Headers
+	// Headers503 the parsed response headers for an HTTP 503 response
+	Headers503 *UpdateAzureDeploymentResponse503Headers
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r UpdateAzureDeploymentResponse) GetJSON200() *AzureDeployment {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r UpdateAzureDeploymentResponse) GetJSON400() *ErrorEnvelope {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r UpdateAzureDeploymentResponse) GetJSON401() *ErrorEnvelope {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r UpdateAzureDeploymentResponse) GetJSON403() *ErrorEnvelope {
+	return r.JSON403
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r UpdateAzureDeploymentResponse) GetJSON404() *ErrorEnvelope {
+	return r.JSON404
+}
+
+// GetJSON412 returns the response for an HTTP 412 `application/json` response
+func (r UpdateAzureDeploymentResponse) GetJSON412() *ErrorEnvelope {
+	return r.JSON412
+}
+
+// GetJSON422 returns the response for an HTTP 422 `application/json` response
+func (r UpdateAzureDeploymentResponse) GetJSON422() *ErrorEnvelope {
+	return r.JSON422
+}
+
+// GetJSON429 returns the response for an HTTP 429 `application/json` response
+func (r UpdateAzureDeploymentResponse) GetJSON429() *ErrorEnvelope {
+	return r.JSON429
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r UpdateAzureDeploymentResponse) GetJSON500() *ErrorEnvelope {
+	return r.JSON500
+}
+
+// GetJSON503 returns the response for an HTTP 503 `application/json` response
+func (r UpdateAzureDeploymentResponse) GetJSON503() *ErrorEnvelope {
+	return r.JSON503
+}
+
+// GetBody returns the raw response body bytes
+func (r UpdateAzureDeploymentResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r UpdateAzureDeploymentResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r UpdateAzureDeploymentResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r UpdateAzureDeploymentResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+// VerifyAzureDeploymentResponse200Headers the declared response headers of an HTTP 200 response for VerifyAzureDeployment
+type VerifyAzureDeploymentResponse200Headers struct {
+	ETag string
+}
+
+// VerifyAzureDeploymentResponse401Headers the declared response headers of an HTTP 401 response for VerifyAzureDeployment
+type VerifyAzureDeploymentResponse401Headers struct {
+	WWWAuthenticate *string
+}
+
+// VerifyAzureDeploymentResponse403Headers the declared response headers of an HTTP 403 response for VerifyAzureDeployment
+type VerifyAzureDeploymentResponse403Headers struct {
+	WWWAuthenticate *string
+}
+
+// VerifyAzureDeploymentResponse429Headers the declared response headers of an HTTP 429 response for VerifyAzureDeployment
+type VerifyAzureDeploymentResponse429Headers struct {
+	RetryAfter *int
+}
+
+// VerifyAzureDeploymentResponse503Headers the declared response headers of an HTTP 503 response for VerifyAzureDeployment
+type VerifyAzureDeploymentResponse503Headers struct {
+	RetryAfter *int
+}
+
+type VerifyAzureDeploymentResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *AzureDeployment
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *ErrorEnvelope
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *ErrorEnvelope
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *ErrorEnvelope
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *ErrorEnvelope
+	// JSON412 the response for an HTTP 412 `application/json` response
+	JSON412 *ErrorEnvelope
+	// JSON422 the response for an HTTP 422 `application/json` response
+	JSON422 *ErrorEnvelope
+	// JSON429 the response for an HTTP 429 `application/json` response
+	JSON429 *ErrorEnvelope
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *ErrorEnvelope
+	// JSON503 the response for an HTTP 503 `application/json` response
+	JSON503 *ErrorEnvelope
+	// Headers200 the parsed response headers for an HTTP 200 response
+	Headers200 *VerifyAzureDeploymentResponse200Headers
+	// Headers401 the parsed response headers for an HTTP 401 response
+	Headers401 *VerifyAzureDeploymentResponse401Headers
+	// Headers403 the parsed response headers for an HTTP 403 response
+	Headers403 *VerifyAzureDeploymentResponse403Headers
+	// Headers429 the parsed response headers for an HTTP 429 response
+	Headers429 *VerifyAzureDeploymentResponse429Headers
+	// Headers503 the parsed response headers for an HTTP 503 response
+	Headers503 *VerifyAzureDeploymentResponse503Headers
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r VerifyAzureDeploymentResponse) GetJSON200() *AzureDeployment {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r VerifyAzureDeploymentResponse) GetJSON400() *ErrorEnvelope {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r VerifyAzureDeploymentResponse) GetJSON401() *ErrorEnvelope {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r VerifyAzureDeploymentResponse) GetJSON403() *ErrorEnvelope {
+	return r.JSON403
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r VerifyAzureDeploymentResponse) GetJSON404() *ErrorEnvelope {
+	return r.JSON404
+}
+
+// GetJSON412 returns the response for an HTTP 412 `application/json` response
+func (r VerifyAzureDeploymentResponse) GetJSON412() *ErrorEnvelope {
+	return r.JSON412
+}
+
+// GetJSON422 returns the response for an HTTP 422 `application/json` response
+func (r VerifyAzureDeploymentResponse) GetJSON422() *ErrorEnvelope {
+	return r.JSON422
+}
+
+// GetJSON429 returns the response for an HTTP 429 `application/json` response
+func (r VerifyAzureDeploymentResponse) GetJSON429() *ErrorEnvelope {
+	return r.JSON429
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r VerifyAzureDeploymentResponse) GetJSON500() *ErrorEnvelope {
+	return r.JSON500
+}
+
+// GetJSON503 returns the response for an HTTP 503 `application/json` response
+func (r VerifyAzureDeploymentResponse) GetJSON503() *ErrorEnvelope {
+	return r.JSON503
+}
+
+// GetBody returns the raw response body bytes
+func (r VerifyAzureDeploymentResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r VerifyAzureDeploymentResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r VerifyAzureDeploymentResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r VerifyAzureDeploymentResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+// CreateGcpDeploymentResponse201Headers the declared response headers of an HTTP 201 response for CreateGcpDeployment
+type CreateGcpDeploymentResponse201Headers struct {
+	ETag string
+}
+
+// CreateGcpDeploymentResponse401Headers the declared response headers of an HTTP 401 response for CreateGcpDeployment
+type CreateGcpDeploymentResponse401Headers struct {
+	WWWAuthenticate *string
+}
+
+// CreateGcpDeploymentResponse403Headers the declared response headers of an HTTP 403 response for CreateGcpDeployment
+type CreateGcpDeploymentResponse403Headers struct {
+	WWWAuthenticate *string
+}
+
+// CreateGcpDeploymentResponse429Headers the declared response headers of an HTTP 429 response for CreateGcpDeployment
+type CreateGcpDeploymentResponse429Headers struct {
+	RetryAfter *int
+}
+
+// CreateGcpDeploymentResponse503Headers the declared response headers of an HTTP 503 response for CreateGcpDeployment
+type CreateGcpDeploymentResponse503Headers struct {
+	RetryAfter *int
+}
+
+type CreateGcpDeploymentResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON201 the response for an HTTP 201 `application/json` response
+	JSON201 *GcpDeployment
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *ErrorEnvelope
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *ErrorEnvelope
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *ErrorEnvelope
+	// JSON409 the response for an HTTP 409 `application/json` response
+	JSON409 *ErrorEnvelope
+	// JSON422 the response for an HTTP 422 `application/json` response
+	JSON422 *ErrorEnvelope
+	// JSON429 the response for an HTTP 429 `application/json` response
+	JSON429 *ErrorEnvelope
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *ErrorEnvelope
+	// JSON503 the response for an HTTP 503 `application/json` response
+	JSON503 *ErrorEnvelope
+	// Headers201 the parsed response headers for an HTTP 201 response
+	Headers201 *CreateGcpDeploymentResponse201Headers
+	// Headers401 the parsed response headers for an HTTP 401 response
+	Headers401 *CreateGcpDeploymentResponse401Headers
+	// Headers403 the parsed response headers for an HTTP 403 response
+	Headers403 *CreateGcpDeploymentResponse403Headers
+	// Headers429 the parsed response headers for an HTTP 429 response
+	Headers429 *CreateGcpDeploymentResponse429Headers
+	// Headers503 the parsed response headers for an HTTP 503 response
+	Headers503 *CreateGcpDeploymentResponse503Headers
+}
+
+// GetJSON201 returns the response for an HTTP 201 `application/json` response
+func (r CreateGcpDeploymentResponse) GetJSON201() *GcpDeployment {
+	return r.JSON201
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r CreateGcpDeploymentResponse) GetJSON400() *ErrorEnvelope {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r CreateGcpDeploymentResponse) GetJSON401() *ErrorEnvelope {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r CreateGcpDeploymentResponse) GetJSON403() *ErrorEnvelope {
+	return r.JSON403
+}
+
+// GetJSON409 returns the response for an HTTP 409 `application/json` response
+func (r CreateGcpDeploymentResponse) GetJSON409() *ErrorEnvelope {
+	return r.JSON409
+}
+
+// GetJSON422 returns the response for an HTTP 422 `application/json` response
+func (r CreateGcpDeploymentResponse) GetJSON422() *ErrorEnvelope {
+	return r.JSON422
+}
+
+// GetJSON429 returns the response for an HTTP 429 `application/json` response
+func (r CreateGcpDeploymentResponse) GetJSON429() *ErrorEnvelope {
+	return r.JSON429
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r CreateGcpDeploymentResponse) GetJSON500() *ErrorEnvelope {
+	return r.JSON500
+}
+
+// GetJSON503 returns the response for an HTTP 503 `application/json` response
+func (r CreateGcpDeploymentResponse) GetJSON503() *ErrorEnvelope {
+	return r.JSON503
+}
+
+// GetBody returns the raw response body bytes
+func (r CreateGcpDeploymentResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r CreateGcpDeploymentResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r CreateGcpDeploymentResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r CreateGcpDeploymentResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+// DeleteGcpDeploymentResponse401Headers the declared response headers of an HTTP 401 response for DeleteGcpDeployment
+type DeleteGcpDeploymentResponse401Headers struct {
+	WWWAuthenticate *string
+}
+
+// DeleteGcpDeploymentResponse403Headers the declared response headers of an HTTP 403 response for DeleteGcpDeployment
+type DeleteGcpDeploymentResponse403Headers struct {
+	WWWAuthenticate *string
+}
+
+// DeleteGcpDeploymentResponse429Headers the declared response headers of an HTTP 429 response for DeleteGcpDeployment
+type DeleteGcpDeploymentResponse429Headers struct {
+	RetryAfter *int
+}
+
+// DeleteGcpDeploymentResponse503Headers the declared response headers of an HTTP 503 response for DeleteGcpDeployment
+type DeleteGcpDeploymentResponse503Headers struct {
+	RetryAfter *int
+}
+
+type DeleteGcpDeploymentResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *DeploymentDeletion
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *ErrorEnvelope
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *ErrorEnvelope
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *ErrorEnvelope
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *ErrorEnvelope
+	// JSON409 the response for an HTTP 409 `application/json` response
+	JSON409 *ErrorEnvelope
+	// JSON412 the response for an HTTP 412 `application/json` response
+	JSON412 *ErrorEnvelope
+	// JSON429 the response for an HTTP 429 `application/json` response
+	JSON429 *ErrorEnvelope
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *ErrorEnvelope
+	// JSON503 the response for an HTTP 503 `application/json` response
+	JSON503 *ErrorEnvelope
+	// Headers401 the parsed response headers for an HTTP 401 response
+	Headers401 *DeleteGcpDeploymentResponse401Headers
+	// Headers403 the parsed response headers for an HTTP 403 response
+	Headers403 *DeleteGcpDeploymentResponse403Headers
+	// Headers429 the parsed response headers for an HTTP 429 response
+	Headers429 *DeleteGcpDeploymentResponse429Headers
+	// Headers503 the parsed response headers for an HTTP 503 response
+	Headers503 *DeleteGcpDeploymentResponse503Headers
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r DeleteGcpDeploymentResponse) GetJSON200() *DeploymentDeletion {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r DeleteGcpDeploymentResponse) GetJSON400() *ErrorEnvelope {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r DeleteGcpDeploymentResponse) GetJSON401() *ErrorEnvelope {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r DeleteGcpDeploymentResponse) GetJSON403() *ErrorEnvelope {
+	return r.JSON403
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r DeleteGcpDeploymentResponse) GetJSON404() *ErrorEnvelope {
+	return r.JSON404
+}
+
+// GetJSON409 returns the response for an HTTP 409 `application/json` response
+func (r DeleteGcpDeploymentResponse) GetJSON409() *ErrorEnvelope {
+	return r.JSON409
+}
+
+// GetJSON412 returns the response for an HTTP 412 `application/json` response
+func (r DeleteGcpDeploymentResponse) GetJSON412() *ErrorEnvelope {
+	return r.JSON412
+}
+
+// GetJSON429 returns the response for an HTTP 429 `application/json` response
+func (r DeleteGcpDeploymentResponse) GetJSON429() *ErrorEnvelope {
+	return r.JSON429
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r DeleteGcpDeploymentResponse) GetJSON500() *ErrorEnvelope {
+	return r.JSON500
+}
+
+// GetJSON503 returns the response for an HTTP 503 `application/json` response
+func (r DeleteGcpDeploymentResponse) GetJSON503() *ErrorEnvelope {
+	return r.JSON503
+}
+
+// GetBody returns the raw response body bytes
+func (r DeleteGcpDeploymentResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r DeleteGcpDeploymentResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r DeleteGcpDeploymentResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r DeleteGcpDeploymentResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
 // GetGcpDeploymentResponse200Headers the declared response headers of an HTTP 200 response for GetGcpDeployment
 type GetGcpDeploymentResponse200Headers struct {
 	ETag string
@@ -2477,6 +5942,520 @@ func (r GetGcpDeploymentResponse) StatusCode() int {
 
 // ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
 func (r GetGcpDeploymentResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+// UpdateGcpDeploymentResponse200Headers the declared response headers of an HTTP 200 response for UpdateGcpDeployment
+type UpdateGcpDeploymentResponse200Headers struct {
+	ETag string
+}
+
+// UpdateGcpDeploymentResponse401Headers the declared response headers of an HTTP 401 response for UpdateGcpDeployment
+type UpdateGcpDeploymentResponse401Headers struct {
+	WWWAuthenticate *string
+}
+
+// UpdateGcpDeploymentResponse403Headers the declared response headers of an HTTP 403 response for UpdateGcpDeployment
+type UpdateGcpDeploymentResponse403Headers struct {
+	WWWAuthenticate *string
+}
+
+// UpdateGcpDeploymentResponse429Headers the declared response headers of an HTTP 429 response for UpdateGcpDeployment
+type UpdateGcpDeploymentResponse429Headers struct {
+	RetryAfter *int
+}
+
+// UpdateGcpDeploymentResponse503Headers the declared response headers of an HTTP 503 response for UpdateGcpDeployment
+type UpdateGcpDeploymentResponse503Headers struct {
+	RetryAfter *int
+}
+
+type UpdateGcpDeploymentResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *GcpDeployment
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *ErrorEnvelope
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *ErrorEnvelope
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *ErrorEnvelope
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *ErrorEnvelope
+	// JSON412 the response for an HTTP 412 `application/json` response
+	JSON412 *ErrorEnvelope
+	// JSON422 the response for an HTTP 422 `application/json` response
+	JSON422 *ErrorEnvelope
+	// JSON429 the response for an HTTP 429 `application/json` response
+	JSON429 *ErrorEnvelope
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *ErrorEnvelope
+	// JSON503 the response for an HTTP 503 `application/json` response
+	JSON503 *ErrorEnvelope
+	// Headers200 the parsed response headers for an HTTP 200 response
+	Headers200 *UpdateGcpDeploymentResponse200Headers
+	// Headers401 the parsed response headers for an HTTP 401 response
+	Headers401 *UpdateGcpDeploymentResponse401Headers
+	// Headers403 the parsed response headers for an HTTP 403 response
+	Headers403 *UpdateGcpDeploymentResponse403Headers
+	// Headers429 the parsed response headers for an HTTP 429 response
+	Headers429 *UpdateGcpDeploymentResponse429Headers
+	// Headers503 the parsed response headers for an HTTP 503 response
+	Headers503 *UpdateGcpDeploymentResponse503Headers
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r UpdateGcpDeploymentResponse) GetJSON200() *GcpDeployment {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r UpdateGcpDeploymentResponse) GetJSON400() *ErrorEnvelope {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r UpdateGcpDeploymentResponse) GetJSON401() *ErrorEnvelope {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r UpdateGcpDeploymentResponse) GetJSON403() *ErrorEnvelope {
+	return r.JSON403
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r UpdateGcpDeploymentResponse) GetJSON404() *ErrorEnvelope {
+	return r.JSON404
+}
+
+// GetJSON412 returns the response for an HTTP 412 `application/json` response
+func (r UpdateGcpDeploymentResponse) GetJSON412() *ErrorEnvelope {
+	return r.JSON412
+}
+
+// GetJSON422 returns the response for an HTTP 422 `application/json` response
+func (r UpdateGcpDeploymentResponse) GetJSON422() *ErrorEnvelope {
+	return r.JSON422
+}
+
+// GetJSON429 returns the response for an HTTP 429 `application/json` response
+func (r UpdateGcpDeploymentResponse) GetJSON429() *ErrorEnvelope {
+	return r.JSON429
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r UpdateGcpDeploymentResponse) GetJSON500() *ErrorEnvelope {
+	return r.JSON500
+}
+
+// GetJSON503 returns the response for an HTTP 503 `application/json` response
+func (r UpdateGcpDeploymentResponse) GetJSON503() *ErrorEnvelope {
+	return r.JSON503
+}
+
+// GetBody returns the raw response body bytes
+func (r UpdateGcpDeploymentResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r UpdateGcpDeploymentResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r UpdateGcpDeploymentResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r UpdateGcpDeploymentResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+// VerifyGcpDeploymentResponse200Headers the declared response headers of an HTTP 200 response for VerifyGcpDeployment
+type VerifyGcpDeploymentResponse200Headers struct {
+	ETag string
+}
+
+// VerifyGcpDeploymentResponse401Headers the declared response headers of an HTTP 401 response for VerifyGcpDeployment
+type VerifyGcpDeploymentResponse401Headers struct {
+	WWWAuthenticate *string
+}
+
+// VerifyGcpDeploymentResponse403Headers the declared response headers of an HTTP 403 response for VerifyGcpDeployment
+type VerifyGcpDeploymentResponse403Headers struct {
+	WWWAuthenticate *string
+}
+
+// VerifyGcpDeploymentResponse429Headers the declared response headers of an HTTP 429 response for VerifyGcpDeployment
+type VerifyGcpDeploymentResponse429Headers struct {
+	RetryAfter *int
+}
+
+// VerifyGcpDeploymentResponse503Headers the declared response headers of an HTTP 503 response for VerifyGcpDeployment
+type VerifyGcpDeploymentResponse503Headers struct {
+	RetryAfter *int
+}
+
+type VerifyGcpDeploymentResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *GcpDeployment
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *ErrorEnvelope
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *ErrorEnvelope
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *ErrorEnvelope
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *ErrorEnvelope
+	// JSON412 the response for an HTTP 412 `application/json` response
+	JSON412 *ErrorEnvelope
+	// JSON422 the response for an HTTP 422 `application/json` response
+	JSON422 *ErrorEnvelope
+	// JSON429 the response for an HTTP 429 `application/json` response
+	JSON429 *ErrorEnvelope
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *ErrorEnvelope
+	// JSON503 the response for an HTTP 503 `application/json` response
+	JSON503 *ErrorEnvelope
+	// Headers200 the parsed response headers for an HTTP 200 response
+	Headers200 *VerifyGcpDeploymentResponse200Headers
+	// Headers401 the parsed response headers for an HTTP 401 response
+	Headers401 *VerifyGcpDeploymentResponse401Headers
+	// Headers403 the parsed response headers for an HTTP 403 response
+	Headers403 *VerifyGcpDeploymentResponse403Headers
+	// Headers429 the parsed response headers for an HTTP 429 response
+	Headers429 *VerifyGcpDeploymentResponse429Headers
+	// Headers503 the parsed response headers for an HTTP 503 response
+	Headers503 *VerifyGcpDeploymentResponse503Headers
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r VerifyGcpDeploymentResponse) GetJSON200() *GcpDeployment {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r VerifyGcpDeploymentResponse) GetJSON400() *ErrorEnvelope {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r VerifyGcpDeploymentResponse) GetJSON401() *ErrorEnvelope {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r VerifyGcpDeploymentResponse) GetJSON403() *ErrorEnvelope {
+	return r.JSON403
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r VerifyGcpDeploymentResponse) GetJSON404() *ErrorEnvelope {
+	return r.JSON404
+}
+
+// GetJSON412 returns the response for an HTTP 412 `application/json` response
+func (r VerifyGcpDeploymentResponse) GetJSON412() *ErrorEnvelope {
+	return r.JSON412
+}
+
+// GetJSON422 returns the response for an HTTP 422 `application/json` response
+func (r VerifyGcpDeploymentResponse) GetJSON422() *ErrorEnvelope {
+	return r.JSON422
+}
+
+// GetJSON429 returns the response for an HTTP 429 `application/json` response
+func (r VerifyGcpDeploymentResponse) GetJSON429() *ErrorEnvelope {
+	return r.JSON429
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r VerifyGcpDeploymentResponse) GetJSON500() *ErrorEnvelope {
+	return r.JSON500
+}
+
+// GetJSON503 returns the response for an HTTP 503 `application/json` response
+func (r VerifyGcpDeploymentResponse) GetJSON503() *ErrorEnvelope {
+	return r.JSON503
+}
+
+// GetBody returns the raw response body bytes
+func (r VerifyGcpDeploymentResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r VerifyGcpDeploymentResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r VerifyGcpDeploymentResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r VerifyGcpDeploymentResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+// ListDeploymentAccountsResponse401Headers the declared response headers of an HTTP 401 response for ListDeploymentAccounts
+type ListDeploymentAccountsResponse401Headers struct {
+	WWWAuthenticate *string
+}
+
+// ListDeploymentAccountsResponse403Headers the declared response headers of an HTTP 403 response for ListDeploymentAccounts
+type ListDeploymentAccountsResponse403Headers struct {
+	WWWAuthenticate *string
+}
+
+// ListDeploymentAccountsResponse429Headers the declared response headers of an HTTP 429 response for ListDeploymentAccounts
+type ListDeploymentAccountsResponse429Headers struct {
+	RetryAfter *int
+}
+
+// ListDeploymentAccountsResponse503Headers the declared response headers of an HTTP 503 response for ListDeploymentAccounts
+type ListDeploymentAccountsResponse503Headers struct {
+	RetryAfter *int
+}
+
+type ListDeploymentAccountsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *MemberAccountPage
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *ErrorEnvelope
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *ErrorEnvelope
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *ErrorEnvelope
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *ErrorEnvelope
+	// JSON429 the response for an HTTP 429 `application/json` response
+	JSON429 *ErrorEnvelope
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *ErrorEnvelope
+	// JSON503 the response for an HTTP 503 `application/json` response
+	JSON503 *ErrorEnvelope
+	// Headers401 the parsed response headers for an HTTP 401 response
+	Headers401 *ListDeploymentAccountsResponse401Headers
+	// Headers403 the parsed response headers for an HTTP 403 response
+	Headers403 *ListDeploymentAccountsResponse403Headers
+	// Headers429 the parsed response headers for an HTTP 429 response
+	Headers429 *ListDeploymentAccountsResponse429Headers
+	// Headers503 the parsed response headers for an HTTP 503 response
+	Headers503 *ListDeploymentAccountsResponse503Headers
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r ListDeploymentAccountsResponse) GetJSON200() *MemberAccountPage {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r ListDeploymentAccountsResponse) GetJSON400() *ErrorEnvelope {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r ListDeploymentAccountsResponse) GetJSON401() *ErrorEnvelope {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r ListDeploymentAccountsResponse) GetJSON403() *ErrorEnvelope {
+	return r.JSON403
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r ListDeploymentAccountsResponse) GetJSON404() *ErrorEnvelope {
+	return r.JSON404
+}
+
+// GetJSON429 returns the response for an HTTP 429 `application/json` response
+func (r ListDeploymentAccountsResponse) GetJSON429() *ErrorEnvelope {
+	return r.JSON429
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r ListDeploymentAccountsResponse) GetJSON500() *ErrorEnvelope {
+	return r.JSON500
+}
+
+// GetJSON503 returns the response for an HTTP 503 `application/json` response
+func (r ListDeploymentAccountsResponse) GetJSON503() *ErrorEnvelope {
+	return r.JSON503
+}
+
+// GetBody returns the raw response body bytes
+func (r ListDeploymentAccountsResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r ListDeploymentAccountsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ListDeploymentAccountsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r ListDeploymentAccountsResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+// GetDeploymentCoverageResponse401Headers the declared response headers of an HTTP 401 response for GetDeploymentCoverage
+type GetDeploymentCoverageResponse401Headers struct {
+	WWWAuthenticate *string
+}
+
+// GetDeploymentCoverageResponse403Headers the declared response headers of an HTTP 403 response for GetDeploymentCoverage
+type GetDeploymentCoverageResponse403Headers struct {
+	WWWAuthenticate *string
+}
+
+// GetDeploymentCoverageResponse429Headers the declared response headers of an HTTP 429 response for GetDeploymentCoverage
+type GetDeploymentCoverageResponse429Headers struct {
+	RetryAfter *int
+}
+
+// GetDeploymentCoverageResponse503Headers the declared response headers of an HTTP 503 response for GetDeploymentCoverage
+type GetDeploymentCoverageResponse503Headers struct {
+	RetryAfter *int
+}
+
+type GetDeploymentCoverageResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *DeploymentCoverage
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *ErrorEnvelope
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *ErrorEnvelope
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *ErrorEnvelope
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *ErrorEnvelope
+	// JSON429 the response for an HTTP 429 `application/json` response
+	JSON429 *ErrorEnvelope
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *ErrorEnvelope
+	// JSON503 the response for an HTTP 503 `application/json` response
+	JSON503 *ErrorEnvelope
+	// Headers401 the parsed response headers for an HTTP 401 response
+	Headers401 *GetDeploymentCoverageResponse401Headers
+	// Headers403 the parsed response headers for an HTTP 403 response
+	Headers403 *GetDeploymentCoverageResponse403Headers
+	// Headers429 the parsed response headers for an HTTP 429 response
+	Headers429 *GetDeploymentCoverageResponse429Headers
+	// Headers503 the parsed response headers for an HTTP 503 response
+	Headers503 *GetDeploymentCoverageResponse503Headers
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r GetDeploymentCoverageResponse) GetJSON200() *DeploymentCoverage {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r GetDeploymentCoverageResponse) GetJSON400() *ErrorEnvelope {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r GetDeploymentCoverageResponse) GetJSON401() *ErrorEnvelope {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r GetDeploymentCoverageResponse) GetJSON403() *ErrorEnvelope {
+	return r.JSON403
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r GetDeploymentCoverageResponse) GetJSON404() *ErrorEnvelope {
+	return r.JSON404
+}
+
+// GetJSON429 returns the response for an HTTP 429 `application/json` response
+func (r GetDeploymentCoverageResponse) GetJSON429() *ErrorEnvelope {
+	return r.JSON429
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r GetDeploymentCoverageResponse) GetJSON500() *ErrorEnvelope {
+	return r.JSON500
+}
+
+// GetJSON503 returns the response for an HTTP 503 `application/json` response
+func (r GetDeploymentCoverageResponse) GetJSON503() *ErrorEnvelope {
+	return r.JSON503
+}
+
+// GetBody returns the raw response body bytes
+func (r GetDeploymentCoverageResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r GetDeploymentCoverageResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetDeploymentCoverageResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetDeploymentCoverageResponse) ContentType() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Header.Get("Content-Type")
 	}
@@ -3683,7 +7662,46 @@ func (c *ClientWithResponses) ListDeploymentsWithResponse(ctx context.Context, p
 	return ParseListDeploymentsResponse(rsp)
 }
 
-// GetAwsDeploymentWithResponse Return one AWS deployment
+// CreateAwsDeploymentWithBodyWithResponse Connect an AWS account or organization to Act. Act verifies access before it stores anything
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /v1/deployments/aws (the `CreateAwsDeployment` operationId).
+func (c *ClientWithResponses) CreateAwsDeploymentWithBodyWithResponse(ctx context.Context, params *CreateAwsDeploymentParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateAwsDeploymentResponse, error) {
+	rsp, err := c.CreateAwsDeploymentWithBody(ctx, params, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCreateAwsDeploymentResponse(rsp)
+}
+
+// CreateAwsDeploymentWithResponse Connect an AWS account or organization to Act. Act verifies access before it stores anything
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /v1/deployments/aws (the `CreateAwsDeployment` operationId).
+func (c *ClientWithResponses) CreateAwsDeploymentWithResponse(ctx context.Context, params *CreateAwsDeploymentParams, body CreateAwsDeploymentJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateAwsDeploymentResponse, error) {
+	rsp, err := c.CreateAwsDeployment(ctx, params, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCreateAwsDeploymentResponse(rsp)
+}
+
+// DeleteAwsDeploymentWithResponse Disconnect a an AWS account or organization deployment: stop scans, purge the credentials Act holds, and list what still trusts Act
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with DELETE /v1/deployments/aws/{id} (the `DeleteAwsDeployment` operationId).
+func (c *ClientWithResponses) DeleteAwsDeploymentWithResponse(ctx context.Context, id string, params *DeleteAwsDeploymentParams, reqEditors ...RequestEditorFn) (*DeleteAwsDeploymentResponse, error) {
+	rsp, err := c.DeleteAwsDeployment(ctx, id, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseDeleteAwsDeploymentResponse(rsp)
+}
+
+// GetAwsDeploymentWithResponse Return one an AWS account or organization deployment
 //
 // Returns a wrapper object for the known response body format(s).
 //
@@ -3696,7 +7714,98 @@ func (c *ClientWithResponses) GetAwsDeploymentWithResponse(ctx context.Context, 
 	return ParseGetAwsDeploymentResponse(rsp)
 }
 
-// GetAzureDeploymentWithResponse Return one Azure deployment
+// UpdateAwsDeploymentWithBodyWithResponse Change a an AWS account or organization deployment in place, keeping its id
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with PATCH /v1/deployments/aws/{id} (the `UpdateAwsDeployment` operationId).
+func (c *ClientWithResponses) UpdateAwsDeploymentWithBodyWithResponse(ctx context.Context, id string, params *UpdateAwsDeploymentParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateAwsDeploymentResponse, error) {
+	rsp, err := c.UpdateAwsDeploymentWithBody(ctx, id, params, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseUpdateAwsDeploymentResponse(rsp)
+}
+
+// UpdateAwsDeploymentWithResponse Change a an AWS account or organization deployment in place, keeping its id
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with PATCH /v1/deployments/aws/{id} (the `UpdateAwsDeployment` operationId).
+func (c *ClientWithResponses) UpdateAwsDeploymentWithResponse(ctx context.Context, id string, params *UpdateAwsDeploymentParams, body UpdateAwsDeploymentJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateAwsDeploymentResponse, error) {
+	rsp, err := c.UpdateAwsDeployment(ctx, id, params, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseUpdateAwsDeploymentResponse(rsp)
+}
+
+// RotateAwsExternalIDWithResponse Move a legacy AWS deployment to its derived external ID, after verifying the role trusts it
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /v1/deployments/aws/{id}/rotate-external-id (the `RotateAwsExternalID` operationId).
+func (c *ClientWithResponses) RotateAwsExternalIDWithResponse(ctx context.Context, id string, params *RotateAwsExternalIDParams, reqEditors ...RequestEditorFn) (*RotateAwsExternalIDResponse, error) {
+	rsp, err := c.RotateAwsExternalID(ctx, id, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseRotateAwsExternalIDResponse(rsp)
+}
+
+// VerifyAwsDeploymentWithResponse Check that Act can use a an AWS account or organization deployment again, after its cloud side was fixed
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /v1/deployments/aws/{id}/verify (the `VerifyAwsDeployment` operationId).
+func (c *ClientWithResponses) VerifyAwsDeploymentWithResponse(ctx context.Context, id string, params *VerifyAwsDeploymentParams, reqEditors ...RequestEditorFn) (*VerifyAwsDeploymentResponse, error) {
+	rsp, err := c.VerifyAwsDeployment(ctx, id, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseVerifyAwsDeploymentResponse(rsp)
+}
+
+// CreateAzureDeploymentWithBodyWithResponse Connect an Azure subscription or management group to Act. Act verifies access before it stores anything
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /v1/deployments/azure (the `CreateAzureDeployment` operationId).
+func (c *ClientWithResponses) CreateAzureDeploymentWithBodyWithResponse(ctx context.Context, params *CreateAzureDeploymentParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateAzureDeploymentResponse, error) {
+	rsp, err := c.CreateAzureDeploymentWithBody(ctx, params, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCreateAzureDeploymentResponse(rsp)
+}
+
+// CreateAzureDeploymentWithResponse Connect an Azure subscription or management group to Act. Act verifies access before it stores anything
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /v1/deployments/azure (the `CreateAzureDeployment` operationId).
+func (c *ClientWithResponses) CreateAzureDeploymentWithResponse(ctx context.Context, params *CreateAzureDeploymentParams, body CreateAzureDeploymentJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateAzureDeploymentResponse, error) {
+	rsp, err := c.CreateAzureDeployment(ctx, params, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCreateAzureDeploymentResponse(rsp)
+}
+
+// DeleteAzureDeploymentWithResponse Disconnect a an Azure subscription or management group deployment: stop scans, purge the credentials Act holds, and list what still trusts Act
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with DELETE /v1/deployments/azure/{id} (the `DeleteAzureDeployment` operationId).
+func (c *ClientWithResponses) DeleteAzureDeploymentWithResponse(ctx context.Context, id string, params *DeleteAzureDeploymentParams, reqEditors ...RequestEditorFn) (*DeleteAzureDeploymentResponse, error) {
+	rsp, err := c.DeleteAzureDeployment(ctx, id, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseDeleteAzureDeploymentResponse(rsp)
+}
+
+// GetAzureDeploymentWithResponse Return one an Azure subscription or management group deployment
 //
 // Returns a wrapper object for the known response body format(s).
 //
@@ -3709,7 +7818,85 @@ func (c *ClientWithResponses) GetAzureDeploymentWithResponse(ctx context.Context
 	return ParseGetAzureDeploymentResponse(rsp)
 }
 
-// GetGcpDeploymentWithResponse Return one GCP deployment
+// UpdateAzureDeploymentWithBodyWithResponse Change a an Azure subscription or management group deployment in place, keeping its id
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with PATCH /v1/deployments/azure/{id} (the `UpdateAzureDeployment` operationId).
+func (c *ClientWithResponses) UpdateAzureDeploymentWithBodyWithResponse(ctx context.Context, id string, params *UpdateAzureDeploymentParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateAzureDeploymentResponse, error) {
+	rsp, err := c.UpdateAzureDeploymentWithBody(ctx, id, params, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseUpdateAzureDeploymentResponse(rsp)
+}
+
+// UpdateAzureDeploymentWithResponse Change a an Azure subscription or management group deployment in place, keeping its id
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with PATCH /v1/deployments/azure/{id} (the `UpdateAzureDeployment` operationId).
+func (c *ClientWithResponses) UpdateAzureDeploymentWithResponse(ctx context.Context, id string, params *UpdateAzureDeploymentParams, body UpdateAzureDeploymentJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateAzureDeploymentResponse, error) {
+	rsp, err := c.UpdateAzureDeployment(ctx, id, params, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseUpdateAzureDeploymentResponse(rsp)
+}
+
+// VerifyAzureDeploymentWithResponse Check that Act can use a an Azure subscription or management group deployment again, after its cloud side was fixed
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /v1/deployments/azure/{id}/verify (the `VerifyAzureDeployment` operationId).
+func (c *ClientWithResponses) VerifyAzureDeploymentWithResponse(ctx context.Context, id string, params *VerifyAzureDeploymentParams, reqEditors ...RequestEditorFn) (*VerifyAzureDeploymentResponse, error) {
+	rsp, err := c.VerifyAzureDeployment(ctx, id, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseVerifyAzureDeploymentResponse(rsp)
+}
+
+// CreateGcpDeploymentWithBodyWithResponse Connect a GCP project or organization to Act. Act verifies access before it stores anything
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /v1/deployments/gcp (the `CreateGcpDeployment` operationId).
+func (c *ClientWithResponses) CreateGcpDeploymentWithBodyWithResponse(ctx context.Context, params *CreateGcpDeploymentParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateGcpDeploymentResponse, error) {
+	rsp, err := c.CreateGcpDeploymentWithBody(ctx, params, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCreateGcpDeploymentResponse(rsp)
+}
+
+// CreateGcpDeploymentWithResponse Connect a GCP project or organization to Act. Act verifies access before it stores anything
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /v1/deployments/gcp (the `CreateGcpDeployment` operationId).
+func (c *ClientWithResponses) CreateGcpDeploymentWithResponse(ctx context.Context, params *CreateGcpDeploymentParams, body CreateGcpDeploymentJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateGcpDeploymentResponse, error) {
+	rsp, err := c.CreateGcpDeployment(ctx, params, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCreateGcpDeploymentResponse(rsp)
+}
+
+// DeleteGcpDeploymentWithResponse Disconnect a a GCP project or organization deployment: stop scans, purge the credentials Act holds, and list what still trusts Act
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with DELETE /v1/deployments/gcp/{id} (the `DeleteGcpDeployment` operationId).
+func (c *ClientWithResponses) DeleteGcpDeploymentWithResponse(ctx context.Context, id string, params *DeleteGcpDeploymentParams, reqEditors ...RequestEditorFn) (*DeleteGcpDeploymentResponse, error) {
+	rsp, err := c.DeleteGcpDeployment(ctx, id, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseDeleteGcpDeploymentResponse(rsp)
+}
+
+// GetGcpDeploymentWithResponse Return one a GCP project or organization deployment
 //
 // Returns a wrapper object for the known response body format(s).
 //
@@ -3720,6 +7907,71 @@ func (c *ClientWithResponses) GetGcpDeploymentWithResponse(ctx context.Context, 
 		return nil, err
 	}
 	return ParseGetGcpDeploymentResponse(rsp)
+}
+
+// UpdateGcpDeploymentWithBodyWithResponse Change a a GCP project or organization deployment in place, keeping its id
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with PATCH /v1/deployments/gcp/{id} (the `UpdateGcpDeployment` operationId).
+func (c *ClientWithResponses) UpdateGcpDeploymentWithBodyWithResponse(ctx context.Context, id string, params *UpdateGcpDeploymentParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateGcpDeploymentResponse, error) {
+	rsp, err := c.UpdateGcpDeploymentWithBody(ctx, id, params, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseUpdateGcpDeploymentResponse(rsp)
+}
+
+// UpdateGcpDeploymentWithResponse Change a a GCP project or organization deployment in place, keeping its id
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with PATCH /v1/deployments/gcp/{id} (the `UpdateGcpDeployment` operationId).
+func (c *ClientWithResponses) UpdateGcpDeploymentWithResponse(ctx context.Context, id string, params *UpdateGcpDeploymentParams, body UpdateGcpDeploymentJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateGcpDeploymentResponse, error) {
+	rsp, err := c.UpdateGcpDeployment(ctx, id, params, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseUpdateGcpDeploymentResponse(rsp)
+}
+
+// VerifyGcpDeploymentWithResponse Check that Act can use a a GCP project or organization deployment again, after its cloud side was fixed
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /v1/deployments/gcp/{id}/verify (the `VerifyGcpDeployment` operationId).
+func (c *ClientWithResponses) VerifyGcpDeploymentWithResponse(ctx context.Context, id string, params *VerifyGcpDeploymentParams, reqEditors ...RequestEditorFn) (*VerifyGcpDeploymentResponse, error) {
+	rsp, err := c.VerifyGcpDeployment(ctx, id, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseVerifyGcpDeploymentResponse(rsp)
+}
+
+// ListDeploymentAccountsWithResponse List the member accounts, subscriptions or projects of one deployment, one page at a time
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with GET /v1/deployments/{id}/accounts (the `ListDeploymentAccounts` operationId).
+func (c *ClientWithResponses) ListDeploymentAccountsWithResponse(ctx context.Context, id string, params *ListDeploymentAccountsParams, reqEditors ...RequestEditorFn) (*ListDeploymentAccountsResponse, error) {
+	rsp, err := c.ListDeploymentAccounts(ctx, id, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseListDeploymentAccountsResponse(rsp)
+}
+
+// GetDeploymentCoverageWithResponse Return how many member accounts, subscriptions or projects Act reaches through one deployment
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with GET /v1/deployments/{id}/coverage (the `GetDeploymentCoverage` operationId).
+func (c *ClientWithResponses) GetDeploymentCoverageWithResponse(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*GetDeploymentCoverageResponse, error) {
+	rsp, err := c.GetDeploymentCoverage(ctx, id, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetDeploymentCoverageResponse(rsp)
 }
 
 // ListIntegrationTypesWithResponse List the integration types this tenant may install, their fields and which of them are secret
@@ -3826,7 +8078,7 @@ func (c *ClientWithResponses) UpdateIntegrationWithResponse(ctx context.Context,
 	return ParseUpdateIntegrationResponse(rsp)
 }
 
-// GetAwsOnboardingWithResponse Return the values an AWS deployment needs before it is created
+// GetAwsOnboardingWithResponse Return what an AWS account or organization needs before it is connected, derived from the target
 //
 // Returns a wrapper object for the known response body format(s).
 //
@@ -3839,26 +8091,26 @@ func (c *ClientWithResponses) GetAwsOnboardingWithResponse(ctx context.Context, 
 	return ParseGetAwsOnboardingResponse(rsp)
 }
 
-// GetAzureOnboardingWithResponse Return the values an Azure deployment needs before it is created
+// GetAzureOnboardingWithResponse Return what an Azure subscription or management group needs before it is connected
 //
 // Returns a wrapper object for the known response body format(s).
 //
 // Corresponds with GET /v1/onboarding/azure (the `GetAzureOnboarding` operationId).
-func (c *ClientWithResponses) GetAzureOnboardingWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetAzureOnboardingResponse, error) {
-	rsp, err := c.GetAzureOnboarding(ctx, reqEditors...)
+func (c *ClientWithResponses) GetAzureOnboardingWithResponse(ctx context.Context, params *GetAzureOnboardingParams, reqEditors ...RequestEditorFn) (*GetAzureOnboardingResponse, error) {
+	rsp, err := c.GetAzureOnboarding(ctx, params, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
 	return ParseGetAzureOnboardingResponse(rsp)
 }
 
-// GetGcpOnboardingWithResponse Return the values a GCP deployment needs before it is reserved
+// GetGcpOnboardingWithResponse Return what a GCP project or organization needs before it is connected
 //
 // Returns a wrapper object for the known response body format(s).
 //
 // Corresponds with GET /v1/onboarding/gcp (the `GetGcpOnboarding` operationId).
-func (c *ClientWithResponses) GetGcpOnboardingWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetGcpOnboardingResponse, error) {
-	rsp, err := c.GetGcpOnboarding(ctx, reqEditors...)
+func (c *ClientWithResponses) GetGcpOnboardingWithResponse(ctx context.Context, params *GetGcpOnboardingParams, reqEditors ...RequestEditorFn) (*GetGcpOnboardingResponse, error) {
+	rsp, err := c.GetGcpOnboarding(ctx, params, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
@@ -3976,6 +8228,273 @@ func ParseListDeploymentsResponse(rsp *http.Response) (*ListDeploymentsResponse,
 		response.Headers429 = &headers
 	case rsp.StatusCode == 503:
 		var headers ListDeploymentsResponse503Headers
+		if values := rsp.Header.Values("Retry-After"); len(values) > 0 {
+			var value int
+			if err := runtime.BindStyledParameterWithOptions("simple", "Retry-After", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.RetryAfter = &value
+		}
+		response.Headers503 = &headers
+	}
+
+	return response, nil
+}
+
+// ParseCreateAwsDeploymentResponse parses an HTTP response from a CreateAwsDeploymentWithResponse call
+func ParseCreateAwsDeploymentResponse(rsp *http.Response) (*CreateAwsDeploymentResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &CreateAwsDeploymentResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 201:
+		var dest AwsDeployment
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON201 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 422:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON422 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON429 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON503 = &dest
+
+	}
+
+	switch {
+	case rsp.StatusCode == 201:
+		var headers CreateAwsDeploymentResponse201Headers
+		if values := rsp.Header.Values("ETag"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "ETag", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.ETag = value
+		}
+		response.Headers201 = &headers
+	case rsp.StatusCode == 401:
+		var headers CreateAwsDeploymentResponse401Headers
+		if values := rsp.Header.Values("WWW-Authenticate"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "WWW-Authenticate", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.WWWAuthenticate = &value
+		}
+		response.Headers401 = &headers
+	case rsp.StatusCode == 403:
+		var headers CreateAwsDeploymentResponse403Headers
+		if values := rsp.Header.Values("WWW-Authenticate"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "WWW-Authenticate", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.WWWAuthenticate = &value
+		}
+		response.Headers403 = &headers
+	case rsp.StatusCode == 429:
+		var headers CreateAwsDeploymentResponse429Headers
+		if values := rsp.Header.Values("Retry-After"); len(values) > 0 {
+			var value int
+			if err := runtime.BindStyledParameterWithOptions("simple", "Retry-After", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.RetryAfter = &value
+		}
+		response.Headers429 = &headers
+	case rsp.StatusCode == 503:
+		var headers CreateAwsDeploymentResponse503Headers
+		if values := rsp.Header.Values("Retry-After"); len(values) > 0 {
+			var value int
+			if err := runtime.BindStyledParameterWithOptions("simple", "Retry-After", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.RetryAfter = &value
+		}
+		response.Headers503 = &headers
+	}
+
+	return response, nil
+}
+
+// ParseDeleteAwsDeploymentResponse parses an HTTP response from a DeleteAwsDeploymentWithResponse call
+func ParseDeleteAwsDeploymentResponse(rsp *http.Response) (*DeleteAwsDeploymentResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &DeleteAwsDeploymentResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest DeploymentDeletion
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 412:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON412 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON429 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON503 = &dest
+
+	}
+
+	switch {
+	case rsp.StatusCode == 401:
+		var headers DeleteAwsDeploymentResponse401Headers
+		if values := rsp.Header.Values("WWW-Authenticate"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "WWW-Authenticate", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.WWWAuthenticate = &value
+		}
+		response.Headers401 = &headers
+	case rsp.StatusCode == 403:
+		var headers DeleteAwsDeploymentResponse403Headers
+		if values := rsp.Header.Values("WWW-Authenticate"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "WWW-Authenticate", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.WWWAuthenticate = &value
+		}
+		response.Headers403 = &headers
+	case rsp.StatusCode == 429:
+		var headers DeleteAwsDeploymentResponse429Headers
+		if values := rsp.Header.Values("Retry-After"); len(values) > 0 {
+			var value int
+			if err := runtime.BindStyledParameterWithOptions("simple", "Retry-After", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.RetryAfter = &value
+		}
+		response.Headers429 = &headers
+	case rsp.StatusCode == 503:
+		var headers DeleteAwsDeploymentResponse503Headers
 		if values := rsp.Header.Values("Retry-After"); len(values) > 0 {
 			var value int
 			if err := runtime.BindStyledParameterWithOptions("simple", "Retry-After", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {
@@ -4117,6 +8636,699 @@ func ParseGetAwsDeploymentResponse(rsp *http.Response) (*GetAwsDeploymentRespons
 	return response, nil
 }
 
+// ParseUpdateAwsDeploymentResponse parses an HTTP response from a UpdateAwsDeploymentWithResponse call
+func ParseUpdateAwsDeploymentResponse(rsp *http.Response) (*UpdateAwsDeploymentResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &UpdateAwsDeploymentResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest AwsDeployment
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 412:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON412 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 422:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON422 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON429 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON503 = &dest
+
+	}
+
+	switch {
+	case rsp.StatusCode == 200:
+		var headers UpdateAwsDeploymentResponse200Headers
+		if values := rsp.Header.Values("ETag"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "ETag", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.ETag = value
+		}
+		response.Headers200 = &headers
+	case rsp.StatusCode == 401:
+		var headers UpdateAwsDeploymentResponse401Headers
+		if values := rsp.Header.Values("WWW-Authenticate"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "WWW-Authenticate", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.WWWAuthenticate = &value
+		}
+		response.Headers401 = &headers
+	case rsp.StatusCode == 403:
+		var headers UpdateAwsDeploymentResponse403Headers
+		if values := rsp.Header.Values("WWW-Authenticate"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "WWW-Authenticate", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.WWWAuthenticate = &value
+		}
+		response.Headers403 = &headers
+	case rsp.StatusCode == 429:
+		var headers UpdateAwsDeploymentResponse429Headers
+		if values := rsp.Header.Values("Retry-After"); len(values) > 0 {
+			var value int
+			if err := runtime.BindStyledParameterWithOptions("simple", "Retry-After", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.RetryAfter = &value
+		}
+		response.Headers429 = &headers
+	case rsp.StatusCode == 503:
+		var headers UpdateAwsDeploymentResponse503Headers
+		if values := rsp.Header.Values("Retry-After"); len(values) > 0 {
+			var value int
+			if err := runtime.BindStyledParameterWithOptions("simple", "Retry-After", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.RetryAfter = &value
+		}
+		response.Headers503 = &headers
+	}
+
+	return response, nil
+}
+
+// ParseRotateAwsExternalIDResponse parses an HTTP response from a RotateAwsExternalIDWithResponse call
+func ParseRotateAwsExternalIDResponse(rsp *http.Response) (*RotateAwsExternalIDResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &RotateAwsExternalIDResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest AwsDeployment
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 412:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON412 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 422:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON422 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON429 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON503 = &dest
+
+	}
+
+	switch {
+	case rsp.StatusCode == 200:
+		var headers RotateAwsExternalIDResponse200Headers
+		if values := rsp.Header.Values("ETag"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "ETag", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.ETag = value
+		}
+		response.Headers200 = &headers
+	case rsp.StatusCode == 401:
+		var headers RotateAwsExternalIDResponse401Headers
+		if values := rsp.Header.Values("WWW-Authenticate"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "WWW-Authenticate", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.WWWAuthenticate = &value
+		}
+		response.Headers401 = &headers
+	case rsp.StatusCode == 403:
+		var headers RotateAwsExternalIDResponse403Headers
+		if values := rsp.Header.Values("WWW-Authenticate"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "WWW-Authenticate", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.WWWAuthenticate = &value
+		}
+		response.Headers403 = &headers
+	case rsp.StatusCode == 429:
+		var headers RotateAwsExternalIDResponse429Headers
+		if values := rsp.Header.Values("Retry-After"); len(values) > 0 {
+			var value int
+			if err := runtime.BindStyledParameterWithOptions("simple", "Retry-After", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.RetryAfter = &value
+		}
+		response.Headers429 = &headers
+	case rsp.StatusCode == 503:
+		var headers RotateAwsExternalIDResponse503Headers
+		if values := rsp.Header.Values("Retry-After"); len(values) > 0 {
+			var value int
+			if err := runtime.BindStyledParameterWithOptions("simple", "Retry-After", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.RetryAfter = &value
+		}
+		response.Headers503 = &headers
+	}
+
+	return response, nil
+}
+
+// ParseVerifyAwsDeploymentResponse parses an HTTP response from a VerifyAwsDeploymentWithResponse call
+func ParseVerifyAwsDeploymentResponse(rsp *http.Response) (*VerifyAwsDeploymentResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &VerifyAwsDeploymentResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest AwsDeployment
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 412:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON412 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 422:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON422 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON429 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON503 = &dest
+
+	}
+
+	switch {
+	case rsp.StatusCode == 200:
+		var headers VerifyAwsDeploymentResponse200Headers
+		if values := rsp.Header.Values("ETag"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "ETag", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.ETag = value
+		}
+		response.Headers200 = &headers
+	case rsp.StatusCode == 401:
+		var headers VerifyAwsDeploymentResponse401Headers
+		if values := rsp.Header.Values("WWW-Authenticate"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "WWW-Authenticate", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.WWWAuthenticate = &value
+		}
+		response.Headers401 = &headers
+	case rsp.StatusCode == 403:
+		var headers VerifyAwsDeploymentResponse403Headers
+		if values := rsp.Header.Values("WWW-Authenticate"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "WWW-Authenticate", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.WWWAuthenticate = &value
+		}
+		response.Headers403 = &headers
+	case rsp.StatusCode == 429:
+		var headers VerifyAwsDeploymentResponse429Headers
+		if values := rsp.Header.Values("Retry-After"); len(values) > 0 {
+			var value int
+			if err := runtime.BindStyledParameterWithOptions("simple", "Retry-After", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.RetryAfter = &value
+		}
+		response.Headers429 = &headers
+	case rsp.StatusCode == 503:
+		var headers VerifyAwsDeploymentResponse503Headers
+		if values := rsp.Header.Values("Retry-After"); len(values) > 0 {
+			var value int
+			if err := runtime.BindStyledParameterWithOptions("simple", "Retry-After", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.RetryAfter = &value
+		}
+		response.Headers503 = &headers
+	}
+
+	return response, nil
+}
+
+// ParseCreateAzureDeploymentResponse parses an HTTP response from a CreateAzureDeploymentWithResponse call
+func ParseCreateAzureDeploymentResponse(rsp *http.Response) (*CreateAzureDeploymentResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &CreateAzureDeploymentResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 201:
+		var dest AzureDeployment
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON201 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 422:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON422 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON429 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON503 = &dest
+
+	}
+
+	switch {
+	case rsp.StatusCode == 201:
+		var headers CreateAzureDeploymentResponse201Headers
+		if values := rsp.Header.Values("ETag"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "ETag", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.ETag = value
+		}
+		response.Headers201 = &headers
+	case rsp.StatusCode == 401:
+		var headers CreateAzureDeploymentResponse401Headers
+		if values := rsp.Header.Values("WWW-Authenticate"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "WWW-Authenticate", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.WWWAuthenticate = &value
+		}
+		response.Headers401 = &headers
+	case rsp.StatusCode == 403:
+		var headers CreateAzureDeploymentResponse403Headers
+		if values := rsp.Header.Values("WWW-Authenticate"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "WWW-Authenticate", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.WWWAuthenticate = &value
+		}
+		response.Headers403 = &headers
+	case rsp.StatusCode == 429:
+		var headers CreateAzureDeploymentResponse429Headers
+		if values := rsp.Header.Values("Retry-After"); len(values) > 0 {
+			var value int
+			if err := runtime.BindStyledParameterWithOptions("simple", "Retry-After", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.RetryAfter = &value
+		}
+		response.Headers429 = &headers
+	case rsp.StatusCode == 503:
+		var headers CreateAzureDeploymentResponse503Headers
+		if values := rsp.Header.Values("Retry-After"); len(values) > 0 {
+			var value int
+			if err := runtime.BindStyledParameterWithOptions("simple", "Retry-After", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.RetryAfter = &value
+		}
+		response.Headers503 = &headers
+	}
+
+	return response, nil
+}
+
+// ParseDeleteAzureDeploymentResponse parses an HTTP response from a DeleteAzureDeploymentWithResponse call
+func ParseDeleteAzureDeploymentResponse(rsp *http.Response) (*DeleteAzureDeploymentResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &DeleteAzureDeploymentResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest DeploymentDeletion
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 412:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON412 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON429 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON503 = &dest
+
+	}
+
+	switch {
+	case rsp.StatusCode == 401:
+		var headers DeleteAzureDeploymentResponse401Headers
+		if values := rsp.Header.Values("WWW-Authenticate"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "WWW-Authenticate", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.WWWAuthenticate = &value
+		}
+		response.Headers401 = &headers
+	case rsp.StatusCode == 403:
+		var headers DeleteAzureDeploymentResponse403Headers
+		if values := rsp.Header.Values("WWW-Authenticate"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "WWW-Authenticate", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.WWWAuthenticate = &value
+		}
+		response.Headers403 = &headers
+	case rsp.StatusCode == 429:
+		var headers DeleteAzureDeploymentResponse429Headers
+		if values := rsp.Header.Values("Retry-After"); len(values) > 0 {
+			var value int
+			if err := runtime.BindStyledParameterWithOptions("simple", "Retry-After", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.RetryAfter = &value
+		}
+		response.Headers429 = &headers
+	case rsp.StatusCode == 503:
+		var headers DeleteAzureDeploymentResponse503Headers
+		if values := rsp.Header.Values("Retry-After"); len(values) > 0 {
+			var value int
+			if err := runtime.BindStyledParameterWithOptions("simple", "Retry-After", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.RetryAfter = &value
+		}
+		response.Headers503 = &headers
+	}
+
+	return response, nil
+}
+
 // ParseGetAzureDeploymentResponse parses an HTTP response from a GetAzureDeploymentWithResponse call
 func ParseGetAzureDeploymentResponse(rsp *http.Response) (*GetAzureDeploymentResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -4245,6 +9457,557 @@ func ParseGetAzureDeploymentResponse(rsp *http.Response) (*GetAzureDeploymentRes
 	return response, nil
 }
 
+// ParseUpdateAzureDeploymentResponse parses an HTTP response from a UpdateAzureDeploymentWithResponse call
+func ParseUpdateAzureDeploymentResponse(rsp *http.Response) (*UpdateAzureDeploymentResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &UpdateAzureDeploymentResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest AzureDeployment
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 412:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON412 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 422:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON422 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON429 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON503 = &dest
+
+	}
+
+	switch {
+	case rsp.StatusCode == 200:
+		var headers UpdateAzureDeploymentResponse200Headers
+		if values := rsp.Header.Values("ETag"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "ETag", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.ETag = value
+		}
+		response.Headers200 = &headers
+	case rsp.StatusCode == 401:
+		var headers UpdateAzureDeploymentResponse401Headers
+		if values := rsp.Header.Values("WWW-Authenticate"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "WWW-Authenticate", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.WWWAuthenticate = &value
+		}
+		response.Headers401 = &headers
+	case rsp.StatusCode == 403:
+		var headers UpdateAzureDeploymentResponse403Headers
+		if values := rsp.Header.Values("WWW-Authenticate"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "WWW-Authenticate", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.WWWAuthenticate = &value
+		}
+		response.Headers403 = &headers
+	case rsp.StatusCode == 429:
+		var headers UpdateAzureDeploymentResponse429Headers
+		if values := rsp.Header.Values("Retry-After"); len(values) > 0 {
+			var value int
+			if err := runtime.BindStyledParameterWithOptions("simple", "Retry-After", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.RetryAfter = &value
+		}
+		response.Headers429 = &headers
+	case rsp.StatusCode == 503:
+		var headers UpdateAzureDeploymentResponse503Headers
+		if values := rsp.Header.Values("Retry-After"); len(values) > 0 {
+			var value int
+			if err := runtime.BindStyledParameterWithOptions("simple", "Retry-After", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.RetryAfter = &value
+		}
+		response.Headers503 = &headers
+	}
+
+	return response, nil
+}
+
+// ParseVerifyAzureDeploymentResponse parses an HTTP response from a VerifyAzureDeploymentWithResponse call
+func ParseVerifyAzureDeploymentResponse(rsp *http.Response) (*VerifyAzureDeploymentResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &VerifyAzureDeploymentResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest AzureDeployment
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 412:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON412 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 422:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON422 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON429 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON503 = &dest
+
+	}
+
+	switch {
+	case rsp.StatusCode == 200:
+		var headers VerifyAzureDeploymentResponse200Headers
+		if values := rsp.Header.Values("ETag"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "ETag", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.ETag = value
+		}
+		response.Headers200 = &headers
+	case rsp.StatusCode == 401:
+		var headers VerifyAzureDeploymentResponse401Headers
+		if values := rsp.Header.Values("WWW-Authenticate"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "WWW-Authenticate", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.WWWAuthenticate = &value
+		}
+		response.Headers401 = &headers
+	case rsp.StatusCode == 403:
+		var headers VerifyAzureDeploymentResponse403Headers
+		if values := rsp.Header.Values("WWW-Authenticate"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "WWW-Authenticate", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.WWWAuthenticate = &value
+		}
+		response.Headers403 = &headers
+	case rsp.StatusCode == 429:
+		var headers VerifyAzureDeploymentResponse429Headers
+		if values := rsp.Header.Values("Retry-After"); len(values) > 0 {
+			var value int
+			if err := runtime.BindStyledParameterWithOptions("simple", "Retry-After", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.RetryAfter = &value
+		}
+		response.Headers429 = &headers
+	case rsp.StatusCode == 503:
+		var headers VerifyAzureDeploymentResponse503Headers
+		if values := rsp.Header.Values("Retry-After"); len(values) > 0 {
+			var value int
+			if err := runtime.BindStyledParameterWithOptions("simple", "Retry-After", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.RetryAfter = &value
+		}
+		response.Headers503 = &headers
+	}
+
+	return response, nil
+}
+
+// ParseCreateGcpDeploymentResponse parses an HTTP response from a CreateGcpDeploymentWithResponse call
+func ParseCreateGcpDeploymentResponse(rsp *http.Response) (*CreateGcpDeploymentResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &CreateGcpDeploymentResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 201:
+		var dest GcpDeployment
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON201 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 422:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON422 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON429 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON503 = &dest
+
+	}
+
+	switch {
+	case rsp.StatusCode == 201:
+		var headers CreateGcpDeploymentResponse201Headers
+		if values := rsp.Header.Values("ETag"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "ETag", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.ETag = value
+		}
+		response.Headers201 = &headers
+	case rsp.StatusCode == 401:
+		var headers CreateGcpDeploymentResponse401Headers
+		if values := rsp.Header.Values("WWW-Authenticate"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "WWW-Authenticate", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.WWWAuthenticate = &value
+		}
+		response.Headers401 = &headers
+	case rsp.StatusCode == 403:
+		var headers CreateGcpDeploymentResponse403Headers
+		if values := rsp.Header.Values("WWW-Authenticate"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "WWW-Authenticate", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.WWWAuthenticate = &value
+		}
+		response.Headers403 = &headers
+	case rsp.StatusCode == 429:
+		var headers CreateGcpDeploymentResponse429Headers
+		if values := rsp.Header.Values("Retry-After"); len(values) > 0 {
+			var value int
+			if err := runtime.BindStyledParameterWithOptions("simple", "Retry-After", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.RetryAfter = &value
+		}
+		response.Headers429 = &headers
+	case rsp.StatusCode == 503:
+		var headers CreateGcpDeploymentResponse503Headers
+		if values := rsp.Header.Values("Retry-After"); len(values) > 0 {
+			var value int
+			if err := runtime.BindStyledParameterWithOptions("simple", "Retry-After", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.RetryAfter = &value
+		}
+		response.Headers503 = &headers
+	}
+
+	return response, nil
+}
+
+// ParseDeleteGcpDeploymentResponse parses an HTTP response from a DeleteGcpDeploymentWithResponse call
+func ParseDeleteGcpDeploymentResponse(rsp *http.Response) (*DeleteGcpDeploymentResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &DeleteGcpDeploymentResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest DeploymentDeletion
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 412:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON412 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON429 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON503 = &dest
+
+	}
+
+	switch {
+	case rsp.StatusCode == 401:
+		var headers DeleteGcpDeploymentResponse401Headers
+		if values := rsp.Header.Values("WWW-Authenticate"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "WWW-Authenticate", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.WWWAuthenticate = &value
+		}
+		response.Headers401 = &headers
+	case rsp.StatusCode == 403:
+		var headers DeleteGcpDeploymentResponse403Headers
+		if values := rsp.Header.Values("WWW-Authenticate"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "WWW-Authenticate", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.WWWAuthenticate = &value
+		}
+		response.Headers403 = &headers
+	case rsp.StatusCode == 429:
+		var headers DeleteGcpDeploymentResponse429Headers
+		if values := rsp.Header.Values("Retry-After"); len(values) > 0 {
+			var value int
+			if err := runtime.BindStyledParameterWithOptions("simple", "Retry-After", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.RetryAfter = &value
+		}
+		response.Headers429 = &headers
+	case rsp.StatusCode == 503:
+		var headers DeleteGcpDeploymentResponse503Headers
+		if values := rsp.Header.Values("Retry-After"); len(values) > 0 {
+			var value int
+			if err := runtime.BindStyledParameterWithOptions("simple", "Retry-After", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.RetryAfter = &value
+		}
+		response.Headers503 = &headers
+	}
+
+	return response, nil
+}
+
 // ParseGetGcpDeploymentResponse parses an HTTP response from a GetGcpDeploymentWithResponse call
 func ParseGetGcpDeploymentResponse(rsp *http.Response) (*GetGcpDeploymentResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -4360,6 +10123,526 @@ func ParseGetGcpDeploymentResponse(rsp *http.Response) (*GetGcpDeploymentRespons
 		response.Headers429 = &headers
 	case rsp.StatusCode == 503:
 		var headers GetGcpDeploymentResponse503Headers
+		if values := rsp.Header.Values("Retry-After"); len(values) > 0 {
+			var value int
+			if err := runtime.BindStyledParameterWithOptions("simple", "Retry-After", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.RetryAfter = &value
+		}
+		response.Headers503 = &headers
+	}
+
+	return response, nil
+}
+
+// ParseUpdateGcpDeploymentResponse parses an HTTP response from a UpdateGcpDeploymentWithResponse call
+func ParseUpdateGcpDeploymentResponse(rsp *http.Response) (*UpdateGcpDeploymentResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &UpdateGcpDeploymentResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest GcpDeployment
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 412:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON412 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 422:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON422 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON429 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON503 = &dest
+
+	}
+
+	switch {
+	case rsp.StatusCode == 200:
+		var headers UpdateGcpDeploymentResponse200Headers
+		if values := rsp.Header.Values("ETag"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "ETag", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.ETag = value
+		}
+		response.Headers200 = &headers
+	case rsp.StatusCode == 401:
+		var headers UpdateGcpDeploymentResponse401Headers
+		if values := rsp.Header.Values("WWW-Authenticate"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "WWW-Authenticate", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.WWWAuthenticate = &value
+		}
+		response.Headers401 = &headers
+	case rsp.StatusCode == 403:
+		var headers UpdateGcpDeploymentResponse403Headers
+		if values := rsp.Header.Values("WWW-Authenticate"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "WWW-Authenticate", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.WWWAuthenticate = &value
+		}
+		response.Headers403 = &headers
+	case rsp.StatusCode == 429:
+		var headers UpdateGcpDeploymentResponse429Headers
+		if values := rsp.Header.Values("Retry-After"); len(values) > 0 {
+			var value int
+			if err := runtime.BindStyledParameterWithOptions("simple", "Retry-After", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.RetryAfter = &value
+		}
+		response.Headers429 = &headers
+	case rsp.StatusCode == 503:
+		var headers UpdateGcpDeploymentResponse503Headers
+		if values := rsp.Header.Values("Retry-After"); len(values) > 0 {
+			var value int
+			if err := runtime.BindStyledParameterWithOptions("simple", "Retry-After", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.RetryAfter = &value
+		}
+		response.Headers503 = &headers
+	}
+
+	return response, nil
+}
+
+// ParseVerifyGcpDeploymentResponse parses an HTTP response from a VerifyGcpDeploymentWithResponse call
+func ParseVerifyGcpDeploymentResponse(rsp *http.Response) (*VerifyGcpDeploymentResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &VerifyGcpDeploymentResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest GcpDeployment
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 412:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON412 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 422:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON422 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON429 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON503 = &dest
+
+	}
+
+	switch {
+	case rsp.StatusCode == 200:
+		var headers VerifyGcpDeploymentResponse200Headers
+		if values := rsp.Header.Values("ETag"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "ETag", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.ETag = value
+		}
+		response.Headers200 = &headers
+	case rsp.StatusCode == 401:
+		var headers VerifyGcpDeploymentResponse401Headers
+		if values := rsp.Header.Values("WWW-Authenticate"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "WWW-Authenticate", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.WWWAuthenticate = &value
+		}
+		response.Headers401 = &headers
+	case rsp.StatusCode == 403:
+		var headers VerifyGcpDeploymentResponse403Headers
+		if values := rsp.Header.Values("WWW-Authenticate"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "WWW-Authenticate", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.WWWAuthenticate = &value
+		}
+		response.Headers403 = &headers
+	case rsp.StatusCode == 429:
+		var headers VerifyGcpDeploymentResponse429Headers
+		if values := rsp.Header.Values("Retry-After"); len(values) > 0 {
+			var value int
+			if err := runtime.BindStyledParameterWithOptions("simple", "Retry-After", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.RetryAfter = &value
+		}
+		response.Headers429 = &headers
+	case rsp.StatusCode == 503:
+		var headers VerifyGcpDeploymentResponse503Headers
+		if values := rsp.Header.Values("Retry-After"); len(values) > 0 {
+			var value int
+			if err := runtime.BindStyledParameterWithOptions("simple", "Retry-After", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.RetryAfter = &value
+		}
+		response.Headers503 = &headers
+	}
+
+	return response, nil
+}
+
+// ParseListDeploymentAccountsResponse parses an HTTP response from a ListDeploymentAccountsWithResponse call
+func ParseListDeploymentAccountsResponse(rsp *http.Response) (*ListDeploymentAccountsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ListDeploymentAccountsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest MemberAccountPage
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON429 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON503 = &dest
+
+	}
+
+	switch {
+	case rsp.StatusCode == 401:
+		var headers ListDeploymentAccountsResponse401Headers
+		if values := rsp.Header.Values("WWW-Authenticate"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "WWW-Authenticate", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.WWWAuthenticate = &value
+		}
+		response.Headers401 = &headers
+	case rsp.StatusCode == 403:
+		var headers ListDeploymentAccountsResponse403Headers
+		if values := rsp.Header.Values("WWW-Authenticate"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "WWW-Authenticate", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.WWWAuthenticate = &value
+		}
+		response.Headers403 = &headers
+	case rsp.StatusCode == 429:
+		var headers ListDeploymentAccountsResponse429Headers
+		if values := rsp.Header.Values("Retry-After"); len(values) > 0 {
+			var value int
+			if err := runtime.BindStyledParameterWithOptions("simple", "Retry-After", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.RetryAfter = &value
+		}
+		response.Headers429 = &headers
+	case rsp.StatusCode == 503:
+		var headers ListDeploymentAccountsResponse503Headers
+		if values := rsp.Header.Values("Retry-After"); len(values) > 0 {
+			var value int
+			if err := runtime.BindStyledParameterWithOptions("simple", "Retry-After", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.RetryAfter = &value
+		}
+		response.Headers503 = &headers
+	}
+
+	return response, nil
+}
+
+// ParseGetDeploymentCoverageResponse parses an HTTP response from a GetDeploymentCoverageWithResponse call
+func ParseGetDeploymentCoverageResponse(rsp *http.Response) (*GetDeploymentCoverageResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetDeploymentCoverageResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest DeploymentCoverage
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON429 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON503 = &dest
+
+	}
+
+	switch {
+	case rsp.StatusCode == 401:
+		var headers GetDeploymentCoverageResponse401Headers
+		if values := rsp.Header.Values("WWW-Authenticate"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "WWW-Authenticate", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.WWWAuthenticate = &value
+		}
+		response.Headers401 = &headers
+	case rsp.StatusCode == 403:
+		var headers GetDeploymentCoverageResponse403Headers
+		if values := rsp.Header.Values("WWW-Authenticate"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "WWW-Authenticate", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.WWWAuthenticate = &value
+		}
+		response.Headers403 = &headers
+	case rsp.StatusCode == 429:
+		var headers GetDeploymentCoverageResponse429Headers
+		if values := rsp.Header.Values("Retry-After"); len(values) > 0 {
+			var value int
+			if err := runtime.BindStyledParameterWithOptions("simple", "Retry-After", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.RetryAfter = &value
+		}
+		response.Headers429 = &headers
+	case rsp.StatusCode == 503:
+		var headers GetDeploymentCoverageResponse503Headers
 		if values := rsp.Header.Values("Retry-After"); len(values) > 0 {
 			var value int
 			if err := runtime.BindStyledParameterWithOptions("simple", "Retry-After", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {
