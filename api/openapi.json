@@ -165,18 +165,36 @@
     "/v1/onboarding/aws": {
       "get": {
         "operationId": "getAwsOnboarding",
-        "summary": "Return the values an AWS deployment needs before it is created",
+        "summary": "Return what an AWS account or organization needs before it is connected, derived from the target",
         "tags": [
           "onboarding"
         ],
         "parameters": [
           {
-            "name": "deploymentId",
+            "name": "accountId",
             "in": "query",
-            "required": true,
             "schema": {
               "type": "string",
-              "format": "uuid"
+              "pattern": "^\\d{12}$"
+            }
+          },
+          {
+            "name": "organizationId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "pattern": "^o-[a-z0-9]{10,32}$"
+            }
+          },
+          {
+            "name": "variant",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 32,
+              "pattern": "^[a-z0-9-]+$",
+              "description": "Distinguishes a second deployment over the same target; leave out for the usual single deployment"
             }
           }
         ],
@@ -295,9 +313,51 @@
     "/v1/onboarding/azure": {
       "get": {
         "operationId": "getAzureOnboarding",
-        "summary": "Return the values an Azure deployment needs before it is created",
+        "summary": "Return what an Azure subscription or management group needs before it is connected",
         "tags": [
           "onboarding"
+        ],
+        "parameters": [
+          {
+            "name": "directoryId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Entra directory (Azure tenant) id that owns the subscription or management group"
+            }
+          },
+          {
+            "name": "subscriptionId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "managementGroupId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_().-]{1,90}$"
+            }
+          },
+          {
+            "name": "variant",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 32,
+              "pattern": "^[a-z0-9-]+$",
+              "description": "Distinguishes a second deployment over the same target; leave out for the usual single deployment"
+            }
+          }
         ],
         "responses": {
           "200": {
@@ -414,9 +474,46 @@
     "/v1/onboarding/gcp": {
       "get": {
         "operationId": "getGcpOnboarding",
-        "summary": "Return the values a GCP deployment needs before it is reserved",
+        "summary": "Return what a GCP project or organization needs before it is connected",
         "tags": [
           "onboarding"
+        ],
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9-]{4,28}[a-z0-9]$"
+            }
+          },
+          {
+            "name": "organizationId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{1,20}$"
+            }
+          },
+          {
+            "name": "serviceAccountProjectId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9-]{4,28}[a-z0-9]$"
+            }
+          },
+          {
+            "name": "variant",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 32,
+              "pattern": "^[a-z0-9-]+$",
+              "description": "Distinguishes a second deployment over the same target; leave out for the usual single deployment"
+            }
+          }
         ],
         "responses": {
           "200": {
@@ -550,6 +647,15 @@
             "in": "query",
             "schema": {
               "$ref": "#/components/schemas/DeploymentStatus"
+            }
+          },
+          {
+            "name": "target",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
             }
           },
           {
@@ -697,10 +803,314 @@
         "x-act-scope": "none"
       }
     },
+    "/v1/deployments/{id}/coverage": {
+      "get": {
+        "operationId": "getDeploymentCoverage",
+        "summary": "Return how many member accounts, subscriptions or projects Act reaches through one deployment",
+        "tags": [
+          "deployments"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeploymentCoverage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error envelope. Codes: invalid_request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error envelope. Codes: unauthenticated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "WWW-Authenticate": {
+                "description": "Bearer challenge",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Error envelope. Codes: insufficient_scope, feature_disabled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "WWW-Authenticate": {
+                "description": "Bearer challenge naming the missing scope",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error envelope. Codes: not_found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Error envelope. Codes: rate_limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error envelope. Codes: internal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Error envelope. Codes: unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "serviceAccount": []
+          }
+        ],
+        "x-act-scope": "none"
+      }
+    },
+    "/v1/deployments/{id}/accounts": {
+      "get": {
+        "operationId": "listDeploymentAccounts",
+        "summary": "List the member accounts, subscriptions or projects of one deployment, one page at a time",
+        "tags": [
+          "deployments"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/MemberAccountStatus"
+            }
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          },
+          {
+            "name": "pageToken",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 2048
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemberAccountPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error envelope. Codes: invalid_request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error envelope. Codes: unauthenticated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "WWW-Authenticate": {
+                "description": "Bearer challenge",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Error envelope. Codes: insufficient_scope, feature_disabled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "WWW-Authenticate": {
+                "description": "Bearer challenge naming the missing scope",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error envelope. Codes: not_found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Error envelope. Codes: rate_limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error envelope. Codes: internal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Error envelope. Codes: unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "serviceAccount": []
+          }
+        ],
+        "x-act-scope": "none"
+      }
+    },
     "/v1/deployments/aws/{id}": {
       "get": {
         "operationId": "getAwsDeployment",
-        "summary": "Return one AWS deployment",
+        "summary": "Return one an AWS account or organization deployment",
         "tags": [
           "deployments"
         ],
@@ -843,12 +1253,905 @@
           }
         ],
         "x-act-scope": "none"
+      },
+      "patch": {
+        "operationId": "updateAwsDeployment",
+        "summary": "Change a an AWS account or organization deployment in place, keeping its id",
+        "tags": [
+          "deployments"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "if-match",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AwsDeploymentPatch"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "headers": {
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                },
+                "required": true
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AwsDeployment"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error envelope. Codes: invalid_request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error envelope. Codes: unauthenticated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "WWW-Authenticate": {
+                "description": "Bearer challenge",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Error envelope. Codes: insufficient_scope, feature_disabled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "WWW-Authenticate": {
+                "description": "Bearer challenge naming the missing scope",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error envelope. Codes: not_found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Error envelope. Codes: precondition_failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Error envelope. Codes: verification_failed, connection_check_failed, integration_not_connected, limit_exceeded, target_not_allowed, idempotency_mismatch",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Error envelope. Codes: rate_limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error envelope. Codes: internal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Error envelope. Codes: unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "serviceAccount": [
+              "act:write",
+              "deployments:write"
+            ]
+          }
+        ],
+        "x-act-scope": "deployments:write"
+      },
+      "delete": {
+        "operationId": "deleteAwsDeployment",
+        "summary": "Disconnect a an AWS account or organization deployment: stop scans, purge the credentials Act holds, and list what still trusts Act",
+        "tags": [
+          "deployments"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "if-match",
+            "in": "header",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeploymentDeletion"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error envelope. Codes: invalid_request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error envelope. Codes: unauthenticated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "WWW-Authenticate": {
+                "description": "Bearer challenge",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Error envelope. Codes: insufficient_scope, feature_disabled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "WWW-Authenticate": {
+                "description": "Bearer challenge naming the missing scope",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error envelope. Codes: not_found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Error envelope. Codes: already_exists, conflict, deletion_protected",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Error envelope. Codes: precondition_failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Error envelope. Codes: rate_limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error envelope. Codes: internal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Error envelope. Codes: unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "serviceAccount": [
+              "act:write",
+              "deployments:write"
+            ]
+          }
+        ],
+        "x-act-scope": "deployments:write"
+      }
+    },
+    "/v1/deployments/aws": {
+      "post": {
+        "operationId": "createAwsDeployment",
+        "summary": "Connect an AWS account or organization to Act. Act verifies access before it stores anything",
+        "tags": [
+          "deployments"
+        ],
+        "parameters": [
+          {
+            "name": "idempotency-key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 255
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AwsDeploymentCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "OK",
+            "headers": {
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                },
+                "required": true
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AwsDeployment"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error envelope. Codes: invalid_request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error envelope. Codes: unauthenticated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "WWW-Authenticate": {
+                "description": "Bearer challenge",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Error envelope. Codes: insufficient_scope, feature_disabled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "WWW-Authenticate": {
+                "description": "Bearer challenge naming the missing scope",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Error envelope. Codes: already_exists, conflict, deletion_protected",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Error envelope. Codes: verification_failed, connection_check_failed, integration_not_connected, limit_exceeded, target_not_allowed, idempotency_mismatch",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Error envelope. Codes: rate_limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error envelope. Codes: internal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Error envelope. Codes: unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "serviceAccount": [
+              "act:write",
+              "deployments:write"
+            ]
+          }
+        ],
+        "x-act-scope": "deployments:write"
+      }
+    },
+    "/v1/deployments/aws/{id}/verify": {
+      "post": {
+        "operationId": "verifyAwsDeployment",
+        "summary": "Check that Act can use a an AWS account or organization deployment again, after its cloud side was fixed",
+        "tags": [
+          "deployments"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "if-match",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "headers": {
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                },
+                "required": true
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AwsDeployment"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error envelope. Codes: invalid_request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error envelope. Codes: unauthenticated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "WWW-Authenticate": {
+                "description": "Bearer challenge",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Error envelope. Codes: insufficient_scope, feature_disabled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "WWW-Authenticate": {
+                "description": "Bearer challenge naming the missing scope",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error envelope. Codes: not_found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Error envelope. Codes: precondition_failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Error envelope. Codes: verification_failed, connection_check_failed, integration_not_connected, limit_exceeded, target_not_allowed, idempotency_mismatch",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Error envelope. Codes: rate_limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error envelope. Codes: internal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Error envelope. Codes: unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "serviceAccount": [
+              "act:write",
+              "deployments:write"
+            ]
+          }
+        ],
+        "x-act-scope": "deployments:write"
+      }
+    },
+    "/v1/deployments/aws/{id}/rotate-external-id": {
+      "post": {
+        "operationId": "rotateAwsExternalId",
+        "summary": "Move a legacy AWS deployment to its derived external ID, after verifying the role trusts it",
+        "tags": [
+          "deployments"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "if-match",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "headers": {
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                },
+                "required": true
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AwsDeployment"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error envelope. Codes: invalid_request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error envelope. Codes: unauthenticated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "WWW-Authenticate": {
+                "description": "Bearer challenge",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Error envelope. Codes: insufficient_scope, feature_disabled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "WWW-Authenticate": {
+                "description": "Bearer challenge naming the missing scope",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error envelope. Codes: not_found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Error envelope. Codes: precondition_failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Error envelope. Codes: verification_failed, connection_check_failed, integration_not_connected, limit_exceeded, target_not_allowed, idempotency_mismatch",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Error envelope. Codes: rate_limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error envelope. Codes: internal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Error envelope. Codes: unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "serviceAccount": [
+              "act:write",
+              "deployments:write"
+            ]
+          }
+        ],
+        "x-act-scope": "deployments:write"
       }
     },
     "/v1/deployments/azure/{id}": {
       "get": {
         "operationId": "getAzureDeployment",
-        "summary": "Return one Azure deployment",
+        "summary": "Return one an Azure subscription or management group deployment",
         "tags": [
           "deployments"
         ],
@@ -991,12 +2294,724 @@
           }
         ],
         "x-act-scope": "none"
+      },
+      "patch": {
+        "operationId": "updateAzureDeployment",
+        "summary": "Change a an Azure subscription or management group deployment in place, keeping its id",
+        "tags": [
+          "deployments"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "if-match",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AzureDeploymentPatch"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "headers": {
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                },
+                "required": true
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AzureDeployment"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error envelope. Codes: invalid_request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error envelope. Codes: unauthenticated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "WWW-Authenticate": {
+                "description": "Bearer challenge",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Error envelope. Codes: insufficient_scope, feature_disabled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "WWW-Authenticate": {
+                "description": "Bearer challenge naming the missing scope",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error envelope. Codes: not_found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Error envelope. Codes: precondition_failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Error envelope. Codes: verification_failed, connection_check_failed, integration_not_connected, limit_exceeded, target_not_allowed, idempotency_mismatch",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Error envelope. Codes: rate_limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error envelope. Codes: internal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Error envelope. Codes: unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "serviceAccount": [
+              "act:write",
+              "deployments:write"
+            ]
+          }
+        ],
+        "x-act-scope": "deployments:write"
+      },
+      "delete": {
+        "operationId": "deleteAzureDeployment",
+        "summary": "Disconnect a an Azure subscription or management group deployment: stop scans, purge the credentials Act holds, and list what still trusts Act",
+        "tags": [
+          "deployments"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "if-match",
+            "in": "header",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeploymentDeletion"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error envelope. Codes: invalid_request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error envelope. Codes: unauthenticated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "WWW-Authenticate": {
+                "description": "Bearer challenge",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Error envelope. Codes: insufficient_scope, feature_disabled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "WWW-Authenticate": {
+                "description": "Bearer challenge naming the missing scope",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error envelope. Codes: not_found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Error envelope. Codes: already_exists, conflict, deletion_protected",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Error envelope. Codes: precondition_failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Error envelope. Codes: rate_limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error envelope. Codes: internal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Error envelope. Codes: unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "serviceAccount": [
+              "act:write",
+              "deployments:write"
+            ]
+          }
+        ],
+        "x-act-scope": "deployments:write"
+      }
+    },
+    "/v1/deployments/azure": {
+      "post": {
+        "operationId": "createAzureDeployment",
+        "summary": "Connect an Azure subscription or management group to Act. Act verifies access before it stores anything",
+        "tags": [
+          "deployments"
+        ],
+        "parameters": [
+          {
+            "name": "idempotency-key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 255
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AzureDeploymentCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "OK",
+            "headers": {
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                },
+                "required": true
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AzureDeployment"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error envelope. Codes: invalid_request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error envelope. Codes: unauthenticated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "WWW-Authenticate": {
+                "description": "Bearer challenge",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Error envelope. Codes: insufficient_scope, feature_disabled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "WWW-Authenticate": {
+                "description": "Bearer challenge naming the missing scope",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Error envelope. Codes: already_exists, conflict, deletion_protected",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Error envelope. Codes: verification_failed, connection_check_failed, integration_not_connected, limit_exceeded, target_not_allowed, idempotency_mismatch",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Error envelope. Codes: rate_limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error envelope. Codes: internal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Error envelope. Codes: unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "serviceAccount": [
+              "act:write",
+              "deployments:write"
+            ]
+          }
+        ],
+        "x-act-scope": "deployments:write"
+      }
+    },
+    "/v1/deployments/azure/{id}/verify": {
+      "post": {
+        "operationId": "verifyAzureDeployment",
+        "summary": "Check that Act can use a an Azure subscription or management group deployment again, after its cloud side was fixed",
+        "tags": [
+          "deployments"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "if-match",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "headers": {
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                },
+                "required": true
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AzureDeployment"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error envelope. Codes: invalid_request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error envelope. Codes: unauthenticated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "WWW-Authenticate": {
+                "description": "Bearer challenge",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Error envelope. Codes: insufficient_scope, feature_disabled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "WWW-Authenticate": {
+                "description": "Bearer challenge naming the missing scope",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error envelope. Codes: not_found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Error envelope. Codes: precondition_failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Error envelope. Codes: verification_failed, connection_check_failed, integration_not_connected, limit_exceeded, target_not_allowed, idempotency_mismatch",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Error envelope. Codes: rate_limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error envelope. Codes: internal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Error envelope. Codes: unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "serviceAccount": [
+              "act:write",
+              "deployments:write"
+            ]
+          }
+        ],
+        "x-act-scope": "deployments:write"
       }
     },
     "/v1/deployments/gcp/{id}": {
       "get": {
         "operationId": "getGcpDeployment",
-        "summary": "Return one GCP deployment",
+        "summary": "Return one a GCP project or organization deployment",
         "tags": [
           "deployments"
         ],
@@ -1139,6 +3154,718 @@
           }
         ],
         "x-act-scope": "none"
+      },
+      "patch": {
+        "operationId": "updateGcpDeployment",
+        "summary": "Change a a GCP project or organization deployment in place, keeping its id",
+        "tags": [
+          "deployments"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "if-match",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GcpDeploymentPatch"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "headers": {
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                },
+                "required": true
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GcpDeployment"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error envelope. Codes: invalid_request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error envelope. Codes: unauthenticated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "WWW-Authenticate": {
+                "description": "Bearer challenge",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Error envelope. Codes: insufficient_scope, feature_disabled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "WWW-Authenticate": {
+                "description": "Bearer challenge naming the missing scope",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error envelope. Codes: not_found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Error envelope. Codes: precondition_failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Error envelope. Codes: verification_failed, connection_check_failed, integration_not_connected, limit_exceeded, target_not_allowed, idempotency_mismatch",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Error envelope. Codes: rate_limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error envelope. Codes: internal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Error envelope. Codes: unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "serviceAccount": [
+              "act:write",
+              "deployments:write"
+            ]
+          }
+        ],
+        "x-act-scope": "deployments:write"
+      },
+      "delete": {
+        "operationId": "deleteGcpDeployment",
+        "summary": "Disconnect a a GCP project or organization deployment: stop scans, purge the credentials Act holds, and list what still trusts Act",
+        "tags": [
+          "deployments"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "if-match",
+            "in": "header",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeploymentDeletion"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error envelope. Codes: invalid_request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error envelope. Codes: unauthenticated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "WWW-Authenticate": {
+                "description": "Bearer challenge",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Error envelope. Codes: insufficient_scope, feature_disabled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "WWW-Authenticate": {
+                "description": "Bearer challenge naming the missing scope",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error envelope. Codes: not_found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Error envelope. Codes: already_exists, conflict, deletion_protected",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Error envelope. Codes: precondition_failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Error envelope. Codes: rate_limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error envelope. Codes: internal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Error envelope. Codes: unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "serviceAccount": [
+              "act:write",
+              "deployments:write"
+            ]
+          }
+        ],
+        "x-act-scope": "deployments:write"
+      }
+    },
+    "/v1/deployments/gcp": {
+      "post": {
+        "operationId": "createGcpDeployment",
+        "summary": "Connect a GCP project or organization to Act. Act verifies access before it stores anything",
+        "tags": [
+          "deployments"
+        ],
+        "parameters": [
+          {
+            "name": "idempotency-key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 255
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GcpDeploymentCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "OK",
+            "headers": {
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                },
+                "required": true
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GcpDeployment"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error envelope. Codes: invalid_request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error envelope. Codes: unauthenticated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "WWW-Authenticate": {
+                "description": "Bearer challenge",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Error envelope. Codes: insufficient_scope, feature_disabled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "WWW-Authenticate": {
+                "description": "Bearer challenge naming the missing scope",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Error envelope. Codes: already_exists, conflict, deletion_protected",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Error envelope. Codes: verification_failed, connection_check_failed, integration_not_connected, limit_exceeded, target_not_allowed, idempotency_mismatch",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Error envelope. Codes: rate_limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error envelope. Codes: internal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Error envelope. Codes: unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "serviceAccount": [
+              "act:write",
+              "deployments:write"
+            ]
+          }
+        ],
+        "x-act-scope": "deployments:write"
+      }
+    },
+    "/v1/deployments/gcp/{id}/verify": {
+      "post": {
+        "operationId": "verifyGcpDeployment",
+        "summary": "Check that Act can use a a GCP project or organization deployment again, after its cloud side was fixed",
+        "tags": [
+          "deployments"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "if-match",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "headers": {
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                },
+                "required": true
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GcpDeployment"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error envelope. Codes: invalid_request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error envelope. Codes: unauthenticated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "WWW-Authenticate": {
+                "description": "Bearer challenge",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Error envelope. Codes: insufficient_scope, feature_disabled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "WWW-Authenticate": {
+                "description": "Bearer challenge naming the missing scope",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error envelope. Codes: not_found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Error envelope. Codes: precondition_failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Error envelope. Codes: verification_failed, connection_check_failed, integration_not_connected, limit_exceeded, target_not_allowed, idempotency_mismatch",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Error envelope. Codes: rate_limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error envelope. Codes: internal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Error envelope. Codes: unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "serviceAccount": [
+              "act:write",
+              "deployments:write"
+            ]
+          }
+        ],
+        "x-act-scope": "deployments:write"
       }
     },
     "/v1/integration-types": {
@@ -2159,31 +4886,6 @@
           "error"
         ]
       },
-      "Cloud": {
-        "enum": [
-          "aws",
-          "azure",
-          "gcp"
-        ],
-        "type": "string"
-      },
-      "DeploymentStatus": {
-        "enum": [
-          "active",
-          "failed"
-        ],
-        "type": "string"
-      },
-      "DeploymentScope": {
-        "enum": [
-          "account",
-          "organization",
-          "subscription",
-          "management_group",
-          "project"
-        ],
-        "type": "string"
-      },
       "TokenScope": {
         "enum": [
           "act:read",
@@ -2205,35 +4907,6 @@
       "PrincipalKind": {
         "enum": [
           "service_account"
-        ],
-        "type": "string"
-      },
-      "ExternalIdSource": {
-        "enum": [
-          "derived",
-          "legacy"
-        ],
-        "type": "string"
-      },
-      "AwsDeploymentMethod": {
-        "enum": [
-          "terraform",
-          "cloudformation"
-        ],
-        "type": "string"
-      },
-      "AzureDeploymentMethod": {
-        "enum": [
-          "terraform",
-          "cli",
-          "manual"
-        ],
-        "type": "string"
-      },
-      "GcpDeploymentMethod": {
-        "enum": [
-          "terraform",
-          "cli"
         ],
         "type": "string"
       },
@@ -2361,6 +5034,119 @@
           "federation"
         ]
       },
+      "Cloud": {
+        "enum": [
+          "aws",
+          "azure",
+          "gcp"
+        ],
+        "type": "string"
+      },
+      "DeploymentStatus": {
+        "enum": [
+          "active",
+          "failed",
+          "pending_consent"
+        ],
+        "type": "string",
+        "description": "pending_consent: Azure only, waiting for an Entra admin to approve Act in the directory"
+      },
+      "DeploymentScope": {
+        "enum": [
+          "account",
+          "organization",
+          "subscription",
+          "management_group",
+          "project"
+        ],
+        "type": "string"
+      },
+      "ExternalIdSource": {
+        "enum": [
+          "derived",
+          "legacy"
+        ],
+        "type": "string"
+      },
+      "DeploymentChangeSource": {
+        "enum": [
+          "ui",
+          "api"
+        ],
+        "type": "string"
+      },
+      "AwsDeploymentMethod": {
+        "enum": [
+          "terraform",
+          "cloudformation"
+        ],
+        "type": "string"
+      },
+      "AzureDeploymentMethod": {
+        "enum": [
+          "terraform",
+          "cli",
+          "manual"
+        ],
+        "type": "string"
+      },
+      "GcpDeploymentMethod": {
+        "enum": [
+          "terraform",
+          "cli"
+        ],
+        "type": "string"
+      },
+      "AwsCapability": {
+        "enum": [
+          "eks_cluster_access"
+        ],
+        "type": "string"
+      },
+      "DiscoveryState": {
+        "enum": [
+          "pending",
+          "running",
+          "complete"
+        ],
+        "type": "string"
+      },
+      "MemberAccountStatus": {
+        "enum": [
+          "connected",
+          "pending",
+          "failed",
+          "excluded"
+        ],
+        "type": "string"
+      },
+      "ExistingDeployment": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "$ref": "#/components/schemas/DeploymentStatus"
+          },
+          "createdVia": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DeploymentChangeSource"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "createdVia"
+        ]
+      },
       "ModuleVersion": {
         "type": "object",
         "properties": {
@@ -2384,24 +5170,53 @@
           "sha256"
         ]
       },
+      "DeprecatedPrincipal": {
+        "type": "object",
+        "properties": {
+          "arn": {
+            "type": "string"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "arn",
+          "expiresAt"
+        ]
+      },
       "AwsOnboarding": {
         "type": "object",
         "properties": {
           "deploymentId": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "Derived by Act from the tenant and the target; stable, unpredictable to others"
+          },
+          "existingDeployment": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ExistingDeployment"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The live deployment already holding this target, if any; import it instead of creating a new one"
           },
           "actPrincipalArn": {
             "type": "string"
           },
-          "deprecatedPrincipalArns": {
+          "deprecatedPrincipals": {
             "type": "array",
             "items": {
-              "type": "string"
+              "$ref": "#/components/schemas/DeprecatedPrincipal"
             }
           },
           "externalId": {
-            "type": "string"
+            "type": "string",
+            "format": "uuid"
           },
           "externalIdSource": {
             "$ref": "#/components/schemas/ExternalIdSource"
@@ -2418,12 +5233,38 @@
           "roleName": {
             "type": "string"
           },
+          "roleArn": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Known before the role exists in account mode; null for organizations"
+          },
+          "memberRoleName": {
+            "type": "string"
+          },
+          "memberRolePath": {
+            "type": "string"
+          },
           "assumeRolePolicyJson": {
             "type": "string"
           },
           "managedPolicyArns": {
             "type": "array",
             "items": {
+              "type": "string"
+            }
+          },
+          "customPolicyDocuments": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {
               "type": "string"
             }
           },
@@ -2458,15 +5299,20 @@
         },
         "required": [
           "deploymentId",
+          "existingDeployment",
           "actPrincipalArn",
-          "deprecatedPrincipalArns",
+          "deprecatedPrincipals",
           "externalId",
           "externalIdSource",
           "targetExternalId",
           "externalIdKeyVersion",
           "roleName",
+          "roleArn",
+          "memberRoleName",
+          "memberRolePath",
           "assumeRolePolicyJson",
           "managedPolicyArns",
+          "customPolicyDocuments",
           "cloudformationTemplateUrl",
           "cloudformationTemplateSha256",
           "moduleSource",
@@ -2480,20 +5326,75 @@
       "AzureOnboarding": {
         "type": "object",
         "properties": {
-          "requiredBuiltinRoles": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
+          "deploymentId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Derived by Act from the tenant and the target; stable, unpredictable to others"
           },
-          "requiredGraphAppRoles": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
+          "existingDeployment": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ExistingDeployment"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The live deployment already holding this target, if any; import it instead of creating a new one"
+          },
+          "azureTenantId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tenantConsented": {
+            "type": "boolean",
+            "description": "Whether an Entra admin has approved Act for this tenant in this directory"
+          },
+          "adminConsentUrl": {
+            "type": "string",
+            "format": "uri",
+            "description": "Stable link for an Entra admin; opening it starts consent, reading it does not"
+          },
+          "actAppClientId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "actServicePrincipalId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Act's service principal in the directory, once consented"
           },
           "customRoleName": {
             "type": "string"
+          },
+          "customRoleActions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "bindingMarker": {
+            "type": "string",
+            "description": "Put this text in the custom role description; verification checks it"
+          },
+          "requiredBuiltinRoleIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "requiredGraphAppRoleIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           },
           "moduleSource": {
             "type": "string"
@@ -2518,9 +5419,18 @@
           }
         },
         "required": [
-          "requiredBuiltinRoles",
-          "requiredGraphAppRoles",
+          "deploymentId",
+          "existingDeployment",
+          "azureTenantId",
+          "tenantConsented",
+          "adminConsentUrl",
+          "actAppClientId",
+          "actServicePrincipalId",
           "customRoleName",
+          "customRoleActions",
+          "bindingMarker",
+          "requiredBuiltinRoleIds",
+          "requiredGraphAppRoleIds",
           "moduleSource",
           "moduleVersion",
           "moduleSha256",
@@ -2532,14 +5442,57 @@
       "GcpOnboarding": {
         "type": "object",
         "properties": {
-          "actAwsRoleName": {
+          "deploymentId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Derived by Act from the tenant and the target; stable, unpredictable to others"
+          },
+          "existingDeployment": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ExistingDeployment"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The live deployment already holding this target, if any; import it instead of creating a new one"
+          },
+          "actAwsAccountId": {
+            "type": "string",
+            "description": "AWS account of the Act federation role the customer pool trusts"
+          },
+          "federationRoleName": {
             "type": "string"
           },
-          "poolHostProjectId": {
+          "sessionBinding": {
+            "type": "string",
+            "description": "Role session name Act uses for this deployment; the pool admits only it"
+          },
+          "attributeCondition": {
+            "type": "string",
+            "description": "Ready-made CEL condition for the workload identity pool provider"
+          },
+          "workloadIdentityPoolId": {
             "type": "string"
           },
-          "poolHostProjectNumber": {
+          "workloadIdentityProviderId": {
             "type": "string"
+          },
+          "serviceAccountId": {
+            "type": "string"
+          },
+          "predefinedRoles": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "customRolePermissions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           },
           "moduleSource": {
             "type": "string"
@@ -2564,15 +5517,38 @@
           }
         },
         "required": [
-          "actAwsRoleName",
-          "poolHostProjectId",
-          "poolHostProjectNumber",
+          "deploymentId",
+          "existingDeployment",
+          "actAwsAccountId",
+          "federationRoleName",
+          "sessionBinding",
+          "attributeCondition",
+          "workloadIdentityPoolId",
+          "workloadIdentityProviderId",
+          "serviceAccountId",
+          "predefinedRoles",
+          "customRolePermissions",
           "moduleSource",
           "moduleVersion",
           "moduleSha256",
           "permissionsHash",
           "moduleVersions",
           "deploymentVersion"
+        ]
+      },
+      "DeploymentWarning": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message"
         ]
       },
       "DeploymentSummary": {
@@ -2653,6 +5629,12 @@
       "AwsOrganization": {
         "type": "object",
         "properties": {
+          "organizationId": {
+            "type": "string"
+          },
+          "managementAccountId": {
+            "type": "string"
+          },
           "rootId": {
             "anyOf": [
               {
@@ -2689,19 +5671,6 @@
               }
             ]
           },
-          "excludedOrganizationalUnitIds": {
-            "anyOf": [
-              {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                }
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
           "memberRoleName": {
             "type": "string"
           },
@@ -2710,10 +5679,11 @@
           }
         },
         "required": [
+          "organizationId",
+          "managementAccountId",
           "rootId",
           "organizationalUnitIds",
           "excludedAccountIds",
-          "excludedOrganizationalUnitIds",
           "memberRoleName",
           "memberRolePath"
         ]
@@ -2758,14 +5728,7 @@
             ]
           },
           "roleArn": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "type": "string"
           },
           "allowedRegions": {
             "anyOf": [
@@ -2779,6 +5742,12 @@
                 "type": "null"
               }
             ]
+          },
+          "disabledCapabilities": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AwsCapability"
+            }
           },
           "deploymentMethod": {
             "anyOf": [
@@ -2824,6 +5793,12 @@
               }
             ]
           },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DeploymentWarning"
+            }
+          },
           "updateAvailable": {
             "type": "boolean"
           },
@@ -2840,6 +5815,20 @@
           "deletionProtection": {
             "type": "boolean"
           },
+          "consoleUrl": {
+            "type": "string",
+            "format": "uri"
+          },
+          "createdVia": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DeploymentChangeSource"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "createdAt": {
             "type": "string",
             "format": "date-time"
@@ -2853,6 +5842,7 @@
           "organization",
           "roleArn",
           "allowedRegions",
+          "disabledCapabilities",
           "deploymentMethod",
           "externalId",
           "externalIdSource",
@@ -2860,9 +5850,12 @@
           "status",
           "errorCode",
           "errorMessage",
+          "warnings",
           "updateAvailable",
           "deployedVersion",
           "deletionProtection",
+          "consoleUrl",
+          "createdVia",
           "createdAt"
         ]
       },
@@ -2906,24 +5899,7 @@
             ]
           },
           "azureTenantId": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "clientId": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "type": "string"
           },
           "servicePrincipalId": {
             "anyOf": [
@@ -2935,12 +5911,20 @@
               }
             ]
           },
-          "credentialType": {
-            "enum": [
-              "client_secret",
-              "certificate"
+          "includeEntraId": {
+            "type": "boolean"
+          },
+          "consentUrl": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uri"
+              },
+              {
+                "type": "null"
+              }
             ],
-            "type": "string"
+            "description": "Set while the deployment is pending_consent"
           },
           "deploymentMethod": {
             "anyOf": [
@@ -2951,9 +5935,6 @@
                 "type": "null"
               }
             ]
-          },
-          "rotationRequired": {
-            "type": "boolean"
           },
           "status": {
             "$ref": "#/components/schemas/DeploymentStatus"
@@ -2978,6 +5959,12 @@
               }
             ]
           },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DeploymentWarning"
+            }
+          },
           "updateAvailable": {
             "type": "boolean"
           },
@@ -2994,6 +5981,20 @@
           "deletionProtection": {
             "type": "boolean"
           },
+          "consoleUrl": {
+            "type": "string",
+            "format": "uri"
+          },
+          "createdVia": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DeploymentChangeSource"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "createdAt": {
             "type": "string",
             "format": "date-time"
@@ -3006,17 +6007,19 @@
           "subscriptionId",
           "managementGroupId",
           "azureTenantId",
-          "clientId",
           "servicePrincipalId",
-          "credentialType",
+          "includeEntraId",
+          "consentUrl",
           "deploymentMethod",
-          "rotationRequired",
           "status",
           "errorCode",
           "errorMessage",
+          "warnings",
           "updateAvailable",
           "deployedVersion",
           "deletionProtection",
+          "consoleUrl",
+          "createdVia",
           "createdAt"
         ]
       },
@@ -3060,36 +6063,19 @@
             ]
           },
           "serviceAccountProjectId": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "deploymentMethod": {
-            "$ref": "#/components/schemas/GcpDeploymentMethod"
-          },
-          "actPrincipal": {
             "type": "string"
           },
-          "serviceAccountId": {
+          "serviceAccountProjectNumber": {
             "type": "string"
           },
           "serviceAccountEmail": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "workloadIdentityPool": {
             "type": "string"
+          },
+          "workloadIdentityProvider": {
+            "type": "string"
+          },
+          "deploymentMethod": {
+            "$ref": "#/components/schemas/GcpDeploymentMethod"
           },
           "status": {
             "$ref": "#/components/schemas/DeploymentStatus"
@@ -3114,6 +6100,12 @@
               }
             ]
           },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DeploymentWarning"
+            }
+          },
           "updateAvailable": {
             "type": "boolean"
           },
@@ -3130,6 +6122,20 @@
           "deletionProtection": {
             "type": "boolean"
           },
+          "consoleUrl": {
+            "type": "string",
+            "format": "uri"
+          },
+          "createdVia": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DeploymentChangeSource"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "createdAt": {
             "type": "string",
             "format": "date-time"
@@ -3142,18 +6148,600 @@
           "organizationId",
           "projectId",
           "serviceAccountProjectId",
-          "deploymentMethod",
-          "actPrincipal",
-          "serviceAccountId",
+          "serviceAccountProjectNumber",
           "serviceAccountEmail",
-          "workloadIdentityPool",
+          "workloadIdentityProvider",
+          "deploymentMethod",
           "status",
           "errorCode",
           "errorMessage",
+          "warnings",
           "updateAvailable",
           "deployedVersion",
           "deletionProtection",
+          "consoleUrl",
+          "createdVia",
           "createdAt"
+        ]
+      },
+      "AwsOrganizationInput": {
+        "type": "object",
+        "properties": {
+          "organizationId": {
+            "type": "string",
+            "pattern": "^o-[a-z0-9]{10,32}$"
+          },
+          "rootId": {
+            "type": "string",
+            "pattern": "^r-[0-9a-z]{4,32}$"
+          },
+          "organizationalUnitIds": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 1000,
+            "items": {
+              "type": "string",
+              "pattern": "^ou-[0-9a-z]{4,32}-[0-9a-z]{8,32}$"
+            }
+          },
+          "excludedAccountIds": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 1000,
+            "items": {
+              "type": "string",
+              "pattern": "^\\d{12}$"
+            }
+          },
+          "memberRoleName": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9+=,.@_-]{1,64}$"
+          },
+          "memberRolePath": {
+            "type": "string",
+            "pattern": "^\\/(?:[\\x21-\\x7E]{0,510}\\/)?$"
+          }
+        },
+        "required": [
+          "organizationId"
+        ],
+        "additionalProperties": false
+      },
+      "AwsDeploymentCreate": {
+        "type": "object",
+        "properties": {
+          "deploymentId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "accountId": {
+            "type": "string",
+            "pattern": "^\\d{12}$"
+          },
+          "organization": {
+            "$ref": "#/components/schemas/AwsOrganizationInput"
+          },
+          "roleArn": {
+            "type": "string",
+            "pattern": "^arn:aws(?:-[a-z]+)*:iam::\\d{12}:role(?:\\/[A-Za-z0-9+=,.@_-]+)+$"
+          },
+          "allowedRegions": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 1000,
+            "items": {
+              "type": "string",
+              "pattern": "^[a-z]{2}(?:-[a-z]+)+-\\d$"
+            }
+          },
+          "disabledCapabilities": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AwsCapability"
+            }
+          },
+          "deploymentMethod": {
+            "$ref": "#/components/schemas/AwsDeploymentMethod"
+          },
+          "externalIdKeyVersion": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9007199254740991
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "tags": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "additionalProperties": {
+              "type": "string",
+              "maxLength": 256
+            }
+          },
+          "deletionProtection": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "deploymentId",
+          "roleArn"
+        ],
+        "additionalProperties": false,
+        "description": "An AWS account or organization to connect. The deployment id comes from GET /v1/onboarding/aws. Act verifies the role before it stores anything."
+      },
+      "AwsOrganizationPatch": {
+        "type": "object",
+        "properties": {
+          "rootId": {
+            "type": "string",
+            "pattern": "^r-[0-9a-z]{4,32}$"
+          },
+          "organizationalUnitIds": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 1000,
+            "items": {
+              "type": "string",
+              "pattern": "^ou-[0-9a-z]{4,32}-[0-9a-z]{8,32}$"
+            }
+          },
+          "excludedAccountIds": {
+            "anyOf": [
+              {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 1000,
+                "items": {
+                  "type": "string",
+                  "pattern": "^\\d{12}$"
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "memberRoleName": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9+=,.@_-]{1,64}$"
+          },
+          "memberRolePath": {
+            "type": "string",
+            "pattern": "^\\/(?:[\\x21-\\x7E]{0,510}\\/)?$"
+          }
+        },
+        "additionalProperties": false
+      },
+      "AwsDeploymentPatch": {
+        "type": "object",
+        "properties": {
+          "roleArn": {
+            "type": "string",
+            "pattern": "^arn:aws(?:-[a-z]+)*:iam::\\d{12}:role(?:\\/[A-Za-z0-9+=,.@_-]+)+$"
+          },
+          "organization": {
+            "$ref": "#/components/schemas/AwsOrganizationPatch"
+          },
+          "allowedRegions": {
+            "anyOf": [
+              {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 1000,
+                "items": {
+                  "type": "string",
+                  "pattern": "^[a-z]{2}(?:-[a-z]+)+-\\d$"
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "disabledCapabilities": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AwsCapability"
+            }
+          },
+          "deploymentMethod": {
+            "$ref": "#/components/schemas/AwsDeploymentMethod"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "tags": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "additionalProperties": {
+              "type": "string",
+              "maxLength": 256
+            }
+          },
+          "deletionProtection": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false,
+        "description": "Merge patch. A member left out keeps its value; null clears it. Role and target changes re-verify."
+      },
+      "AzureDeploymentCreate": {
+        "type": "object",
+        "properties": {
+          "deploymentId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "azureTenantId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "subscriptionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "managementGroupId": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_().-]{1,90}$"
+          },
+          "servicePrincipalId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "includeEntraId": {
+            "type": "boolean"
+          },
+          "deploymentMethod": {
+            "$ref": "#/components/schemas/AzureDeploymentMethod"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "tags": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "additionalProperties": {
+              "type": "string",
+              "maxLength": 256
+            }
+          },
+          "deletionProtection": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "deploymentId",
+          "azureTenantId",
+          "servicePrincipalId"
+        ],
+        "additionalProperties": false,
+        "description": "An Azure subscription or management group to connect through Act's app. Before consent the deployment is created as pending_consent."
+      },
+      "AzureDeploymentPatch": {
+        "type": "object",
+        "properties": {
+          "servicePrincipalId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "includeEntraId": {
+            "type": "boolean"
+          },
+          "deploymentMethod": {
+            "$ref": "#/components/schemas/AzureDeploymentMethod"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "tags": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "additionalProperties": {
+              "type": "string",
+              "maxLength": 256
+            }
+          },
+          "deletionProtection": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false,
+        "description": "Merge patch. A member left out keeps its value. Identity changes re-verify."
+      },
+      "GcpDeploymentCreate": {
+        "type": "object",
+        "properties": {
+          "deploymentId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "projectId": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]{4,28}[a-z0-9]$"
+          },
+          "organizationId": {
+            "type": "string",
+            "pattern": "^\\d{1,20}$"
+          },
+          "serviceAccountProjectId": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]{4,28}[a-z0-9]$"
+          },
+          "serviceAccountProjectNumber": {
+            "type": "string",
+            "pattern": "^\\d{1,20}$"
+          },
+          "deploymentMethod": {
+            "$ref": "#/components/schemas/GcpDeploymentMethod"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "tags": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "additionalProperties": {
+              "type": "string",
+              "maxLength": 256
+            }
+          },
+          "deletionProtection": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "deploymentId",
+          "serviceAccountProjectNumber"
+        ],
+        "additionalProperties": false,
+        "description": "A GCP project or organization to connect. Act derives the service account and workload identity provider from the deployment id; it never takes them from the request."
+      },
+      "GcpDeploymentPatch": {
+        "type": "object",
+        "properties": {
+          "deploymentMethod": {
+            "$ref": "#/components/schemas/GcpDeploymentMethod"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "tags": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "additionalProperties": {
+              "type": "string",
+              "maxLength": 256
+            }
+          },
+          "deletionProtection": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false,
+        "description": "Merge patch. A member left out keeps its value."
+      },
+      "CleanupItem": {
+        "type": "object",
+        "properties": {
+          "resource": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "resource",
+          "description"
+        ]
+      },
+      "DeploymentDeletion": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "cleanupRequired": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CleanupItem"
+            },
+            "description": "Cloud-side resources that still trust Act; remove them"
+          }
+        },
+        "required": [
+          "id",
+          "cleanupRequired"
+        ]
+      },
+      "FailedMemberAccount": {
+        "type": "object",
+        "properties": {
+          "accountId": {
+            "type": "string"
+          },
+          "errorCode": {
+            "type": "string"
+          },
+          "cause": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "failingSince": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "accountId",
+          "errorCode",
+          "cause",
+          "failingSince"
+        ]
+      },
+      "DeploymentCoverage": {
+        "type": "object",
+        "properties": {
+          "deploymentId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "discoveryState": {
+            "$ref": "#/components/schemas/DiscoveryState"
+          },
+          "accountsExpected": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "accountsConnected": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "accountsPending": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "accountsFailed": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "failedAccounts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FailedMemberAccount"
+            }
+          },
+          "lastDiscoveryAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "deploymentId",
+          "discoveryState",
+          "accountsExpected",
+          "accountsConnected",
+          "accountsPending",
+          "accountsFailed",
+          "failedAccounts",
+          "lastDiscoveryAt"
+        ]
+      },
+      "MemberAccount": {
+        "type": "object",
+        "properties": {
+          "accountId": {
+            "type": "string"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "status": {
+            "$ref": "#/components/schemas/MemberAccountStatus"
+          },
+          "errorCode": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "accountId",
+          "name",
+          "status",
+          "errorCode"
+        ]
+      },
+      "MemberAccountPage": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MemberAccount"
+            }
+          },
+          "nextPageToken": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "items",
+          "nextPageToken"
         ]
       },
       "IntegrationType": {

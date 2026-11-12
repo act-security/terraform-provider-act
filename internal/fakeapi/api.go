@@ -25,6 +25,8 @@ func (f *Fake) bearer(next http.Handler) http.Handler {
 
 func (f *Fake) apiRoutes() http.Handler {
 	return gen.HandlerWithOptions(gen.NewStrictHandler(&apiServer{fake: f}, nil), gen.StdHTTPServerOptions{
+		BaseRouter:  newRouter(),
+		Middlewares: []gen.MiddlewareFunc{captureBody},
 		ErrorHandlerFunc: func(w http.ResponseWriter, _ *http.Request, err error) {
 			writeJSON(w, http.StatusBadRequest, envelope(gen.ErrorEnvelopeErrorCodeInvalidRequest, err.Error()))
 		},
@@ -61,10 +63,6 @@ func (s *apiServer) GetWhoami(ctx context.Context, _ gen.GetWhoamiRequestObject)
 	}, nil
 }
 
-func (s *apiServer) GetAwsOnboarding(context.Context, gen.GetAwsOnboardingRequestObject) (gen.GetAwsOnboardingResponseObject, error) {
-	return gen.GetAwsOnboarding403JSONResponse{Body: featureDisabled()}, nil
-}
-
 func (s *apiServer) GetAzureOnboarding(context.Context, gen.GetAzureOnboardingRequestObject) (gen.GetAzureOnboardingResponseObject, error) {
 	return gen.GetAzureOnboarding403JSONResponse{Body: featureDisabled()}, nil
 }
@@ -73,20 +71,44 @@ func (s *apiServer) GetGcpOnboarding(context.Context, gen.GetGcpOnboardingReques
 	return gen.GetGcpOnboarding403JSONResponse{Body: featureDisabled()}, nil
 }
 
-func (s *apiServer) ListDeployments(context.Context, gen.ListDeploymentsRequestObject) (gen.ListDeploymentsResponseObject, error) {
-	return gen.ListDeployments403JSONResponse{Body: featureDisabled()}, nil
-}
-
-func (s *apiServer) GetAwsDeployment(context.Context, gen.GetAwsDeploymentRequestObject) (gen.GetAwsDeploymentResponseObject, error) {
-	return gen.GetAwsDeployment403JSONResponse{Body: featureDisabled()}, nil
-}
-
 func (s *apiServer) GetAzureDeployment(context.Context, gen.GetAzureDeploymentRequestObject) (gen.GetAzureDeploymentResponseObject, error) {
 	return gen.GetAzureDeployment403JSONResponse{Body: featureDisabled()}, nil
 }
 
+func (s *apiServer) CreateAzureDeployment(context.Context, gen.CreateAzureDeploymentRequestObject) (gen.CreateAzureDeploymentResponseObject, error) {
+	return gen.CreateAzureDeployment403JSONResponse{Body: featureDisabled()}, nil
+}
+
+func (s *apiServer) UpdateAzureDeployment(context.Context, gen.UpdateAzureDeploymentRequestObject) (gen.UpdateAzureDeploymentResponseObject, error) {
+	return gen.UpdateAzureDeployment403JSONResponse{Body: featureDisabled()}, nil
+}
+
+func (s *apiServer) VerifyAzureDeployment(context.Context, gen.VerifyAzureDeploymentRequestObject) (gen.VerifyAzureDeploymentResponseObject, error) {
+	return gen.VerifyAzureDeployment403JSONResponse{Body: featureDisabled()}, nil
+}
+
+func (s *apiServer) DeleteAzureDeployment(context.Context, gen.DeleteAzureDeploymentRequestObject) (gen.DeleteAzureDeploymentResponseObject, error) {
+	return gen.DeleteAzureDeployment403JSONResponse{Body: featureDisabled()}, nil
+}
+
 func (s *apiServer) GetGcpDeployment(context.Context, gen.GetGcpDeploymentRequestObject) (gen.GetGcpDeploymentResponseObject, error) {
 	return gen.GetGcpDeployment403JSONResponse{Body: featureDisabled()}, nil
+}
+
+func (s *apiServer) CreateGcpDeployment(context.Context, gen.CreateGcpDeploymentRequestObject) (gen.CreateGcpDeploymentResponseObject, error) {
+	return gen.CreateGcpDeployment403JSONResponse{Body: featureDisabled()}, nil
+}
+
+func (s *apiServer) UpdateGcpDeployment(context.Context, gen.UpdateGcpDeploymentRequestObject) (gen.UpdateGcpDeploymentResponseObject, error) {
+	return gen.UpdateGcpDeployment403JSONResponse{Body: featureDisabled()}, nil
+}
+
+func (s *apiServer) VerifyGcpDeployment(context.Context, gen.VerifyGcpDeploymentRequestObject) (gen.VerifyGcpDeploymentResponseObject, error) {
+	return gen.VerifyGcpDeployment403JSONResponse{Body: featureDisabled()}, nil
+}
+
+func (s *apiServer) DeleteGcpDeployment(context.Context, gen.DeleteGcpDeploymentRequestObject) (gen.DeleteGcpDeploymentResponseObject, error) {
+	return gen.DeleteGcpDeployment403JSONResponse{Body: featureDisabled()}, nil
 }
 
 func featureDisabled() gen.ErrorEnvelope {

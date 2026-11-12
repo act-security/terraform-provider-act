@@ -36,6 +36,21 @@ func (e AuthMethod) Valid() bool {
 	}
 }
 
+// Defines values for AwsCapability.
+const (
+	AwsCapabilityEksClusterAccess AwsCapability = "eks_cluster_access"
+)
+
+// Valid indicates whether the value is a known member of the AwsCapability enum.
+func (e AwsCapability) Valid() bool {
+	switch e {
+	case AwsCapabilityEksClusterAccess:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AwsDeploymentMethod.
 const (
 	AwsDeploymentMethodCloudformation AwsDeploymentMethod = "cloudformation"
@@ -48,24 +63,6 @@ func (e AwsDeploymentMethod) Valid() bool {
 	case AwsDeploymentMethodCloudformation:
 		return true
 	case AwsDeploymentMethodTerraform:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for AzureDeploymentCredentialType.
-const (
-	AzureDeploymentCredentialTypeCertificate  AzureDeploymentCredentialType = "certificate"
-	AzureDeploymentCredentialTypeClientSecret AzureDeploymentCredentialType = "client_secret"
-)
-
-// Valid indicates whether the value is a known member of the AzureDeploymentCredentialType enum.
-func (e AzureDeploymentCredentialType) Valid() bool {
-	switch e {
-	case AzureDeploymentCredentialTypeCertificate:
-		return true
-	case AzureDeploymentCredentialTypeClientSecret:
 		return true
 	default:
 		return false
@@ -114,6 +111,24 @@ func (e Cloud) Valid() bool {
 	}
 }
 
+// Defines values for DeploymentChangeSource.
+const (
+	DeploymentChangeSourceAPI DeploymentChangeSource = "api"
+	DeploymentChangeSourceUI  DeploymentChangeSource = "ui"
+)
+
+// Valid indicates whether the value is a known member of the DeploymentChangeSource enum.
+func (e DeploymentChangeSource) Valid() bool {
+	switch e {
+	case DeploymentChangeSourceAPI:
+		return true
+	case DeploymentChangeSourceUI:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for DeploymentScope.
 const (
 	DeploymentScopeAccount         DeploymentScope = "account"
@@ -143,8 +158,9 @@ func (e DeploymentScope) Valid() bool {
 
 // Defines values for DeploymentStatus.
 const (
-	DeploymentStatusActive DeploymentStatus = "active"
-	DeploymentStatusFailed DeploymentStatus = "failed"
+	DeploymentStatusActive         DeploymentStatus = "active"
+	DeploymentStatusFailed         DeploymentStatus = "failed"
+	DeploymentStatusPendingConsent DeploymentStatus = "pending_consent"
 )
 
 // Valid indicates whether the value is a known member of the DeploymentStatus enum.
@@ -153,6 +169,29 @@ func (e DeploymentStatus) Valid() bool {
 	case DeploymentStatusActive:
 		return true
 	case DeploymentStatusFailed:
+		return true
+	case DeploymentStatusPendingConsent:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for DiscoveryState.
+const (
+	DiscoveryStateComplete DiscoveryState = "complete"
+	DiscoveryStatePending  DiscoveryState = "pending"
+	DiscoveryStateRunning  DiscoveryState = "running"
+)
+
+// Valid indicates whether the value is a known member of the DiscoveryState enum.
+func (e DiscoveryState) Valid() bool {
+	switch e {
+	case DiscoveryStateComplete:
+		return true
+	case DiscoveryStatePending:
+		return true
+	case DiscoveryStateRunning:
 		return true
 	default:
 		return false
@@ -354,6 +393,30 @@ func (e IntegrationType) Valid() bool {
 	}
 }
 
+// Defines values for MemberAccountStatus.
+const (
+	MemberAccountStatusConnected MemberAccountStatus = "connected"
+	MemberAccountStatusExcluded  MemberAccountStatus = "excluded"
+	MemberAccountStatusFailed    MemberAccountStatus = "failed"
+	MemberAccountStatusPending   MemberAccountStatus = "pending"
+)
+
+// Valid indicates whether the value is a known member of the MemberAccountStatus enum.
+func (e MemberAccountStatus) Valid() bool {
+	switch e {
+	case MemberAccountStatusConnected:
+		return true
+	case MemberAccountStatusExcluded:
+		return true
+	case MemberAccountStatusFailed:
+		return true
+	case MemberAccountStatusPending:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for PrincipalKind.
 const (
 	PrincipalKindServiceAccount PrincipalKind = "service_account"
@@ -411,106 +474,249 @@ func (e TokenScope) Valid() bool {
 // AuthMethod defines model for AuthMethod.
 type AuthMethod string
 
+// AwsCapability defines model for AwsCapability.
+type AwsCapability string
+
 // AwsDeployment defines model for AwsDeployment.
 type AwsDeployment struct {
-	AccountID            *string              `json:"accountId"`
-	AllowedRegions       *[]string            `json:"allowedRegions"`
-	CreatedAt            time.Time            `json:"createdAt"`
-	DeletionProtection   bool                 `json:"deletionProtection"`
-	DeployedVersion      *string              `json:"deployedVersion"`
-	DeploymentMethod     *AwsDeploymentMethod `json:"deploymentMethod"`
-	ErrorCode            *string              `json:"errorCode"`
-	ErrorMessage         *string              `json:"errorMessage"`
-	ExternalID           string               `json:"externalId"`
-	ExternalIDKeyVersion int                  `json:"externalIdKeyVersion"`
-	ExternalIDSource     ExternalIDSource     `json:"externalIdSource"`
-	ID                   string               `json:"id"`
-	Name                 string               `json:"name"`
-	Organization         *AwsOrganization     `json:"organization"`
-	RoleArn              *string              `json:"roleArn"`
-	Status               DeploymentStatus     `json:"status"`
-	Tags                 map[string]string    `json:"tags"`
-	UpdateAvailable      bool                 `json:"updateAvailable"`
+	AccountID            *string                 `json:"accountId"`
+	AllowedRegions       *[]string               `json:"allowedRegions"`
+	ConsoleURL           string                  `json:"consoleUrl"`
+	CreatedAt            time.Time               `json:"createdAt"`
+	CreatedVia           *DeploymentChangeSource `json:"createdVia"`
+	DeletionProtection   bool                    `json:"deletionProtection"`
+	DeployedVersion      *string                 `json:"deployedVersion"`
+	DeploymentMethod     *AwsDeploymentMethod    `json:"deploymentMethod"`
+	DisabledCapabilities []AwsCapability         `json:"disabledCapabilities"`
+	ErrorCode            *string                 `json:"errorCode"`
+	ErrorMessage         *string                 `json:"errorMessage"`
+	ExternalID           string                  `json:"externalId"`
+	ExternalIDKeyVersion int                     `json:"externalIdKeyVersion"`
+	ExternalIDSource     ExternalIDSource        `json:"externalIdSource"`
+	ID                   string                  `json:"id"`
+	Name                 string                  `json:"name"`
+	Organization         *AwsOrganization        `json:"organization"`
+	RoleArn              string                  `json:"roleArn"`
+
+	// Status pending_consent: Azure only, waiting for an Entra admin to approve Act in the directory
+	Status          DeploymentStatus    `json:"status"`
+	Tags            map[string]string   `json:"tags"`
+	UpdateAvailable bool                `json:"updateAvailable"`
+	Warnings        []DeploymentWarning `json:"warnings"`
+}
+
+// AwsDeploymentCreate An AWS account or organization to connect. The deployment id comes from GET /v1/onboarding/aws. Act verifies the role before it stores anything.
+type AwsDeploymentCreate struct {
+	AccountID            *string               `json:"accountId,omitempty"`
+	AllowedRegions       *[]string             `json:"allowedRegions,omitempty"`
+	DeletionProtection   *bool                 `json:"deletionProtection,omitempty"`
+	DeploymentID         string                `json:"deploymentId"`
+	DeploymentMethod     *AwsDeploymentMethod  `json:"deploymentMethod,omitempty"`
+	DisabledCapabilities *[]AwsCapability      `json:"disabledCapabilities,omitempty"`
+	ExternalIDKeyVersion *int                  `json:"externalIdKeyVersion,omitempty"`
+	Name                 *string               `json:"name,omitempty"`
+	Organization         *AwsOrganizationInput `json:"organization,omitempty"`
+	RoleArn              string                `json:"roleArn"`
+	Tags                 *map[string]string    `json:"tags,omitempty"`
 }
 
 // AwsDeploymentMethod defines model for AwsDeploymentMethod.
 type AwsDeploymentMethod string
 
+// AwsDeploymentPatch Merge patch. A member left out keeps its value; null clears it. Role and target changes re-verify.
+type AwsDeploymentPatch struct {
+	AllowedRegions       *[]string             `json:"allowedRegions,omitempty"`
+	DeletionProtection   *bool                 `json:"deletionProtection,omitempty"`
+	DeploymentMethod     *AwsDeploymentMethod  `json:"deploymentMethod,omitempty"`
+	DisabledCapabilities *[]AwsCapability      `json:"disabledCapabilities,omitempty"`
+	Name                 *string               `json:"name,omitempty"`
+	Organization         *AwsOrganizationPatch `json:"organization,omitempty"`
+	RoleArn              *string               `json:"roleArn,omitempty"`
+	Tags                 *map[string]string    `json:"tags,omitempty"`
+}
+
 // AwsOnboarding defines model for AwsOnboarding.
 type AwsOnboarding struct {
-	ActPrincipalArn              string           `json:"actPrincipalArn"`
-	AssumeRolePolicyJSON         string           `json:"assumeRolePolicyJson"`
-	CloudformationTemplateSha256 string           `json:"cloudformationTemplateSha256"`
-	CloudformationTemplateURL    string           `json:"cloudformationTemplateUrl"`
-	DeploymentID                 string           `json:"deploymentId"`
-	DeploymentVersion            string           `json:"deploymentVersion"`
-	DeprecatedPrincipalArns      []string         `json:"deprecatedPrincipalArns"`
-	ExternalID                   string           `json:"externalId"`
-	ExternalIDKeyVersion         int              `json:"externalIdKeyVersion"`
-	ExternalIDSource             ExternalIDSource `json:"externalIdSource"`
-	ManagedPolicyArns            []string         `json:"managedPolicyArns"`
-	ModuleSha256                 string           `json:"moduleSha256"`
-	ModuleSource                 string           `json:"moduleSource"`
-	ModuleVersion                string           `json:"moduleVersion"`
-	ModuleVersions               []ModuleVersion  `json:"moduleVersions"`
-	PermissionsHash              string           `json:"permissionsHash"`
-	RoleName                     string           `json:"roleName"`
-	TargetExternalID             string           `json:"targetExternalId"`
+	ActPrincipalArn              string            `json:"actPrincipalArn"`
+	AssumeRolePolicyJSON         string            `json:"assumeRolePolicyJson"`
+	CloudformationTemplateSha256 string            `json:"cloudformationTemplateSha256"`
+	CloudformationTemplateURL    string            `json:"cloudformationTemplateUrl"`
+	CustomPolicyDocuments        map[string]string `json:"customPolicyDocuments"`
+
+	// DeploymentID Derived by Act from the tenant and the target; stable, unpredictable to others
+	DeploymentID         string                `json:"deploymentId"`
+	DeploymentVersion    string                `json:"deploymentVersion"`
+	DeprecatedPrincipals []DeprecatedPrincipal `json:"deprecatedPrincipals"`
+
+	// ExistingDeployment The live deployment already holding this target, if any; import it instead of creating a new one
+	ExistingDeployment   *ExistingDeployment `json:"existingDeployment"`
+	ExternalID           string              `json:"externalId"`
+	ExternalIDKeyVersion int                 `json:"externalIdKeyVersion"`
+	ExternalIDSource     ExternalIDSource    `json:"externalIdSource"`
+	ManagedPolicyArns    []string            `json:"managedPolicyArns"`
+	MemberRoleName       string              `json:"memberRoleName"`
+	MemberRolePath       string              `json:"memberRolePath"`
+	ModuleSha256         string              `json:"moduleSha256"`
+	ModuleSource         string              `json:"moduleSource"`
+	ModuleVersion        string              `json:"moduleVersion"`
+	ModuleVersions       []ModuleVersion     `json:"moduleVersions"`
+	PermissionsHash      string              `json:"permissionsHash"`
+
+	// RoleArn Known before the role exists in account mode; null for organizations
+	RoleArn          *string `json:"roleArn"`
+	RoleName         string  `json:"roleName"`
+	TargetExternalID string  `json:"targetExternalId"`
 }
 
 // AwsOrganization defines model for AwsOrganization.
 type AwsOrganization struct {
-	ExcludedAccountIds            *[]string `json:"excludedAccountIds"`
-	ExcludedOrganizationalUnitIds *[]string `json:"excludedOrganizationalUnitIds"`
-	MemberRoleName                string    `json:"memberRoleName"`
-	MemberRolePath                string    `json:"memberRolePath"`
-	OrganizationalUnitIds         *[]string `json:"organizationalUnitIds"`
-	RootID                        *string   `json:"rootId"`
+	ExcludedAccountIds    *[]string `json:"excludedAccountIds"`
+	ManagementAccountID   string    `json:"managementAccountId"`
+	MemberRoleName        string    `json:"memberRoleName"`
+	MemberRolePath        string    `json:"memberRolePath"`
+	OrganizationID        string    `json:"organizationId"`
+	OrganizationalUnitIds *[]string `json:"organizationalUnitIds"`
+	RootID                *string   `json:"rootId"`
+}
+
+// AwsOrganizationInput defines model for AwsOrganizationInput.
+type AwsOrganizationInput struct {
+	ExcludedAccountIds    *[]string `json:"excludedAccountIds,omitempty"`
+	MemberRoleName        *string   `json:"memberRoleName,omitempty"`
+	MemberRolePath        *string   `json:"memberRolePath,omitempty"`
+	OrganizationID        string    `json:"organizationId"`
+	OrganizationalUnitIds *[]string `json:"organizationalUnitIds,omitempty"`
+	RootID                *string   `json:"rootId,omitempty"`
+}
+
+// AwsOrganizationPatch defines model for AwsOrganizationPatch.
+type AwsOrganizationPatch struct {
+	ExcludedAccountIds    *[]string `json:"excludedAccountIds,omitempty"`
+	MemberRoleName        *string   `json:"memberRoleName,omitempty"`
+	MemberRolePath        *string   `json:"memberRolePath,omitempty"`
+	OrganizationalUnitIds *[]string `json:"organizationalUnitIds,omitempty"`
+	RootID                *string   `json:"rootId,omitempty"`
 }
 
 // AzureDeployment defines model for AzureDeployment.
 type AzureDeployment struct {
-	AzureTenantID      *string                       `json:"azureTenantId"`
-	ClientID           *string                       `json:"clientId"`
-	CreatedAt          time.Time                     `json:"createdAt"`
-	CredentialType     AzureDeploymentCredentialType `json:"credentialType"`
-	DeletionProtection bool                          `json:"deletionProtection"`
-	DeployedVersion    *string                       `json:"deployedVersion"`
-	DeploymentMethod   *AzureDeploymentMethod        `json:"deploymentMethod"`
-	ErrorCode          *string                       `json:"errorCode"`
-	ErrorMessage       *string                       `json:"errorMessage"`
-	ID                 string                        `json:"id"`
-	ManagementGroupID  *string                       `json:"managementGroupId"`
-	Name               string                        `json:"name"`
-	RotationRequired   bool                          `json:"rotationRequired"`
-	ServicePrincipalID *string                       `json:"servicePrincipalId"`
-	Status             DeploymentStatus              `json:"status"`
-	SubscriptionID     *string                       `json:"subscriptionId"`
-	Tags               map[string]string             `json:"tags"`
-	UpdateAvailable    bool                          `json:"updateAvailable"`
+	AzureTenantID string `json:"azureTenantId"`
+
+	// ConsentURL Set while the deployment is pending_consent
+	ConsentURL         *string                 `json:"consentUrl"`
+	ConsoleURL         string                  `json:"consoleUrl"`
+	CreatedAt          time.Time               `json:"createdAt"`
+	CreatedVia         *DeploymentChangeSource `json:"createdVia"`
+	DeletionProtection bool                    `json:"deletionProtection"`
+	DeployedVersion    *string                 `json:"deployedVersion"`
+	DeploymentMethod   *AzureDeploymentMethod  `json:"deploymentMethod"`
+	ErrorCode          *string                 `json:"errorCode"`
+	ErrorMessage       *string                 `json:"errorMessage"`
+	ID                 string                  `json:"id"`
+	IncludeEntraID     bool                    `json:"includeEntraId"`
+	ManagementGroupID  *string                 `json:"managementGroupId"`
+	Name               string                  `json:"name"`
+	ServicePrincipalID *string                 `json:"servicePrincipalId"`
+
+	// Status pending_consent: Azure only, waiting for an Entra admin to approve Act in the directory
+	Status          DeploymentStatus    `json:"status"`
+	SubscriptionID  *string             `json:"subscriptionId"`
+	Tags            map[string]string   `json:"tags"`
+	UpdateAvailable bool                `json:"updateAvailable"`
+	Warnings        []DeploymentWarning `json:"warnings"`
 }
 
-// AzureDeploymentCredentialType defines model for AzureDeployment.CredentialType.
-type AzureDeploymentCredentialType string
+// AzureDeploymentCreate An Azure subscription or management group to connect through Act's app. Before consent the deployment is created as pending_consent.
+type AzureDeploymentCreate struct {
+	AzureTenantID      string                 `json:"azureTenantId"`
+	DeletionProtection *bool                  `json:"deletionProtection,omitempty"`
+	DeploymentID       string                 `json:"deploymentId"`
+	DeploymentMethod   *AzureDeploymentMethod `json:"deploymentMethod,omitempty"`
+	IncludeEntraID     *bool                  `json:"includeEntraId,omitempty"`
+	ManagementGroupID  *string                `json:"managementGroupId,omitempty"`
+	Name               *string                `json:"name,omitempty"`
+	ServicePrincipalID string                 `json:"servicePrincipalId"`
+	SubscriptionID     *string                `json:"subscriptionId,omitempty"`
+	Tags               *map[string]string     `json:"tags,omitempty"`
+}
 
 // AzureDeploymentMethod defines model for AzureDeploymentMethod.
 type AzureDeploymentMethod string
 
+// AzureDeploymentPatch Merge patch. A member left out keeps its value. Identity changes re-verify.
+type AzureDeploymentPatch struct {
+	DeletionProtection *bool                  `json:"deletionProtection,omitempty"`
+	DeploymentMethod   *AzureDeploymentMethod `json:"deploymentMethod,omitempty"`
+	IncludeEntraID     *bool                  `json:"includeEntraId,omitempty"`
+	Name               *string                `json:"name,omitempty"`
+	ServicePrincipalID *string                `json:"servicePrincipalId,omitempty"`
+	Tags               *map[string]string     `json:"tags,omitempty"`
+}
+
 // AzureOnboarding defines model for AzureOnboarding.
 type AzureOnboarding struct {
-	CustomRoleName        string          `json:"customRoleName"`
-	DeploymentVersion     string          `json:"deploymentVersion"`
-	ModuleSha256          string          `json:"moduleSha256"`
-	ModuleSource          string          `json:"moduleSource"`
-	ModuleVersion         string          `json:"moduleVersion"`
-	ModuleVersions        []ModuleVersion `json:"moduleVersions"`
-	PermissionsHash       string          `json:"permissionsHash"`
-	RequiredBuiltinRoles  []string        `json:"requiredBuiltinRoles"`
-	RequiredGraphAppRoles []string        `json:"requiredGraphAppRoles"`
+	ActAppClientID string `json:"actAppClientId"`
+
+	// ActServicePrincipalID Act's service principal in the directory, once consented
+	ActServicePrincipalID *string `json:"actServicePrincipalId"`
+
+	// AdminConsentURL Stable link for an Entra admin; opening it starts consent, reading it does not
+	AdminConsentURL string `json:"adminConsentUrl"`
+	AzureTenantID   string `json:"azureTenantId"`
+
+	// BindingMarker Put this text in the custom role description; verification checks it
+	BindingMarker     string   `json:"bindingMarker"`
+	CustomRoleActions []string `json:"customRoleActions"`
+	CustomRoleName    string   `json:"customRoleName"`
+
+	// DeploymentID Derived by Act from the tenant and the target; stable, unpredictable to others
+	DeploymentID      string `json:"deploymentId"`
+	DeploymentVersion string `json:"deploymentVersion"`
+
+	// ExistingDeployment The live deployment already holding this target, if any; import it instead of creating a new one
+	ExistingDeployment      *ExistingDeployment `json:"existingDeployment"`
+	ModuleSha256            string              `json:"moduleSha256"`
+	ModuleSource            string              `json:"moduleSource"`
+	ModuleVersion           string              `json:"moduleVersion"`
+	ModuleVersions          []ModuleVersion     `json:"moduleVersions"`
+	PermissionsHash         string              `json:"permissionsHash"`
+	RequiredBuiltinRoleIds  []string            `json:"requiredBuiltinRoleIds"`
+	RequiredGraphAppRoleIds []string            `json:"requiredGraphAppRoleIds"`
+
+	// TenantConsented Whether an Entra admin has approved Act for this tenant in this directory
+	TenantConsented bool `json:"tenantConsented"`
+}
+
+// CleanupItem defines model for CleanupItem.
+type CleanupItem struct {
+	Description string `json:"description"`
+	Resource    string `json:"resource"`
 }
 
 // Cloud defines model for Cloud.
 type Cloud string
+
+// DeploymentChangeSource defines model for DeploymentChangeSource.
+type DeploymentChangeSource string
+
+// DeploymentCoverage defines model for DeploymentCoverage.
+type DeploymentCoverage struct {
+	AccountsConnected int                   `json:"accountsConnected"`
+	AccountsExpected  int                   `json:"accountsExpected"`
+	AccountsFailed    int                   `json:"accountsFailed"`
+	AccountsPending   int                   `json:"accountsPending"`
+	DeploymentID      string                `json:"deploymentId"`
+	DiscoveryState    DiscoveryState        `json:"discoveryState"`
+	FailedAccounts    []FailedMemberAccount `json:"failedAccounts"`
+	LastDiscoveryAt   *time.Time            `json:"lastDiscoveryAt"`
+}
+
+// DeploymentDeletion defines model for DeploymentDeletion.
+type DeploymentDeletion struct {
+	// CleanupRequired Cloud-side resources that still trust Act; remove them
+	CleanupRequired []CleanupItem `json:"cleanupRequired"`
+	ID              string        `json:"id"`
+}
 
 // DeploymentPage defines model for DeploymentPage.
 type DeploymentPage struct {
@@ -521,22 +727,39 @@ type DeploymentPage struct {
 // DeploymentScope defines model for DeploymentScope.
 type DeploymentScope string
 
-// DeploymentStatus defines model for DeploymentStatus.
+// DeploymentStatus pending_consent: Azure only, waiting for an Entra admin to approve Act in the directory
 type DeploymentStatus string
 
 // DeploymentSummary defines model for DeploymentSummary.
 type DeploymentSummary struct {
-	Cloud              Cloud             `json:"cloud"`
-	CreatedAt          time.Time         `json:"createdAt"`
-	DeletionProtection bool              `json:"deletionProtection"`
-	ID                 string            `json:"id"`
-	Name               string            `json:"name"`
-	Scope              DeploymentScope   `json:"scope"`
-	Status             DeploymentStatus  `json:"status"`
-	Tags               map[string]string `json:"tags"`
-	Targets            []string          `json:"targets"`
-	UpdateAvailable    bool              `json:"updateAvailable"`
+	Cloud              Cloud           `json:"cloud"`
+	CreatedAt          time.Time       `json:"createdAt"`
+	DeletionProtection bool            `json:"deletionProtection"`
+	ID                 string          `json:"id"`
+	Name               string          `json:"name"`
+	Scope              DeploymentScope `json:"scope"`
+
+	// Status pending_consent: Azure only, waiting for an Entra admin to approve Act in the directory
+	Status          DeploymentStatus  `json:"status"`
+	Tags            map[string]string `json:"tags"`
+	Targets         []string          `json:"targets"`
+	UpdateAvailable bool              `json:"updateAvailable"`
 }
+
+// DeploymentWarning defines model for DeploymentWarning.
+type DeploymentWarning struct {
+	Code    string `json:"code"`
+	Message string `json:"message"`
+}
+
+// DeprecatedPrincipal defines model for DeprecatedPrincipal.
+type DeprecatedPrincipal struct {
+	Arn       string    `json:"arn"`
+	ExpiresAt time.Time `json:"expiresAt"`
+}
+
+// DiscoveryState defines model for DiscoveryState.
+type DiscoveryState string
 
 // ErrorEnvelope defines model for ErrorEnvelope.
 type ErrorEnvelope struct {
@@ -552,8 +775,25 @@ type ErrorEnvelope struct {
 // ErrorEnvelopeErrorCode defines model for ErrorEnvelope.Error.Code.
 type ErrorEnvelopeErrorCode string
 
+// ExistingDeployment defines model for ExistingDeployment.
+type ExistingDeployment struct {
+	CreatedVia *DeploymentChangeSource `json:"createdVia"`
+	ID         string                  `json:"id"`
+
+	// Status pending_consent: Azure only, waiting for an Entra admin to approve Act in the directory
+	Status DeploymentStatus `json:"status"`
+}
+
 // ExternalIDSource defines model for ExternalIdSource.
 type ExternalIDSource string
+
+// FailedMemberAccount defines model for FailedMemberAccount.
+type FailedMemberAccount struct {
+	AccountID    string    `json:"accountId"`
+	Cause        *string   `json:"cause"`
+	ErrorCode    string    `json:"errorCode"`
+	FailingSince time.Time `json:"failingSince"`
+}
 
 // Federation defines model for Federation.
 type Federation struct {
@@ -563,40 +803,82 @@ type Federation struct {
 
 // GcpDeployment defines model for GcpDeployment.
 type GcpDeployment struct {
-	ActPrincipal            string              `json:"actPrincipal"`
-	CreatedAt               time.Time           `json:"createdAt"`
-	DeletionProtection      bool                `json:"deletionProtection"`
-	DeployedVersion         *string             `json:"deployedVersion"`
-	DeploymentMethod        GcpDeploymentMethod `json:"deploymentMethod"`
-	ErrorCode               *string             `json:"errorCode"`
-	ErrorMessage            *string             `json:"errorMessage"`
-	ID                      string              `json:"id"`
-	Name                    string              `json:"name"`
-	OrganizationID          *string             `json:"organizationId"`
-	ProjectID               *string             `json:"projectId"`
-	ServiceAccountEmail     *string             `json:"serviceAccountEmail"`
-	ServiceAccountID        string              `json:"serviceAccountId"`
-	ServiceAccountProjectID *string             `json:"serviceAccountProjectId"`
-	Status                  DeploymentStatus    `json:"status"`
-	Tags                    map[string]string   `json:"tags"`
-	UpdateAvailable         bool                `json:"updateAvailable"`
-	WorkloadIdentityPool    string              `json:"workloadIdentityPool"`
+	ConsoleURL                  string                  `json:"consoleUrl"`
+	CreatedAt                   time.Time               `json:"createdAt"`
+	CreatedVia                  *DeploymentChangeSource `json:"createdVia"`
+	DeletionProtection          bool                    `json:"deletionProtection"`
+	DeployedVersion             *string                 `json:"deployedVersion"`
+	DeploymentMethod            GcpDeploymentMethod     `json:"deploymentMethod"`
+	ErrorCode                   *string                 `json:"errorCode"`
+	ErrorMessage                *string                 `json:"errorMessage"`
+	ID                          string                  `json:"id"`
+	Name                        string                  `json:"name"`
+	OrganizationID              *string                 `json:"organizationId"`
+	ProjectID                   *string                 `json:"projectId"`
+	ServiceAccountEmail         string                  `json:"serviceAccountEmail"`
+	ServiceAccountProjectID     string                  `json:"serviceAccountProjectId"`
+	ServiceAccountProjectNumber string                  `json:"serviceAccountProjectNumber"`
+
+	// Status pending_consent: Azure only, waiting for an Entra admin to approve Act in the directory
+	Status                   DeploymentStatus    `json:"status"`
+	Tags                     map[string]string   `json:"tags"`
+	UpdateAvailable          bool                `json:"updateAvailable"`
+	Warnings                 []DeploymentWarning `json:"warnings"`
+	WorkloadIdentityProvider string              `json:"workloadIdentityProvider"`
+}
+
+// GcpDeploymentCreate A GCP project or organization to connect. Act derives the service account and workload identity provider from the deployment id; it never takes them from the request.
+type GcpDeploymentCreate struct {
+	DeletionProtection          *bool                `json:"deletionProtection,omitempty"`
+	DeploymentID                string               `json:"deploymentId"`
+	DeploymentMethod            *GcpDeploymentMethod `json:"deploymentMethod,omitempty"`
+	Name                        *string              `json:"name,omitempty"`
+	OrganizationID              *string              `json:"organizationId,omitempty"`
+	ProjectID                   *string              `json:"projectId,omitempty"`
+	ServiceAccountProjectID     *string              `json:"serviceAccountProjectId,omitempty"`
+	ServiceAccountProjectNumber string               `json:"serviceAccountProjectNumber"`
+	Tags                        *map[string]string   `json:"tags,omitempty"`
 }
 
 // GcpDeploymentMethod defines model for GcpDeploymentMethod.
 type GcpDeploymentMethod string
 
+// GcpDeploymentPatch Merge patch. A member left out keeps its value.
+type GcpDeploymentPatch struct {
+	DeletionProtection *bool                `json:"deletionProtection,omitempty"`
+	DeploymentMethod   *GcpDeploymentMethod `json:"deploymentMethod,omitempty"`
+	Name               *string              `json:"name,omitempty"`
+	Tags               *map[string]string   `json:"tags,omitempty"`
+}
+
 // GcpOnboarding defines model for GcpOnboarding.
 type GcpOnboarding struct {
-	ActAwsRoleName        string          `json:"actAwsRoleName"`
-	DeploymentVersion     string          `json:"deploymentVersion"`
-	ModuleSha256          string          `json:"moduleSha256"`
-	ModuleSource          string          `json:"moduleSource"`
-	ModuleVersion         string          `json:"moduleVersion"`
-	ModuleVersions        []ModuleVersion `json:"moduleVersions"`
-	PermissionsHash       string          `json:"permissionsHash"`
-	PoolHostProjectID     string          `json:"poolHostProjectId"`
-	PoolHostProjectNumber string          `json:"poolHostProjectNumber"`
+	// ActAwsAccountID AWS account of the Act federation role the customer pool trusts
+	ActAwsAccountID string `json:"actAwsAccountId"`
+
+	// AttributeCondition Ready-made CEL condition for the workload identity pool provider
+	AttributeCondition    string   `json:"attributeCondition"`
+	CustomRolePermissions []string `json:"customRolePermissions"`
+
+	// DeploymentID Derived by Act from the tenant and the target; stable, unpredictable to others
+	DeploymentID      string `json:"deploymentId"`
+	DeploymentVersion string `json:"deploymentVersion"`
+
+	// ExistingDeployment The live deployment already holding this target, if any; import it instead of creating a new one
+	ExistingDeployment *ExistingDeployment `json:"existingDeployment"`
+	FederationRoleName string              `json:"federationRoleName"`
+	ModuleSha256       string              `json:"moduleSha256"`
+	ModuleSource       string              `json:"moduleSource"`
+	ModuleVersion      string              `json:"moduleVersion"`
+	ModuleVersions     []ModuleVersion     `json:"moduleVersions"`
+	PermissionsHash    string              `json:"permissionsHash"`
+	PredefinedRoles    []string            `json:"predefinedRoles"`
+	ServiceAccountID   string              `json:"serviceAccountId"`
+
+	// SessionBinding Role session name Act uses for this deployment; the pool admits only it
+	SessionBinding             string `json:"sessionBinding"`
+	WorkloadIdentityPoolID     string `json:"workloadIdentityPoolId"`
+	WorkloadIdentityProviderID string `json:"workloadIdentityProviderId"`
 }
 
 // InstallableIntegrationType defines model for InstallableIntegrationType.
@@ -697,6 +979,23 @@ type IntegrationTypeList struct {
 	Items []IntegrationTypeInfo `json:"items"`
 }
 
+// MemberAccount defines model for MemberAccount.
+type MemberAccount struct {
+	AccountID string              `json:"accountId"`
+	ErrorCode *string             `json:"errorCode"`
+	Name      *string             `json:"name"`
+	Status    MemberAccountStatus `json:"status"`
+}
+
+// MemberAccountPage defines model for MemberAccountPage.
+type MemberAccountPage struct {
+	Items         []MemberAccount `json:"items"`
+	NextPageToken *string         `json:"nextPageToken"`
+}
+
+// MemberAccountStatus defines model for MemberAccountStatus.
+type MemberAccountStatus string
+
 // ModuleVersion defines model for ModuleVersion.
 type ModuleVersion struct {
 	DeploymentVersion string `json:"deploymentVersion"`
@@ -740,9 +1039,82 @@ type Whoami struct {
 type ListDeploymentsParams struct {
 	Cloud     *Cloud             `form:"cloud,omitempty" json:"cloud,omitempty"`
 	Status    *DeploymentStatus  `form:"status,omitempty" json:"status,omitempty"`
+	Target    *string            `form:"target,omitempty" json:"target,omitempty"`
 	Tag       *map[string]string `json:"tag,omitempty"`
 	PageSize  *int               `form:"pageSize,omitempty" json:"pageSize,omitempty"`
 	PageToken *string            `form:"pageToken,omitempty" json:"pageToken,omitempty"`
+}
+
+// CreateAwsDeploymentParams defines parameters for CreateAwsDeployment.
+type CreateAwsDeploymentParams struct {
+	IdempotencyKey string `json:"idempotency-key"`
+}
+
+// DeleteAwsDeploymentParams defines parameters for DeleteAwsDeployment.
+type DeleteAwsDeploymentParams struct {
+	IfMatch *string `json:"if-match,omitempty"`
+}
+
+// UpdateAwsDeploymentParams defines parameters for UpdateAwsDeployment.
+type UpdateAwsDeploymentParams struct {
+	IfMatch string `json:"if-match"`
+}
+
+// RotateAwsExternalIDParams defines parameters for RotateAwsExternalID.
+type RotateAwsExternalIDParams struct {
+	IfMatch string `json:"if-match"`
+}
+
+// VerifyAwsDeploymentParams defines parameters for VerifyAwsDeployment.
+type VerifyAwsDeploymentParams struct {
+	IfMatch string `json:"if-match"`
+}
+
+// CreateAzureDeploymentParams defines parameters for CreateAzureDeployment.
+type CreateAzureDeploymentParams struct {
+	IdempotencyKey string `json:"idempotency-key"`
+}
+
+// DeleteAzureDeploymentParams defines parameters for DeleteAzureDeployment.
+type DeleteAzureDeploymentParams struct {
+	IfMatch *string `json:"if-match,omitempty"`
+}
+
+// UpdateAzureDeploymentParams defines parameters for UpdateAzureDeployment.
+type UpdateAzureDeploymentParams struct {
+	IfMatch string `json:"if-match"`
+}
+
+// VerifyAzureDeploymentParams defines parameters for VerifyAzureDeployment.
+type VerifyAzureDeploymentParams struct {
+	IfMatch string `json:"if-match"`
+}
+
+// CreateGcpDeploymentParams defines parameters for CreateGcpDeployment.
+type CreateGcpDeploymentParams struct {
+	IdempotencyKey string `json:"idempotency-key"`
+}
+
+// DeleteGcpDeploymentParams defines parameters for DeleteGcpDeployment.
+type DeleteGcpDeploymentParams struct {
+	IfMatch *string `json:"if-match,omitempty"`
+}
+
+// UpdateGcpDeploymentParams defines parameters for UpdateGcpDeployment.
+type UpdateGcpDeploymentParams struct {
+	IfMatch string `json:"if-match"`
+}
+
+// VerifyGcpDeploymentParams defines parameters for VerifyGcpDeployment.
+type VerifyGcpDeploymentParams struct {
+	IfMatch string `json:"if-match"`
+}
+
+// ListDeploymentAccountsParams defines parameters for ListDeploymentAccounts.
+type ListDeploymentAccountsParams struct {
+	Status    *MemberAccountStatus `form:"status,omitempty" json:"status,omitempty"`
+	PageSize  *int                 `form:"pageSize,omitempty" json:"pageSize,omitempty"`
+	PageToken *string              `form:"pageToken,omitempty" json:"pageToken,omitempty"`
 }
 
 // ListIntegrationsParams defines parameters for ListIntegrations.
@@ -770,8 +1142,44 @@ type UpdateIntegrationParams struct {
 
 // GetAwsOnboardingParams defines parameters for GetAwsOnboarding.
 type GetAwsOnboardingParams struct {
-	DeploymentID string `form:"deploymentId" json:"deploymentId"`
+	AccountID      *string `form:"accountId,omitempty" json:"accountId,omitempty"`
+	OrganizationID *string `form:"organizationId,omitempty" json:"organizationId,omitempty"`
+	Variant        *string `form:"variant,omitempty" json:"variant,omitempty"`
 }
+
+// GetAzureOnboardingParams defines parameters for GetAzureOnboarding.
+type GetAzureOnboardingParams struct {
+	DirectoryID       string  `form:"directoryId" json:"directoryId"`
+	SubscriptionID    *string `form:"subscriptionId,omitempty" json:"subscriptionId,omitempty"`
+	ManagementGroupID *string `form:"managementGroupId,omitempty" json:"managementGroupId,omitempty"`
+	Variant           *string `form:"variant,omitempty" json:"variant,omitempty"`
+}
+
+// GetGcpOnboardingParams defines parameters for GetGcpOnboarding.
+type GetGcpOnboardingParams struct {
+	ProjectID               *string `form:"projectId,omitempty" json:"projectId,omitempty"`
+	OrganizationID          *string `form:"organizationId,omitempty" json:"organizationId,omitempty"`
+	ServiceAccountProjectID *string `form:"serviceAccountProjectId,omitempty" json:"serviceAccountProjectId,omitempty"`
+	Variant                 *string `form:"variant,omitempty" json:"variant,omitempty"`
+}
+
+// CreateAwsDeploymentJSONRequestBody defines body for CreateAwsDeployment for application/json ContentType.
+type CreateAwsDeploymentJSONRequestBody = AwsDeploymentCreate
+
+// UpdateAwsDeploymentJSONRequestBody defines body for UpdateAwsDeployment for application/json ContentType.
+type UpdateAwsDeploymentJSONRequestBody = AwsDeploymentPatch
+
+// CreateAzureDeploymentJSONRequestBody defines body for CreateAzureDeployment for application/json ContentType.
+type CreateAzureDeploymentJSONRequestBody = AzureDeploymentCreate
+
+// UpdateAzureDeploymentJSONRequestBody defines body for UpdateAzureDeployment for application/json ContentType.
+type UpdateAzureDeploymentJSONRequestBody = AzureDeploymentPatch
+
+// CreateGcpDeploymentJSONRequestBody defines body for CreateGcpDeployment for application/json ContentType.
+type CreateGcpDeploymentJSONRequestBody = GcpDeploymentCreate
+
+// UpdateGcpDeploymentJSONRequestBody defines body for UpdateGcpDeployment for application/json ContentType.
+type UpdateGcpDeploymentJSONRequestBody = GcpDeploymentPatch
 
 // CreateIntegrationJSONRequestBody defines body for CreateIntegration for application/json ContentType.
 type CreateIntegrationJSONRequestBody = IntegrationCreate
@@ -784,15 +1192,60 @@ type ServerInterface interface {
 	// ListDeployments List the deployments of the calling tenant, one page at a time
 	// (GET /v1/deployments)
 	ListDeployments(w http.ResponseWriter, r *http.Request, params ListDeploymentsParams)
-	// GetAwsDeployment Return one AWS deployment
+	// CreateAwsDeployment Connect an AWS account or organization to Act. Act verifies access before it stores anything
+	// (POST /v1/deployments/aws)
+	CreateAwsDeployment(w http.ResponseWriter, r *http.Request, params CreateAwsDeploymentParams)
+	// DeleteAwsDeployment Disconnect a an AWS account or organization deployment: stop scans, purge the credentials Act holds, and list what still trusts Act
+	// (DELETE /v1/deployments/aws/{id})
+	DeleteAwsDeployment(w http.ResponseWriter, r *http.Request, id string, params DeleteAwsDeploymentParams)
+	// GetAwsDeployment Return one an AWS account or organization deployment
 	// (GET /v1/deployments/aws/{id})
 	GetAwsDeployment(w http.ResponseWriter, r *http.Request, id string)
-	// GetAzureDeployment Return one Azure deployment
+	// UpdateAwsDeployment Change a an AWS account or organization deployment in place, keeping its id
+	// (PATCH /v1/deployments/aws/{id})
+	UpdateAwsDeployment(w http.ResponseWriter, r *http.Request, id string, params UpdateAwsDeploymentParams)
+	// RotateAwsExternalID Move a legacy AWS deployment to its derived external ID, after verifying the role trusts it
+	// (POST /v1/deployments/aws/{id}/rotate-external-id)
+	RotateAwsExternalID(w http.ResponseWriter, r *http.Request, id string, params RotateAwsExternalIDParams)
+	// VerifyAwsDeployment Check that Act can use a an AWS account or organization deployment again, after its cloud side was fixed
+	// (POST /v1/deployments/aws/{id}/verify)
+	VerifyAwsDeployment(w http.ResponseWriter, r *http.Request, id string, params VerifyAwsDeploymentParams)
+	// CreateAzureDeployment Connect an Azure subscription or management group to Act. Act verifies access before it stores anything
+	// (POST /v1/deployments/azure)
+	CreateAzureDeployment(w http.ResponseWriter, r *http.Request, params CreateAzureDeploymentParams)
+	// DeleteAzureDeployment Disconnect a an Azure subscription or management group deployment: stop scans, purge the credentials Act holds, and list what still trusts Act
+	// (DELETE /v1/deployments/azure/{id})
+	DeleteAzureDeployment(w http.ResponseWriter, r *http.Request, id string, params DeleteAzureDeploymentParams)
+	// GetAzureDeployment Return one an Azure subscription or management group deployment
 	// (GET /v1/deployments/azure/{id})
 	GetAzureDeployment(w http.ResponseWriter, r *http.Request, id string)
-	// GetGcpDeployment Return one GCP deployment
+	// UpdateAzureDeployment Change a an Azure subscription or management group deployment in place, keeping its id
+	// (PATCH /v1/deployments/azure/{id})
+	UpdateAzureDeployment(w http.ResponseWriter, r *http.Request, id string, params UpdateAzureDeploymentParams)
+	// VerifyAzureDeployment Check that Act can use a an Azure subscription or management group deployment again, after its cloud side was fixed
+	// (POST /v1/deployments/azure/{id}/verify)
+	VerifyAzureDeployment(w http.ResponseWriter, r *http.Request, id string, params VerifyAzureDeploymentParams)
+	// CreateGcpDeployment Connect a GCP project or organization to Act. Act verifies access before it stores anything
+	// (POST /v1/deployments/gcp)
+	CreateGcpDeployment(w http.ResponseWriter, r *http.Request, params CreateGcpDeploymentParams)
+	// DeleteGcpDeployment Disconnect a a GCP project or organization deployment: stop scans, purge the credentials Act holds, and list what still trusts Act
+	// (DELETE /v1/deployments/gcp/{id})
+	DeleteGcpDeployment(w http.ResponseWriter, r *http.Request, id string, params DeleteGcpDeploymentParams)
+	// GetGcpDeployment Return one a GCP project or organization deployment
 	// (GET /v1/deployments/gcp/{id})
 	GetGcpDeployment(w http.ResponseWriter, r *http.Request, id string)
+	// UpdateGcpDeployment Change a a GCP project or organization deployment in place, keeping its id
+	// (PATCH /v1/deployments/gcp/{id})
+	UpdateGcpDeployment(w http.ResponseWriter, r *http.Request, id string, params UpdateGcpDeploymentParams)
+	// VerifyGcpDeployment Check that Act can use a a GCP project or organization deployment again, after its cloud side was fixed
+	// (POST /v1/deployments/gcp/{id}/verify)
+	VerifyGcpDeployment(w http.ResponseWriter, r *http.Request, id string, params VerifyGcpDeploymentParams)
+	// ListDeploymentAccounts List the member accounts, subscriptions or projects of one deployment, one page at a time
+	// (GET /v1/deployments/{id}/accounts)
+	ListDeploymentAccounts(w http.ResponseWriter, r *http.Request, id string, params ListDeploymentAccountsParams)
+	// GetDeploymentCoverage Return how many member accounts, subscriptions or projects Act reaches through one deployment
+	// (GET /v1/deployments/{id}/coverage)
+	GetDeploymentCoverage(w http.ResponseWriter, r *http.Request, id string)
 	// ListIntegrationTypes List the integration types this tenant may install, their fields and which of them are secret
 	// (GET /v1/integration-types)
 	ListIntegrationTypes(w http.ResponseWriter, r *http.Request)
@@ -811,15 +1264,15 @@ type ServerInterface interface {
 	// UpdateIntegration Change an installed integration in place, keeping its id
 	// (PATCH /v1/integrations/{id})
 	UpdateIntegration(w http.ResponseWriter, r *http.Request, id string, params UpdateIntegrationParams)
-	// GetAwsOnboarding Return the values an AWS deployment needs before it is created
+	// GetAwsOnboarding Return what an AWS account or organization needs before it is connected, derived from the target
 	// (GET /v1/onboarding/aws)
 	GetAwsOnboarding(w http.ResponseWriter, r *http.Request, params GetAwsOnboardingParams)
-	// GetAzureOnboarding Return the values an Azure deployment needs before it is created
+	// GetAzureOnboarding Return what an Azure subscription or management group needs before it is connected
 	// (GET /v1/onboarding/azure)
-	GetAzureOnboarding(w http.ResponseWriter, r *http.Request)
-	// GetGcpOnboarding Return the values a GCP deployment needs before it is reserved
+	GetAzureOnboarding(w http.ResponseWriter, r *http.Request, params GetAzureOnboardingParams)
+	// GetGcpOnboarding Return what a GCP project or organization needs before it is connected
 	// (GET /v1/onboarding/gcp)
-	GetGcpOnboarding(w http.ResponseWriter, r *http.Request)
+	GetGcpOnboarding(w http.ResponseWriter, r *http.Request, params GetGcpOnboardingParams)
 	// GetWhoami Return the tenant, region and principal of the calling token
 	// (GET /v1/whoami)
 	GetWhoami(w http.ResponseWriter, r *http.Request)
@@ -865,6 +1318,19 @@ func (siw *ServerInterfaceWrapper) ListDeployments(w http.ResponseWriter, r *htt
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "status"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "status", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "target" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "target", r.URL.Query(), &params.Target, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "target"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "target", Err: err})
 		}
 		return
 	}
@@ -919,6 +1385,101 @@ func (siw *ServerInterfaceWrapper) ListDeployments(w http.ResponseWriter, r *htt
 	handler.ServeHTTP(w, r)
 }
 
+// CreateAwsDeployment operation middleware
+func (siw *ServerInterfaceWrapper) CreateAwsDeployment(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params CreateAwsDeploymentParams
+
+	headers := r.Header
+
+	// ------------- Required header parameter "idempotency-key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("idempotency-key")]; found {
+		var IdempotencyKey string
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "idempotency-key", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "idempotency-key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "idempotency-key", Err: err})
+			return
+		}
+
+		params.IdempotencyKey = IdempotencyKey
+
+	} else {
+		err := fmt.Errorf("Header parameter idempotency-key is required, but not found")
+		siw.ErrorHandlerFunc(w, r, &RequiredHeaderError{ParamName: "idempotency-key", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateAwsDeployment(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteAwsDeployment operation middleware
+func (siw *ServerInterfaceWrapper) DeleteAwsDeployment(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params DeleteAwsDeploymentParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "if-match" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("if-match")]; found {
+		var IfMatch string
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "if-match", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "if-match", valueList[0], &IfMatch, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "if-match", Err: err})
+			return
+		}
+
+		params.IfMatch = &IfMatch
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteAwsDeployment(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetAwsDeployment operation middleware
 func (siw *ServerInterfaceWrapper) GetAwsDeployment(w http.ResponseWriter, r *http.Request) {
 
@@ -936,6 +1497,263 @@ func (siw *ServerInterfaceWrapper) GetAwsDeployment(w http.ResponseWriter, r *ht
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetAwsDeployment(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateAwsDeployment operation middleware
+func (siw *ServerInterfaceWrapper) UpdateAwsDeployment(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params UpdateAwsDeploymentParams
+
+	headers := r.Header
+
+	// ------------- Required header parameter "if-match" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("if-match")]; found {
+		var IfMatch string
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "if-match", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "if-match", valueList[0], &IfMatch, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "if-match", Err: err})
+			return
+		}
+
+		params.IfMatch = IfMatch
+
+	} else {
+		err := fmt.Errorf("Header parameter if-match is required, but not found")
+		siw.ErrorHandlerFunc(w, r, &RequiredHeaderError{ParamName: "if-match", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateAwsDeployment(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RotateAwsExternalID operation middleware
+func (siw *ServerInterfaceWrapper) RotateAwsExternalID(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params RotateAwsExternalIDParams
+
+	headers := r.Header
+
+	// ------------- Required header parameter "if-match" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("if-match")]; found {
+		var IfMatch string
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "if-match", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "if-match", valueList[0], &IfMatch, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "if-match", Err: err})
+			return
+		}
+
+		params.IfMatch = IfMatch
+
+	} else {
+		err := fmt.Errorf("Header parameter if-match is required, but not found")
+		siw.ErrorHandlerFunc(w, r, &RequiredHeaderError{ParamName: "if-match", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RotateAwsExternalID(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// VerifyAwsDeployment operation middleware
+func (siw *ServerInterfaceWrapper) VerifyAwsDeployment(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params VerifyAwsDeploymentParams
+
+	headers := r.Header
+
+	// ------------- Required header parameter "if-match" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("if-match")]; found {
+		var IfMatch string
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "if-match", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "if-match", valueList[0], &IfMatch, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "if-match", Err: err})
+			return
+		}
+
+		params.IfMatch = IfMatch
+
+	} else {
+		err := fmt.Errorf("Header parameter if-match is required, but not found")
+		siw.ErrorHandlerFunc(w, r, &RequiredHeaderError{ParamName: "if-match", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.VerifyAwsDeployment(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateAzureDeployment operation middleware
+func (siw *ServerInterfaceWrapper) CreateAzureDeployment(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params CreateAzureDeploymentParams
+
+	headers := r.Header
+
+	// ------------- Required header parameter "idempotency-key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("idempotency-key")]; found {
+		var IdempotencyKey string
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "idempotency-key", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "idempotency-key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "idempotency-key", Err: err})
+			return
+		}
+
+		params.IdempotencyKey = IdempotencyKey
+
+	} else {
+		err := fmt.Errorf("Header parameter idempotency-key is required, but not found")
+		siw.ErrorHandlerFunc(w, r, &RequiredHeaderError{ParamName: "idempotency-key", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateAzureDeployment(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteAzureDeployment operation middleware
+func (siw *ServerInterfaceWrapper) DeleteAzureDeployment(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params DeleteAzureDeploymentParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "if-match" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("if-match")]; found {
+		var IfMatch string
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "if-match", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "if-match", valueList[0], &IfMatch, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "if-match", Err: err})
+			return
+		}
+
+		params.IfMatch = &IfMatch
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteAzureDeployment(w, r, id, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -971,6 +1789,209 @@ func (siw *ServerInterfaceWrapper) GetAzureDeployment(w http.ResponseWriter, r *
 	handler.ServeHTTP(w, r)
 }
 
+// UpdateAzureDeployment operation middleware
+func (siw *ServerInterfaceWrapper) UpdateAzureDeployment(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params UpdateAzureDeploymentParams
+
+	headers := r.Header
+
+	// ------------- Required header parameter "if-match" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("if-match")]; found {
+		var IfMatch string
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "if-match", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "if-match", valueList[0], &IfMatch, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "if-match", Err: err})
+			return
+		}
+
+		params.IfMatch = IfMatch
+
+	} else {
+		err := fmt.Errorf("Header parameter if-match is required, but not found")
+		siw.ErrorHandlerFunc(w, r, &RequiredHeaderError{ParamName: "if-match", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateAzureDeployment(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// VerifyAzureDeployment operation middleware
+func (siw *ServerInterfaceWrapper) VerifyAzureDeployment(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params VerifyAzureDeploymentParams
+
+	headers := r.Header
+
+	// ------------- Required header parameter "if-match" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("if-match")]; found {
+		var IfMatch string
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "if-match", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "if-match", valueList[0], &IfMatch, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "if-match", Err: err})
+			return
+		}
+
+		params.IfMatch = IfMatch
+
+	} else {
+		err := fmt.Errorf("Header parameter if-match is required, but not found")
+		siw.ErrorHandlerFunc(w, r, &RequiredHeaderError{ParamName: "if-match", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.VerifyAzureDeployment(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateGcpDeployment operation middleware
+func (siw *ServerInterfaceWrapper) CreateGcpDeployment(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params CreateGcpDeploymentParams
+
+	headers := r.Header
+
+	// ------------- Required header parameter "idempotency-key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("idempotency-key")]; found {
+		var IdempotencyKey string
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "idempotency-key", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "idempotency-key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "idempotency-key", Err: err})
+			return
+		}
+
+		params.IdempotencyKey = IdempotencyKey
+
+	} else {
+		err := fmt.Errorf("Header parameter idempotency-key is required, but not found")
+		siw.ErrorHandlerFunc(w, r, &RequiredHeaderError{ParamName: "idempotency-key", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateGcpDeployment(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteGcpDeployment operation middleware
+func (siw *ServerInterfaceWrapper) DeleteGcpDeployment(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params DeleteGcpDeploymentParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "if-match" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("if-match")]; found {
+		var IfMatch string
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "if-match", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "if-match", valueList[0], &IfMatch, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "if-match", Err: err})
+			return
+		}
+
+		params.IfMatch = &IfMatch
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteGcpDeployment(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetGcpDeployment operation middleware
 func (siw *ServerInterfaceWrapper) GetGcpDeployment(w http.ResponseWriter, r *http.Request) {
 
@@ -988,6 +2009,208 @@ func (siw *ServerInterfaceWrapper) GetGcpDeployment(w http.ResponseWriter, r *ht
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetGcpDeployment(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateGcpDeployment operation middleware
+func (siw *ServerInterfaceWrapper) UpdateGcpDeployment(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params UpdateGcpDeploymentParams
+
+	headers := r.Header
+
+	// ------------- Required header parameter "if-match" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("if-match")]; found {
+		var IfMatch string
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "if-match", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "if-match", valueList[0], &IfMatch, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "if-match", Err: err})
+			return
+		}
+
+		params.IfMatch = IfMatch
+
+	} else {
+		err := fmt.Errorf("Header parameter if-match is required, but not found")
+		siw.ErrorHandlerFunc(w, r, &RequiredHeaderError{ParamName: "if-match", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateGcpDeployment(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// VerifyGcpDeployment operation middleware
+func (siw *ServerInterfaceWrapper) VerifyGcpDeployment(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params VerifyGcpDeploymentParams
+
+	headers := r.Header
+
+	// ------------- Required header parameter "if-match" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("if-match")]; found {
+		var IfMatch string
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "if-match", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "if-match", valueList[0], &IfMatch, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "if-match", Err: err})
+			return
+		}
+
+		params.IfMatch = IfMatch
+
+	} else {
+		err := fmt.Errorf("Header parameter if-match is required, but not found")
+		siw.ErrorHandlerFunc(w, r, &RequiredHeaderError{ParamName: "if-match", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.VerifyGcpDeployment(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListDeploymentAccounts operation middleware
+func (siw *ServerInterfaceWrapper) ListDeploymentAccounts(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListDeploymentAccountsParams
+
+	// ------------- Optional query parameter "status" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "status", r.URL.Query(), &params.Status, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "status"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "status", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "pageSize" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "pageSize", r.URL.Query(), &params.PageSize, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "pageSize"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "pageSize", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "pageToken" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "pageToken", r.URL.Query(), &params.PageToken, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "pageToken"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "pageToken", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListDeploymentAccounts(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetDeploymentCoverage operation middleware
+func (siw *ServerInterfaceWrapper) GetDeploymentCoverage(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetDeploymentCoverage(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -1263,15 +2486,41 @@ func (siw *ServerInterfaceWrapper) GetAwsOnboarding(w http.ResponseWriter, r *ht
 	// Parameter object where we will unmarshal all parameters from the context
 	var params GetAwsOnboardingParams
 
-	// ------------- Required query parameter "deploymentId" -------------
+	// ------------- Optional query parameter "accountId" -------------
 
-	err = runtime.BindQueryParameterWithOptions("form", true, true, "deploymentId", r.URL.Query(), &params.DeploymentID, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "accountId", r.URL.Query(), &params.AccountID, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
 	if err != nil {
 		var requiredError *runtime.RequiredParameterError
 		if errors.As(err, &requiredError) {
-			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "deploymentId"})
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "accountId"})
 		} else {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "deploymentId", Err: err})
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "accountId", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "organizationId" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "organizationId", r.URL.Query(), &params.OrganizationID, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "organizationId"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "organizationId", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "variant" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "variant", r.URL.Query(), &params.Variant, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "variant"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "variant", Err: err})
 		}
 		return
 	}
@@ -1290,8 +2539,66 @@ func (siw *ServerInterfaceWrapper) GetAwsOnboarding(w http.ResponseWriter, r *ht
 // GetAzureOnboarding operation middleware
 func (siw *ServerInterfaceWrapper) GetAzureOnboarding(w http.ResponseWriter, r *http.Request) {
 
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetAzureOnboardingParams
+
+	// ------------- Required query parameter "directoryId" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "directoryId", r.URL.Query(), &params.DirectoryID, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "directoryId"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "directoryId", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "subscriptionId" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "subscriptionId", r.URL.Query(), &params.SubscriptionID, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "subscriptionId"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "subscriptionId", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "managementGroupId" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "managementGroupId", r.URL.Query(), &params.ManagementGroupID, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "managementGroupId"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "managementGroupId", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "variant" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "variant", r.URL.Query(), &params.Variant, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "variant"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "variant", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetAzureOnboarding(w, r)
+		siw.Handler.GetAzureOnboarding(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -1304,8 +2611,66 @@ func (siw *ServerInterfaceWrapper) GetAzureOnboarding(w http.ResponseWriter, r *
 // GetGcpOnboarding operation middleware
 func (siw *ServerInterfaceWrapper) GetGcpOnboarding(w http.ResponseWriter, r *http.Request) {
 
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetGcpOnboardingParams
+
+	// ------------- Optional query parameter "projectId" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "projectId", r.URL.Query(), &params.ProjectID, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "projectId"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "projectId", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "organizationId" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "organizationId", r.URL.Query(), &params.OrganizationID, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "organizationId"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "organizationId", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "serviceAccountProjectId" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "serviceAccountProjectId", r.URL.Query(), &params.ServiceAccountProjectID, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "serviceAccountProjectId"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "serviceAccountProjectId", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "variant" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "variant", r.URL.Query(), &params.Variant, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "variant"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "variant", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetGcpOnboarding(w, r)
+		siw.Handler.GetGcpOnboarding(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -1450,9 +2815,24 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	}
 
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/v1/deployments", wrapper.ListDeployments)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/v1/deployments/aws", wrapper.CreateAwsDeployment)
+	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/v1/deployments/aws/{id}", wrapper.DeleteAwsDeployment)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/v1/deployments/aws/{id}", wrapper.GetAwsDeployment)
+	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/v1/deployments/aws/{id}", wrapper.UpdateAwsDeployment)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/v1/deployments/aws/{id}/rotate-external-id", wrapper.RotateAwsExternalID)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/v1/deployments/aws/{id}/verify", wrapper.VerifyAwsDeployment)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/v1/deployments/azure", wrapper.CreateAzureDeployment)
+	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/v1/deployments/azure/{id}", wrapper.DeleteAzureDeployment)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/v1/deployments/azure/{id}", wrapper.GetAzureDeployment)
+	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/v1/deployments/azure/{id}", wrapper.UpdateAzureDeployment)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/v1/deployments/azure/{id}/verify", wrapper.VerifyAzureDeployment)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/v1/deployments/gcp", wrapper.CreateGcpDeployment)
+	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/v1/deployments/gcp/{id}", wrapper.DeleteGcpDeployment)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/v1/deployments/gcp/{id}", wrapper.GetGcpDeployment)
+	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/v1/deployments/gcp/{id}", wrapper.UpdateGcpDeployment)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/v1/deployments/gcp/{id}/verify", wrapper.VerifyGcpDeployment)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/v1/deployments/{id}/accounts", wrapper.ListDeploymentAccounts)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/v1/deployments/{id}/coverage", wrapper.GetDeploymentCoverage)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/v1/integration-types", wrapper.ListIntegrationTypes)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/v1/integrations", wrapper.ListIntegrations)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/v1/integrations", wrapper.CreateIntegration)
@@ -1599,6 +2979,378 @@ type ListDeployments503JSONResponse struct {
 }
 
 func (response ListDeployments503JSONResponse) VisitListDeploymentsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateAwsDeploymentRequestObject struct {
+	Params CreateAwsDeploymentParams
+	Body   *CreateAwsDeploymentJSONRequestBody
+}
+
+type CreateAwsDeploymentResponseObject interface {
+	VisitCreateAwsDeploymentResponse(w http.ResponseWriter) error
+}
+
+type CreateAwsDeployment201ResponseHeaders struct {
+	ETag string
+}
+
+type CreateAwsDeployment201JSONResponse struct {
+	Body    AwsDeployment
+	Headers CreateAwsDeployment201ResponseHeaders
+}
+
+func (response CreateAwsDeployment201JSONResponse) VisitCreateAwsDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("ETag", fmt.Sprint(response.Headers.ETag))
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateAwsDeployment400JSONResponse ErrorEnvelope
+
+func (response CreateAwsDeployment400JSONResponse) VisitCreateAwsDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateAwsDeployment401ResponseHeaders struct {
+	WWWAuthenticate *string
+}
+
+type CreateAwsDeployment401JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers CreateAwsDeployment401ResponseHeaders
+}
+
+func (response CreateAwsDeployment401JSONResponse) VisitCreateAwsDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateAwsDeployment403ResponseHeaders struct {
+	WWWAuthenticate *string
+}
+
+type CreateAwsDeployment403JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers CreateAwsDeployment403ResponseHeaders
+}
+
+func (response CreateAwsDeployment403JSONResponse) VisitCreateAwsDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateAwsDeployment409JSONResponse ErrorEnvelope
+
+func (response CreateAwsDeployment409JSONResponse) VisitCreateAwsDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateAwsDeployment422JSONResponse ErrorEnvelope
+
+func (response CreateAwsDeployment422JSONResponse) VisitCreateAwsDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateAwsDeployment429ResponseHeaders struct {
+	RetryAfter *int
+}
+
+type CreateAwsDeployment429JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers CreateAwsDeployment429ResponseHeaders
+}
+
+func (response CreateAwsDeployment429JSONResponse) VisitCreateAwsDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	w.WriteHeader(429)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateAwsDeployment500JSONResponse ErrorEnvelope
+
+func (response CreateAwsDeployment500JSONResponse) VisitCreateAwsDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateAwsDeployment503ResponseHeaders struct {
+	RetryAfter *int
+}
+
+type CreateAwsDeployment503JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers CreateAwsDeployment503ResponseHeaders
+}
+
+func (response CreateAwsDeployment503JSONResponse) VisitCreateAwsDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteAwsDeploymentRequestObject struct {
+	ID     string `json:"id"`
+	Params DeleteAwsDeploymentParams
+}
+
+type DeleteAwsDeploymentResponseObject interface {
+	VisitDeleteAwsDeploymentResponse(w http.ResponseWriter) error
+}
+
+type DeleteAwsDeployment200JSONResponse DeploymentDeletion
+
+func (response DeleteAwsDeployment200JSONResponse) VisitDeleteAwsDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteAwsDeployment400JSONResponse ErrorEnvelope
+
+func (response DeleteAwsDeployment400JSONResponse) VisitDeleteAwsDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteAwsDeployment401ResponseHeaders struct {
+	WWWAuthenticate *string
+}
+
+type DeleteAwsDeployment401JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers DeleteAwsDeployment401ResponseHeaders
+}
+
+func (response DeleteAwsDeployment401JSONResponse) VisitDeleteAwsDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteAwsDeployment403ResponseHeaders struct {
+	WWWAuthenticate *string
+}
+
+type DeleteAwsDeployment403JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers DeleteAwsDeployment403ResponseHeaders
+}
+
+func (response DeleteAwsDeployment403JSONResponse) VisitDeleteAwsDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteAwsDeployment404JSONResponse ErrorEnvelope
+
+func (response DeleteAwsDeployment404JSONResponse) VisitDeleteAwsDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteAwsDeployment409JSONResponse ErrorEnvelope
+
+func (response DeleteAwsDeployment409JSONResponse) VisitDeleteAwsDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteAwsDeployment412JSONResponse ErrorEnvelope
+
+func (response DeleteAwsDeployment412JSONResponse) VisitDeleteAwsDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(412)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteAwsDeployment429ResponseHeaders struct {
+	RetryAfter *int
+}
+
+type DeleteAwsDeployment429JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers DeleteAwsDeployment429ResponseHeaders
+}
+
+func (response DeleteAwsDeployment429JSONResponse) VisitDeleteAwsDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	w.WriteHeader(429)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteAwsDeployment500JSONResponse ErrorEnvelope
+
+func (response DeleteAwsDeployment500JSONResponse) VisitDeleteAwsDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteAwsDeployment503ResponseHeaders struct {
+	RetryAfter *int
+}
+
+type DeleteAwsDeployment503JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers DeleteAwsDeployment503ResponseHeaders
+}
+
+func (response DeleteAwsDeployment503JSONResponse) VisitDeleteAwsDeploymentResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
@@ -1781,6 +3533,970 @@ func (response GetAwsDeployment503JSONResponse) VisitGetAwsDeploymentResponse(w 
 	return err
 }
 
+type UpdateAwsDeploymentRequestObject struct {
+	ID     string `json:"id"`
+	Params UpdateAwsDeploymentParams
+	Body   *UpdateAwsDeploymentJSONRequestBody
+}
+
+type UpdateAwsDeploymentResponseObject interface {
+	VisitUpdateAwsDeploymentResponse(w http.ResponseWriter) error
+}
+
+type UpdateAwsDeployment200ResponseHeaders struct {
+	ETag string
+}
+
+type UpdateAwsDeployment200JSONResponse struct {
+	Body    AwsDeployment
+	Headers UpdateAwsDeployment200ResponseHeaders
+}
+
+func (response UpdateAwsDeployment200JSONResponse) VisitUpdateAwsDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("ETag", fmt.Sprint(response.Headers.ETag))
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateAwsDeployment400JSONResponse ErrorEnvelope
+
+func (response UpdateAwsDeployment400JSONResponse) VisitUpdateAwsDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateAwsDeployment401ResponseHeaders struct {
+	WWWAuthenticate *string
+}
+
+type UpdateAwsDeployment401JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers UpdateAwsDeployment401ResponseHeaders
+}
+
+func (response UpdateAwsDeployment401JSONResponse) VisitUpdateAwsDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateAwsDeployment403ResponseHeaders struct {
+	WWWAuthenticate *string
+}
+
+type UpdateAwsDeployment403JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers UpdateAwsDeployment403ResponseHeaders
+}
+
+func (response UpdateAwsDeployment403JSONResponse) VisitUpdateAwsDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateAwsDeployment404JSONResponse ErrorEnvelope
+
+func (response UpdateAwsDeployment404JSONResponse) VisitUpdateAwsDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateAwsDeployment412JSONResponse ErrorEnvelope
+
+func (response UpdateAwsDeployment412JSONResponse) VisitUpdateAwsDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(412)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateAwsDeployment422JSONResponse ErrorEnvelope
+
+func (response UpdateAwsDeployment422JSONResponse) VisitUpdateAwsDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateAwsDeployment429ResponseHeaders struct {
+	RetryAfter *int
+}
+
+type UpdateAwsDeployment429JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers UpdateAwsDeployment429ResponseHeaders
+}
+
+func (response UpdateAwsDeployment429JSONResponse) VisitUpdateAwsDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	w.WriteHeader(429)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateAwsDeployment500JSONResponse ErrorEnvelope
+
+func (response UpdateAwsDeployment500JSONResponse) VisitUpdateAwsDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateAwsDeployment503ResponseHeaders struct {
+	RetryAfter *int
+}
+
+type UpdateAwsDeployment503JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers UpdateAwsDeployment503ResponseHeaders
+}
+
+func (response UpdateAwsDeployment503JSONResponse) VisitUpdateAwsDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RotateAwsExternalIDRequestObject struct {
+	ID     string `json:"id"`
+	Params RotateAwsExternalIDParams
+}
+
+type RotateAwsExternalIDResponseObject interface {
+	VisitRotateAwsExternalIDResponse(w http.ResponseWriter) error
+}
+
+type RotateAwsExternalID200ResponseHeaders struct {
+	ETag string
+}
+
+type RotateAwsExternalID200JSONResponse struct {
+	Body    AwsDeployment
+	Headers RotateAwsExternalID200ResponseHeaders
+}
+
+func (response RotateAwsExternalID200JSONResponse) VisitRotateAwsExternalIDResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("ETag", fmt.Sprint(response.Headers.ETag))
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RotateAwsExternalID400JSONResponse ErrorEnvelope
+
+func (response RotateAwsExternalID400JSONResponse) VisitRotateAwsExternalIDResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RotateAwsExternalID401ResponseHeaders struct {
+	WWWAuthenticate *string
+}
+
+type RotateAwsExternalID401JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers RotateAwsExternalID401ResponseHeaders
+}
+
+func (response RotateAwsExternalID401JSONResponse) VisitRotateAwsExternalIDResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RotateAwsExternalID403ResponseHeaders struct {
+	WWWAuthenticate *string
+}
+
+type RotateAwsExternalID403JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers RotateAwsExternalID403ResponseHeaders
+}
+
+func (response RotateAwsExternalID403JSONResponse) VisitRotateAwsExternalIDResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RotateAwsExternalID404JSONResponse ErrorEnvelope
+
+func (response RotateAwsExternalID404JSONResponse) VisitRotateAwsExternalIDResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RotateAwsExternalID412JSONResponse ErrorEnvelope
+
+func (response RotateAwsExternalID412JSONResponse) VisitRotateAwsExternalIDResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(412)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RotateAwsExternalID422JSONResponse ErrorEnvelope
+
+func (response RotateAwsExternalID422JSONResponse) VisitRotateAwsExternalIDResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RotateAwsExternalID429ResponseHeaders struct {
+	RetryAfter *int
+}
+
+type RotateAwsExternalID429JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers RotateAwsExternalID429ResponseHeaders
+}
+
+func (response RotateAwsExternalID429JSONResponse) VisitRotateAwsExternalIDResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	w.WriteHeader(429)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RotateAwsExternalID500JSONResponse ErrorEnvelope
+
+func (response RotateAwsExternalID500JSONResponse) VisitRotateAwsExternalIDResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RotateAwsExternalID503ResponseHeaders struct {
+	RetryAfter *int
+}
+
+type RotateAwsExternalID503JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers RotateAwsExternalID503ResponseHeaders
+}
+
+func (response RotateAwsExternalID503JSONResponse) VisitRotateAwsExternalIDResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type VerifyAwsDeploymentRequestObject struct {
+	ID     string `json:"id"`
+	Params VerifyAwsDeploymentParams
+}
+
+type VerifyAwsDeploymentResponseObject interface {
+	VisitVerifyAwsDeploymentResponse(w http.ResponseWriter) error
+}
+
+type VerifyAwsDeployment200ResponseHeaders struct {
+	ETag string
+}
+
+type VerifyAwsDeployment200JSONResponse struct {
+	Body    AwsDeployment
+	Headers VerifyAwsDeployment200ResponseHeaders
+}
+
+func (response VerifyAwsDeployment200JSONResponse) VisitVerifyAwsDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("ETag", fmt.Sprint(response.Headers.ETag))
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type VerifyAwsDeployment400JSONResponse ErrorEnvelope
+
+func (response VerifyAwsDeployment400JSONResponse) VisitVerifyAwsDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type VerifyAwsDeployment401ResponseHeaders struct {
+	WWWAuthenticate *string
+}
+
+type VerifyAwsDeployment401JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers VerifyAwsDeployment401ResponseHeaders
+}
+
+func (response VerifyAwsDeployment401JSONResponse) VisitVerifyAwsDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type VerifyAwsDeployment403ResponseHeaders struct {
+	WWWAuthenticate *string
+}
+
+type VerifyAwsDeployment403JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers VerifyAwsDeployment403ResponseHeaders
+}
+
+func (response VerifyAwsDeployment403JSONResponse) VisitVerifyAwsDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type VerifyAwsDeployment404JSONResponse ErrorEnvelope
+
+func (response VerifyAwsDeployment404JSONResponse) VisitVerifyAwsDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type VerifyAwsDeployment412JSONResponse ErrorEnvelope
+
+func (response VerifyAwsDeployment412JSONResponse) VisitVerifyAwsDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(412)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type VerifyAwsDeployment422JSONResponse ErrorEnvelope
+
+func (response VerifyAwsDeployment422JSONResponse) VisitVerifyAwsDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type VerifyAwsDeployment429ResponseHeaders struct {
+	RetryAfter *int
+}
+
+type VerifyAwsDeployment429JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers VerifyAwsDeployment429ResponseHeaders
+}
+
+func (response VerifyAwsDeployment429JSONResponse) VisitVerifyAwsDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	w.WriteHeader(429)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type VerifyAwsDeployment500JSONResponse ErrorEnvelope
+
+func (response VerifyAwsDeployment500JSONResponse) VisitVerifyAwsDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type VerifyAwsDeployment503ResponseHeaders struct {
+	RetryAfter *int
+}
+
+type VerifyAwsDeployment503JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers VerifyAwsDeployment503ResponseHeaders
+}
+
+func (response VerifyAwsDeployment503JSONResponse) VisitVerifyAwsDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateAzureDeploymentRequestObject struct {
+	Params CreateAzureDeploymentParams
+	Body   *CreateAzureDeploymentJSONRequestBody
+}
+
+type CreateAzureDeploymentResponseObject interface {
+	VisitCreateAzureDeploymentResponse(w http.ResponseWriter) error
+}
+
+type CreateAzureDeployment201ResponseHeaders struct {
+	ETag string
+}
+
+type CreateAzureDeployment201JSONResponse struct {
+	Body    AzureDeployment
+	Headers CreateAzureDeployment201ResponseHeaders
+}
+
+func (response CreateAzureDeployment201JSONResponse) VisitCreateAzureDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("ETag", fmt.Sprint(response.Headers.ETag))
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateAzureDeployment400JSONResponse ErrorEnvelope
+
+func (response CreateAzureDeployment400JSONResponse) VisitCreateAzureDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateAzureDeployment401ResponseHeaders struct {
+	WWWAuthenticate *string
+}
+
+type CreateAzureDeployment401JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers CreateAzureDeployment401ResponseHeaders
+}
+
+func (response CreateAzureDeployment401JSONResponse) VisitCreateAzureDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateAzureDeployment403ResponseHeaders struct {
+	WWWAuthenticate *string
+}
+
+type CreateAzureDeployment403JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers CreateAzureDeployment403ResponseHeaders
+}
+
+func (response CreateAzureDeployment403JSONResponse) VisitCreateAzureDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateAzureDeployment409JSONResponse ErrorEnvelope
+
+func (response CreateAzureDeployment409JSONResponse) VisitCreateAzureDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateAzureDeployment422JSONResponse ErrorEnvelope
+
+func (response CreateAzureDeployment422JSONResponse) VisitCreateAzureDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateAzureDeployment429ResponseHeaders struct {
+	RetryAfter *int
+}
+
+type CreateAzureDeployment429JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers CreateAzureDeployment429ResponseHeaders
+}
+
+func (response CreateAzureDeployment429JSONResponse) VisitCreateAzureDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	w.WriteHeader(429)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateAzureDeployment500JSONResponse ErrorEnvelope
+
+func (response CreateAzureDeployment500JSONResponse) VisitCreateAzureDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateAzureDeployment503ResponseHeaders struct {
+	RetryAfter *int
+}
+
+type CreateAzureDeployment503JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers CreateAzureDeployment503ResponseHeaders
+}
+
+func (response CreateAzureDeployment503JSONResponse) VisitCreateAzureDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteAzureDeploymentRequestObject struct {
+	ID     string `json:"id"`
+	Params DeleteAzureDeploymentParams
+}
+
+type DeleteAzureDeploymentResponseObject interface {
+	VisitDeleteAzureDeploymentResponse(w http.ResponseWriter) error
+}
+
+type DeleteAzureDeployment200JSONResponse DeploymentDeletion
+
+func (response DeleteAzureDeployment200JSONResponse) VisitDeleteAzureDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteAzureDeployment400JSONResponse ErrorEnvelope
+
+func (response DeleteAzureDeployment400JSONResponse) VisitDeleteAzureDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteAzureDeployment401ResponseHeaders struct {
+	WWWAuthenticate *string
+}
+
+type DeleteAzureDeployment401JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers DeleteAzureDeployment401ResponseHeaders
+}
+
+func (response DeleteAzureDeployment401JSONResponse) VisitDeleteAzureDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteAzureDeployment403ResponseHeaders struct {
+	WWWAuthenticate *string
+}
+
+type DeleteAzureDeployment403JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers DeleteAzureDeployment403ResponseHeaders
+}
+
+func (response DeleteAzureDeployment403JSONResponse) VisitDeleteAzureDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteAzureDeployment404JSONResponse ErrorEnvelope
+
+func (response DeleteAzureDeployment404JSONResponse) VisitDeleteAzureDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteAzureDeployment409JSONResponse ErrorEnvelope
+
+func (response DeleteAzureDeployment409JSONResponse) VisitDeleteAzureDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteAzureDeployment412JSONResponse ErrorEnvelope
+
+func (response DeleteAzureDeployment412JSONResponse) VisitDeleteAzureDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(412)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteAzureDeployment429ResponseHeaders struct {
+	RetryAfter *int
+}
+
+type DeleteAzureDeployment429JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers DeleteAzureDeployment429ResponseHeaders
+}
+
+func (response DeleteAzureDeployment429JSONResponse) VisitDeleteAzureDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	w.WriteHeader(429)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteAzureDeployment500JSONResponse ErrorEnvelope
+
+func (response DeleteAzureDeployment500JSONResponse) VisitDeleteAzureDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteAzureDeployment503ResponseHeaders struct {
+	RetryAfter *int
+}
+
+type DeleteAzureDeployment503JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers DeleteAzureDeployment503ResponseHeaders
+}
+
+func (response DeleteAzureDeployment503JSONResponse) VisitDeleteAzureDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type GetAzureDeploymentRequestObject struct {
 	ID string `json:"id"`
 }
@@ -1949,6 +4665,773 @@ func (response GetAzureDeployment503JSONResponse) VisitGetAzureDeploymentRespons
 	return err
 }
 
+type UpdateAzureDeploymentRequestObject struct {
+	ID     string `json:"id"`
+	Params UpdateAzureDeploymentParams
+	Body   *UpdateAzureDeploymentJSONRequestBody
+}
+
+type UpdateAzureDeploymentResponseObject interface {
+	VisitUpdateAzureDeploymentResponse(w http.ResponseWriter) error
+}
+
+type UpdateAzureDeployment200ResponseHeaders struct {
+	ETag string
+}
+
+type UpdateAzureDeployment200JSONResponse struct {
+	Body    AzureDeployment
+	Headers UpdateAzureDeployment200ResponseHeaders
+}
+
+func (response UpdateAzureDeployment200JSONResponse) VisitUpdateAzureDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("ETag", fmt.Sprint(response.Headers.ETag))
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateAzureDeployment400JSONResponse ErrorEnvelope
+
+func (response UpdateAzureDeployment400JSONResponse) VisitUpdateAzureDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateAzureDeployment401ResponseHeaders struct {
+	WWWAuthenticate *string
+}
+
+type UpdateAzureDeployment401JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers UpdateAzureDeployment401ResponseHeaders
+}
+
+func (response UpdateAzureDeployment401JSONResponse) VisitUpdateAzureDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateAzureDeployment403ResponseHeaders struct {
+	WWWAuthenticate *string
+}
+
+type UpdateAzureDeployment403JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers UpdateAzureDeployment403ResponseHeaders
+}
+
+func (response UpdateAzureDeployment403JSONResponse) VisitUpdateAzureDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateAzureDeployment404JSONResponse ErrorEnvelope
+
+func (response UpdateAzureDeployment404JSONResponse) VisitUpdateAzureDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateAzureDeployment412JSONResponse ErrorEnvelope
+
+func (response UpdateAzureDeployment412JSONResponse) VisitUpdateAzureDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(412)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateAzureDeployment422JSONResponse ErrorEnvelope
+
+func (response UpdateAzureDeployment422JSONResponse) VisitUpdateAzureDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateAzureDeployment429ResponseHeaders struct {
+	RetryAfter *int
+}
+
+type UpdateAzureDeployment429JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers UpdateAzureDeployment429ResponseHeaders
+}
+
+func (response UpdateAzureDeployment429JSONResponse) VisitUpdateAzureDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	w.WriteHeader(429)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateAzureDeployment500JSONResponse ErrorEnvelope
+
+func (response UpdateAzureDeployment500JSONResponse) VisitUpdateAzureDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateAzureDeployment503ResponseHeaders struct {
+	RetryAfter *int
+}
+
+type UpdateAzureDeployment503JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers UpdateAzureDeployment503ResponseHeaders
+}
+
+func (response UpdateAzureDeployment503JSONResponse) VisitUpdateAzureDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type VerifyAzureDeploymentRequestObject struct {
+	ID     string `json:"id"`
+	Params VerifyAzureDeploymentParams
+}
+
+type VerifyAzureDeploymentResponseObject interface {
+	VisitVerifyAzureDeploymentResponse(w http.ResponseWriter) error
+}
+
+type VerifyAzureDeployment200ResponseHeaders struct {
+	ETag string
+}
+
+type VerifyAzureDeployment200JSONResponse struct {
+	Body    AzureDeployment
+	Headers VerifyAzureDeployment200ResponseHeaders
+}
+
+func (response VerifyAzureDeployment200JSONResponse) VisitVerifyAzureDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("ETag", fmt.Sprint(response.Headers.ETag))
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type VerifyAzureDeployment400JSONResponse ErrorEnvelope
+
+func (response VerifyAzureDeployment400JSONResponse) VisitVerifyAzureDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type VerifyAzureDeployment401ResponseHeaders struct {
+	WWWAuthenticate *string
+}
+
+type VerifyAzureDeployment401JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers VerifyAzureDeployment401ResponseHeaders
+}
+
+func (response VerifyAzureDeployment401JSONResponse) VisitVerifyAzureDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type VerifyAzureDeployment403ResponseHeaders struct {
+	WWWAuthenticate *string
+}
+
+type VerifyAzureDeployment403JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers VerifyAzureDeployment403ResponseHeaders
+}
+
+func (response VerifyAzureDeployment403JSONResponse) VisitVerifyAzureDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type VerifyAzureDeployment404JSONResponse ErrorEnvelope
+
+func (response VerifyAzureDeployment404JSONResponse) VisitVerifyAzureDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type VerifyAzureDeployment412JSONResponse ErrorEnvelope
+
+func (response VerifyAzureDeployment412JSONResponse) VisitVerifyAzureDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(412)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type VerifyAzureDeployment422JSONResponse ErrorEnvelope
+
+func (response VerifyAzureDeployment422JSONResponse) VisitVerifyAzureDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type VerifyAzureDeployment429ResponseHeaders struct {
+	RetryAfter *int
+}
+
+type VerifyAzureDeployment429JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers VerifyAzureDeployment429ResponseHeaders
+}
+
+func (response VerifyAzureDeployment429JSONResponse) VisitVerifyAzureDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	w.WriteHeader(429)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type VerifyAzureDeployment500JSONResponse ErrorEnvelope
+
+func (response VerifyAzureDeployment500JSONResponse) VisitVerifyAzureDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type VerifyAzureDeployment503ResponseHeaders struct {
+	RetryAfter *int
+}
+
+type VerifyAzureDeployment503JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers VerifyAzureDeployment503ResponseHeaders
+}
+
+func (response VerifyAzureDeployment503JSONResponse) VisitVerifyAzureDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateGcpDeploymentRequestObject struct {
+	Params CreateGcpDeploymentParams
+	Body   *CreateGcpDeploymentJSONRequestBody
+}
+
+type CreateGcpDeploymentResponseObject interface {
+	VisitCreateGcpDeploymentResponse(w http.ResponseWriter) error
+}
+
+type CreateGcpDeployment201ResponseHeaders struct {
+	ETag string
+}
+
+type CreateGcpDeployment201JSONResponse struct {
+	Body    GcpDeployment
+	Headers CreateGcpDeployment201ResponseHeaders
+}
+
+func (response CreateGcpDeployment201JSONResponse) VisitCreateGcpDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("ETag", fmt.Sprint(response.Headers.ETag))
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateGcpDeployment400JSONResponse ErrorEnvelope
+
+func (response CreateGcpDeployment400JSONResponse) VisitCreateGcpDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateGcpDeployment401ResponseHeaders struct {
+	WWWAuthenticate *string
+}
+
+type CreateGcpDeployment401JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers CreateGcpDeployment401ResponseHeaders
+}
+
+func (response CreateGcpDeployment401JSONResponse) VisitCreateGcpDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateGcpDeployment403ResponseHeaders struct {
+	WWWAuthenticate *string
+}
+
+type CreateGcpDeployment403JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers CreateGcpDeployment403ResponseHeaders
+}
+
+func (response CreateGcpDeployment403JSONResponse) VisitCreateGcpDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateGcpDeployment409JSONResponse ErrorEnvelope
+
+func (response CreateGcpDeployment409JSONResponse) VisitCreateGcpDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateGcpDeployment422JSONResponse ErrorEnvelope
+
+func (response CreateGcpDeployment422JSONResponse) VisitCreateGcpDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateGcpDeployment429ResponseHeaders struct {
+	RetryAfter *int
+}
+
+type CreateGcpDeployment429JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers CreateGcpDeployment429ResponseHeaders
+}
+
+func (response CreateGcpDeployment429JSONResponse) VisitCreateGcpDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	w.WriteHeader(429)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateGcpDeployment500JSONResponse ErrorEnvelope
+
+func (response CreateGcpDeployment500JSONResponse) VisitCreateGcpDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateGcpDeployment503ResponseHeaders struct {
+	RetryAfter *int
+}
+
+type CreateGcpDeployment503JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers CreateGcpDeployment503ResponseHeaders
+}
+
+func (response CreateGcpDeployment503JSONResponse) VisitCreateGcpDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteGcpDeploymentRequestObject struct {
+	ID     string `json:"id"`
+	Params DeleteGcpDeploymentParams
+}
+
+type DeleteGcpDeploymentResponseObject interface {
+	VisitDeleteGcpDeploymentResponse(w http.ResponseWriter) error
+}
+
+type DeleteGcpDeployment200JSONResponse DeploymentDeletion
+
+func (response DeleteGcpDeployment200JSONResponse) VisitDeleteGcpDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteGcpDeployment400JSONResponse ErrorEnvelope
+
+func (response DeleteGcpDeployment400JSONResponse) VisitDeleteGcpDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteGcpDeployment401ResponseHeaders struct {
+	WWWAuthenticate *string
+}
+
+type DeleteGcpDeployment401JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers DeleteGcpDeployment401ResponseHeaders
+}
+
+func (response DeleteGcpDeployment401JSONResponse) VisitDeleteGcpDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteGcpDeployment403ResponseHeaders struct {
+	WWWAuthenticate *string
+}
+
+type DeleteGcpDeployment403JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers DeleteGcpDeployment403ResponseHeaders
+}
+
+func (response DeleteGcpDeployment403JSONResponse) VisitDeleteGcpDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteGcpDeployment404JSONResponse ErrorEnvelope
+
+func (response DeleteGcpDeployment404JSONResponse) VisitDeleteGcpDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteGcpDeployment409JSONResponse ErrorEnvelope
+
+func (response DeleteGcpDeployment409JSONResponse) VisitDeleteGcpDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteGcpDeployment412JSONResponse ErrorEnvelope
+
+func (response DeleteGcpDeployment412JSONResponse) VisitDeleteGcpDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(412)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteGcpDeployment429ResponseHeaders struct {
+	RetryAfter *int
+}
+
+type DeleteGcpDeployment429JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers DeleteGcpDeployment429ResponseHeaders
+}
+
+func (response DeleteGcpDeployment429JSONResponse) VisitDeleteGcpDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	w.WriteHeader(429)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteGcpDeployment500JSONResponse ErrorEnvelope
+
+func (response DeleteGcpDeployment500JSONResponse) VisitDeleteGcpDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteGcpDeployment503ResponseHeaders struct {
+	RetryAfter *int
+}
+
+type DeleteGcpDeployment503JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers DeleteGcpDeployment503ResponseHeaders
+}
+
+func (response DeleteGcpDeployment503JSONResponse) VisitDeleteGcpDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type GetGcpDeploymentRequestObject struct {
 	ID string `json:"id"`
 }
@@ -2103,6 +5586,722 @@ type GetGcpDeployment503JSONResponse struct {
 }
 
 func (response GetGcpDeployment503JSONResponse) VisitGetGcpDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateGcpDeploymentRequestObject struct {
+	ID     string `json:"id"`
+	Params UpdateGcpDeploymentParams
+	Body   *UpdateGcpDeploymentJSONRequestBody
+}
+
+type UpdateGcpDeploymentResponseObject interface {
+	VisitUpdateGcpDeploymentResponse(w http.ResponseWriter) error
+}
+
+type UpdateGcpDeployment200ResponseHeaders struct {
+	ETag string
+}
+
+type UpdateGcpDeployment200JSONResponse struct {
+	Body    GcpDeployment
+	Headers UpdateGcpDeployment200ResponseHeaders
+}
+
+func (response UpdateGcpDeployment200JSONResponse) VisitUpdateGcpDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("ETag", fmt.Sprint(response.Headers.ETag))
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateGcpDeployment400JSONResponse ErrorEnvelope
+
+func (response UpdateGcpDeployment400JSONResponse) VisitUpdateGcpDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateGcpDeployment401ResponseHeaders struct {
+	WWWAuthenticate *string
+}
+
+type UpdateGcpDeployment401JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers UpdateGcpDeployment401ResponseHeaders
+}
+
+func (response UpdateGcpDeployment401JSONResponse) VisitUpdateGcpDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateGcpDeployment403ResponseHeaders struct {
+	WWWAuthenticate *string
+}
+
+type UpdateGcpDeployment403JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers UpdateGcpDeployment403ResponseHeaders
+}
+
+func (response UpdateGcpDeployment403JSONResponse) VisitUpdateGcpDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateGcpDeployment404JSONResponse ErrorEnvelope
+
+func (response UpdateGcpDeployment404JSONResponse) VisitUpdateGcpDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateGcpDeployment412JSONResponse ErrorEnvelope
+
+func (response UpdateGcpDeployment412JSONResponse) VisitUpdateGcpDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(412)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateGcpDeployment422JSONResponse ErrorEnvelope
+
+func (response UpdateGcpDeployment422JSONResponse) VisitUpdateGcpDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateGcpDeployment429ResponseHeaders struct {
+	RetryAfter *int
+}
+
+type UpdateGcpDeployment429JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers UpdateGcpDeployment429ResponseHeaders
+}
+
+func (response UpdateGcpDeployment429JSONResponse) VisitUpdateGcpDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	w.WriteHeader(429)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateGcpDeployment500JSONResponse ErrorEnvelope
+
+func (response UpdateGcpDeployment500JSONResponse) VisitUpdateGcpDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateGcpDeployment503ResponseHeaders struct {
+	RetryAfter *int
+}
+
+type UpdateGcpDeployment503JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers UpdateGcpDeployment503ResponseHeaders
+}
+
+func (response UpdateGcpDeployment503JSONResponse) VisitUpdateGcpDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type VerifyGcpDeploymentRequestObject struct {
+	ID     string `json:"id"`
+	Params VerifyGcpDeploymentParams
+}
+
+type VerifyGcpDeploymentResponseObject interface {
+	VisitVerifyGcpDeploymentResponse(w http.ResponseWriter) error
+}
+
+type VerifyGcpDeployment200ResponseHeaders struct {
+	ETag string
+}
+
+type VerifyGcpDeployment200JSONResponse struct {
+	Body    GcpDeployment
+	Headers VerifyGcpDeployment200ResponseHeaders
+}
+
+func (response VerifyGcpDeployment200JSONResponse) VisitVerifyGcpDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("ETag", fmt.Sprint(response.Headers.ETag))
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type VerifyGcpDeployment400JSONResponse ErrorEnvelope
+
+func (response VerifyGcpDeployment400JSONResponse) VisitVerifyGcpDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type VerifyGcpDeployment401ResponseHeaders struct {
+	WWWAuthenticate *string
+}
+
+type VerifyGcpDeployment401JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers VerifyGcpDeployment401ResponseHeaders
+}
+
+func (response VerifyGcpDeployment401JSONResponse) VisitVerifyGcpDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type VerifyGcpDeployment403ResponseHeaders struct {
+	WWWAuthenticate *string
+}
+
+type VerifyGcpDeployment403JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers VerifyGcpDeployment403ResponseHeaders
+}
+
+func (response VerifyGcpDeployment403JSONResponse) VisitVerifyGcpDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type VerifyGcpDeployment404JSONResponse ErrorEnvelope
+
+func (response VerifyGcpDeployment404JSONResponse) VisitVerifyGcpDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type VerifyGcpDeployment412JSONResponse ErrorEnvelope
+
+func (response VerifyGcpDeployment412JSONResponse) VisitVerifyGcpDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(412)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type VerifyGcpDeployment422JSONResponse ErrorEnvelope
+
+func (response VerifyGcpDeployment422JSONResponse) VisitVerifyGcpDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type VerifyGcpDeployment429ResponseHeaders struct {
+	RetryAfter *int
+}
+
+type VerifyGcpDeployment429JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers VerifyGcpDeployment429ResponseHeaders
+}
+
+func (response VerifyGcpDeployment429JSONResponse) VisitVerifyGcpDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	w.WriteHeader(429)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type VerifyGcpDeployment500JSONResponse ErrorEnvelope
+
+func (response VerifyGcpDeployment500JSONResponse) VisitVerifyGcpDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type VerifyGcpDeployment503ResponseHeaders struct {
+	RetryAfter *int
+}
+
+type VerifyGcpDeployment503JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers VerifyGcpDeployment503ResponseHeaders
+}
+
+func (response VerifyGcpDeployment503JSONResponse) VisitVerifyGcpDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListDeploymentAccountsRequestObject struct {
+	ID     string `json:"id"`
+	Params ListDeploymentAccountsParams
+}
+
+type ListDeploymentAccountsResponseObject interface {
+	VisitListDeploymentAccountsResponse(w http.ResponseWriter) error
+}
+
+type ListDeploymentAccounts200JSONResponse MemberAccountPage
+
+func (response ListDeploymentAccounts200JSONResponse) VisitListDeploymentAccountsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListDeploymentAccounts400JSONResponse ErrorEnvelope
+
+func (response ListDeploymentAccounts400JSONResponse) VisitListDeploymentAccountsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListDeploymentAccounts401ResponseHeaders struct {
+	WWWAuthenticate *string
+}
+
+type ListDeploymentAccounts401JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers ListDeploymentAccounts401ResponseHeaders
+}
+
+func (response ListDeploymentAccounts401JSONResponse) VisitListDeploymentAccountsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListDeploymentAccounts403ResponseHeaders struct {
+	WWWAuthenticate *string
+}
+
+type ListDeploymentAccounts403JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers ListDeploymentAccounts403ResponseHeaders
+}
+
+func (response ListDeploymentAccounts403JSONResponse) VisitListDeploymentAccountsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListDeploymentAccounts404JSONResponse ErrorEnvelope
+
+func (response ListDeploymentAccounts404JSONResponse) VisitListDeploymentAccountsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListDeploymentAccounts429ResponseHeaders struct {
+	RetryAfter *int
+}
+
+type ListDeploymentAccounts429JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers ListDeploymentAccounts429ResponseHeaders
+}
+
+func (response ListDeploymentAccounts429JSONResponse) VisitListDeploymentAccountsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	w.WriteHeader(429)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListDeploymentAccounts500JSONResponse ErrorEnvelope
+
+func (response ListDeploymentAccounts500JSONResponse) VisitListDeploymentAccountsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListDeploymentAccounts503ResponseHeaders struct {
+	RetryAfter *int
+}
+
+type ListDeploymentAccounts503JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers ListDeploymentAccounts503ResponseHeaders
+}
+
+func (response ListDeploymentAccounts503JSONResponse) VisitListDeploymentAccountsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetDeploymentCoverageRequestObject struct {
+	ID string `json:"id"`
+}
+
+type GetDeploymentCoverageResponseObject interface {
+	VisitGetDeploymentCoverageResponse(w http.ResponseWriter) error
+}
+
+type GetDeploymentCoverage200JSONResponse DeploymentCoverage
+
+func (response GetDeploymentCoverage200JSONResponse) VisitGetDeploymentCoverageResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetDeploymentCoverage400JSONResponse ErrorEnvelope
+
+func (response GetDeploymentCoverage400JSONResponse) VisitGetDeploymentCoverageResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetDeploymentCoverage401ResponseHeaders struct {
+	WWWAuthenticate *string
+}
+
+type GetDeploymentCoverage401JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers GetDeploymentCoverage401ResponseHeaders
+}
+
+func (response GetDeploymentCoverage401JSONResponse) VisitGetDeploymentCoverageResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetDeploymentCoverage403ResponseHeaders struct {
+	WWWAuthenticate *string
+}
+
+type GetDeploymentCoverage403JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers GetDeploymentCoverage403ResponseHeaders
+}
+
+func (response GetDeploymentCoverage403JSONResponse) VisitGetDeploymentCoverageResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetDeploymentCoverage404JSONResponse ErrorEnvelope
+
+func (response GetDeploymentCoverage404JSONResponse) VisitGetDeploymentCoverageResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetDeploymentCoverage429ResponseHeaders struct {
+	RetryAfter *int
+}
+
+type GetDeploymentCoverage429JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers GetDeploymentCoverage429ResponseHeaders
+}
+
+func (response GetDeploymentCoverage429JSONResponse) VisitGetDeploymentCoverageResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	w.WriteHeader(429)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetDeploymentCoverage500JSONResponse ErrorEnvelope
+
+func (response GetDeploymentCoverage500JSONResponse) VisitGetDeploymentCoverageResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetDeploymentCoverage503ResponseHeaders struct {
+	RetryAfter *int
+}
+
+type GetDeploymentCoverage503JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers GetDeploymentCoverage503ResponseHeaders
+}
+
+func (response GetDeploymentCoverage503JSONResponse) VisitGetDeploymentCoverageResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
@@ -3287,6 +7486,7 @@ func (response GetAwsOnboarding503JSONResponse) VisitGetAwsOnboardingResponse(w 
 }
 
 type GetAzureOnboardingRequestObject struct {
+	Params GetAzureOnboardingParams
 }
 
 type GetAzureOnboardingResponseObject interface {
@@ -3432,6 +7632,7 @@ func (response GetAzureOnboarding503JSONResponse) VisitGetAzureOnboardingRespons
 }
 
 type GetGcpOnboardingRequestObject struct {
+	Params GetGcpOnboardingParams
 }
 
 type GetGcpOnboardingResponseObject interface {
@@ -3726,15 +7927,60 @@ type StrictServerInterface interface {
 	// ListDeployments List the deployments of the calling tenant, one page at a time
 	// (GET /v1/deployments)
 	ListDeployments(ctx context.Context, request ListDeploymentsRequestObject) (ListDeploymentsResponseObject, error)
-	// GetAwsDeployment Return one AWS deployment
+	// CreateAwsDeployment Connect an AWS account or organization to Act. Act verifies access before it stores anything
+	// (POST /v1/deployments/aws)
+	CreateAwsDeployment(ctx context.Context, request CreateAwsDeploymentRequestObject) (CreateAwsDeploymentResponseObject, error)
+	// DeleteAwsDeployment Disconnect a an AWS account or organization deployment: stop scans, purge the credentials Act holds, and list what still trusts Act
+	// (DELETE /v1/deployments/aws/{id})
+	DeleteAwsDeployment(ctx context.Context, request DeleteAwsDeploymentRequestObject) (DeleteAwsDeploymentResponseObject, error)
+	// GetAwsDeployment Return one an AWS account or organization deployment
 	// (GET /v1/deployments/aws/{id})
 	GetAwsDeployment(ctx context.Context, request GetAwsDeploymentRequestObject) (GetAwsDeploymentResponseObject, error)
-	// GetAzureDeployment Return one Azure deployment
+	// UpdateAwsDeployment Change a an AWS account or organization deployment in place, keeping its id
+	// (PATCH /v1/deployments/aws/{id})
+	UpdateAwsDeployment(ctx context.Context, request UpdateAwsDeploymentRequestObject) (UpdateAwsDeploymentResponseObject, error)
+	// RotateAwsExternalID Move a legacy AWS deployment to its derived external ID, after verifying the role trusts it
+	// (POST /v1/deployments/aws/{id}/rotate-external-id)
+	RotateAwsExternalID(ctx context.Context, request RotateAwsExternalIDRequestObject) (RotateAwsExternalIDResponseObject, error)
+	// VerifyAwsDeployment Check that Act can use a an AWS account or organization deployment again, after its cloud side was fixed
+	// (POST /v1/deployments/aws/{id}/verify)
+	VerifyAwsDeployment(ctx context.Context, request VerifyAwsDeploymentRequestObject) (VerifyAwsDeploymentResponseObject, error)
+	// CreateAzureDeployment Connect an Azure subscription or management group to Act. Act verifies access before it stores anything
+	// (POST /v1/deployments/azure)
+	CreateAzureDeployment(ctx context.Context, request CreateAzureDeploymentRequestObject) (CreateAzureDeploymentResponseObject, error)
+	// DeleteAzureDeployment Disconnect a an Azure subscription or management group deployment: stop scans, purge the credentials Act holds, and list what still trusts Act
+	// (DELETE /v1/deployments/azure/{id})
+	DeleteAzureDeployment(ctx context.Context, request DeleteAzureDeploymentRequestObject) (DeleteAzureDeploymentResponseObject, error)
+	// GetAzureDeployment Return one an Azure subscription or management group deployment
 	// (GET /v1/deployments/azure/{id})
 	GetAzureDeployment(ctx context.Context, request GetAzureDeploymentRequestObject) (GetAzureDeploymentResponseObject, error)
-	// GetGcpDeployment Return one GCP deployment
+	// UpdateAzureDeployment Change a an Azure subscription or management group deployment in place, keeping its id
+	// (PATCH /v1/deployments/azure/{id})
+	UpdateAzureDeployment(ctx context.Context, request UpdateAzureDeploymentRequestObject) (UpdateAzureDeploymentResponseObject, error)
+	// VerifyAzureDeployment Check that Act can use a an Azure subscription or management group deployment again, after its cloud side was fixed
+	// (POST /v1/deployments/azure/{id}/verify)
+	VerifyAzureDeployment(ctx context.Context, request VerifyAzureDeploymentRequestObject) (VerifyAzureDeploymentResponseObject, error)
+	// CreateGcpDeployment Connect a GCP project or organization to Act. Act verifies access before it stores anything
+	// (POST /v1/deployments/gcp)
+	CreateGcpDeployment(ctx context.Context, request CreateGcpDeploymentRequestObject) (CreateGcpDeploymentResponseObject, error)
+	// DeleteGcpDeployment Disconnect a a GCP project or organization deployment: stop scans, purge the credentials Act holds, and list what still trusts Act
+	// (DELETE /v1/deployments/gcp/{id})
+	DeleteGcpDeployment(ctx context.Context, request DeleteGcpDeploymentRequestObject) (DeleteGcpDeploymentResponseObject, error)
+	// GetGcpDeployment Return one a GCP project or organization deployment
 	// (GET /v1/deployments/gcp/{id})
 	GetGcpDeployment(ctx context.Context, request GetGcpDeploymentRequestObject) (GetGcpDeploymentResponseObject, error)
+	// UpdateGcpDeployment Change a a GCP project or organization deployment in place, keeping its id
+	// (PATCH /v1/deployments/gcp/{id})
+	UpdateGcpDeployment(ctx context.Context, request UpdateGcpDeploymentRequestObject) (UpdateGcpDeploymentResponseObject, error)
+	// VerifyGcpDeployment Check that Act can use a a GCP project or organization deployment again, after its cloud side was fixed
+	// (POST /v1/deployments/gcp/{id}/verify)
+	VerifyGcpDeployment(ctx context.Context, request VerifyGcpDeploymentRequestObject) (VerifyGcpDeploymentResponseObject, error)
+	// ListDeploymentAccounts List the member accounts, subscriptions or projects of one deployment, one page at a time
+	// (GET /v1/deployments/{id}/accounts)
+	ListDeploymentAccounts(ctx context.Context, request ListDeploymentAccountsRequestObject) (ListDeploymentAccountsResponseObject, error)
+	// GetDeploymentCoverage Return how many member accounts, subscriptions or projects Act reaches through one deployment
+	// (GET /v1/deployments/{id}/coverage)
+	GetDeploymentCoverage(ctx context.Context, request GetDeploymentCoverageRequestObject) (GetDeploymentCoverageResponseObject, error)
 	// ListIntegrationTypes List the integration types this tenant may install, their fields and which of them are secret
 	// (GET /v1/integration-types)
 	ListIntegrationTypes(ctx context.Context, request ListIntegrationTypesRequestObject) (ListIntegrationTypesResponseObject, error)
@@ -3753,13 +7999,13 @@ type StrictServerInterface interface {
 	// UpdateIntegration Change an installed integration in place, keeping its id
 	// (PATCH /v1/integrations/{id})
 	UpdateIntegration(ctx context.Context, request UpdateIntegrationRequestObject) (UpdateIntegrationResponseObject, error)
-	// GetAwsOnboarding Return the values an AWS deployment needs before it is created
+	// GetAwsOnboarding Return what an AWS account or organization needs before it is connected, derived from the target
 	// (GET /v1/onboarding/aws)
 	GetAwsOnboarding(ctx context.Context, request GetAwsOnboardingRequestObject) (GetAwsOnboardingResponseObject, error)
-	// GetAzureOnboarding Return the values an Azure deployment needs before it is created
+	// GetAzureOnboarding Return what an Azure subscription or management group needs before it is connected
 	// (GET /v1/onboarding/azure)
 	GetAzureOnboarding(ctx context.Context, request GetAzureOnboardingRequestObject) (GetAzureOnboardingResponseObject, error)
-	// GetGcpOnboarding Return the values a GCP deployment needs before it is reserved
+	// GetGcpOnboarding Return what a GCP project or organization needs before it is connected
 	// (GET /v1/onboarding/gcp)
 	GetGcpOnboarding(ctx context.Context, request GetGcpOnboardingRequestObject) (GetGcpOnboardingResponseObject, error)
 	// GetWhoami Return the tenant, region and principal of the calling token
@@ -3832,6 +8078,66 @@ func (sh *strictHandler) ListDeployments(w http.ResponseWriter, r *http.Request,
 	}
 }
 
+// CreateAwsDeployment operation middleware
+func (sh *strictHandler) CreateAwsDeployment(w http.ResponseWriter, r *http.Request, params CreateAwsDeploymentParams) {
+	var request CreateAwsDeploymentRequestObject
+
+	request.Params = params
+
+	var body CreateAwsDeploymentJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateAwsDeployment(ctx, request.(CreateAwsDeploymentRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateAwsDeployment")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CreateAwsDeploymentResponseObject); ok {
+		if err := validResponse.VisitCreateAwsDeploymentResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeleteAwsDeployment operation middleware
+func (sh *strictHandler) DeleteAwsDeployment(w http.ResponseWriter, r *http.Request, id string, params DeleteAwsDeploymentParams) {
+	var request DeleteAwsDeploymentRequestObject
+
+	request.ID = id
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteAwsDeployment(ctx, request.(DeleteAwsDeploymentRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteAwsDeployment")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteAwsDeploymentResponseObject); ok {
+		if err := validResponse.VisitDeleteAwsDeploymentResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // GetAwsDeployment operation middleware
 func (sh *strictHandler) GetAwsDeployment(w http.ResponseWriter, r *http.Request, id string) {
 	var request GetAwsDeploymentRequestObject
@@ -3851,6 +8157,154 @@ func (sh *strictHandler) GetAwsDeployment(w http.ResponseWriter, r *http.Request
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(GetAwsDeploymentResponseObject); ok {
 		if err := validResponse.VisitGetAwsDeploymentResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateAwsDeployment operation middleware
+func (sh *strictHandler) UpdateAwsDeployment(w http.ResponseWriter, r *http.Request, id string, params UpdateAwsDeploymentParams) {
+	var request UpdateAwsDeploymentRequestObject
+
+	request.ID = id
+	request.Params = params
+
+	var body UpdateAwsDeploymentJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateAwsDeployment(ctx, request.(UpdateAwsDeploymentRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateAwsDeployment")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdateAwsDeploymentResponseObject); ok {
+		if err := validResponse.VisitUpdateAwsDeploymentResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// RotateAwsExternalID operation middleware
+func (sh *strictHandler) RotateAwsExternalID(w http.ResponseWriter, r *http.Request, id string, params RotateAwsExternalIDParams) {
+	var request RotateAwsExternalIDRequestObject
+
+	request.ID = id
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.RotateAwsExternalID(ctx, request.(RotateAwsExternalIDRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "RotateAwsExternalID")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(RotateAwsExternalIDResponseObject); ok {
+		if err := validResponse.VisitRotateAwsExternalIDResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// VerifyAwsDeployment operation middleware
+func (sh *strictHandler) VerifyAwsDeployment(w http.ResponseWriter, r *http.Request, id string, params VerifyAwsDeploymentParams) {
+	var request VerifyAwsDeploymentRequestObject
+
+	request.ID = id
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.VerifyAwsDeployment(ctx, request.(VerifyAwsDeploymentRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "VerifyAwsDeployment")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(VerifyAwsDeploymentResponseObject); ok {
+		if err := validResponse.VisitVerifyAwsDeploymentResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CreateAzureDeployment operation middleware
+func (sh *strictHandler) CreateAzureDeployment(w http.ResponseWriter, r *http.Request, params CreateAzureDeploymentParams) {
+	var request CreateAzureDeploymentRequestObject
+
+	request.Params = params
+
+	var body CreateAzureDeploymentJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateAzureDeployment(ctx, request.(CreateAzureDeploymentRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateAzureDeployment")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CreateAzureDeploymentResponseObject); ok {
+		if err := validResponse.VisitCreateAzureDeploymentResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeleteAzureDeployment operation middleware
+func (sh *strictHandler) DeleteAzureDeployment(w http.ResponseWriter, r *http.Request, id string, params DeleteAzureDeploymentParams) {
+	var request DeleteAzureDeploymentRequestObject
+
+	request.ID = id
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteAzureDeployment(ctx, request.(DeleteAzureDeploymentRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteAzureDeployment")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteAzureDeploymentResponseObject); ok {
+		if err := validResponse.VisitDeleteAzureDeploymentResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -3884,6 +8338,127 @@ func (sh *strictHandler) GetAzureDeployment(w http.ResponseWriter, r *http.Reque
 	}
 }
 
+// UpdateAzureDeployment operation middleware
+func (sh *strictHandler) UpdateAzureDeployment(w http.ResponseWriter, r *http.Request, id string, params UpdateAzureDeploymentParams) {
+	var request UpdateAzureDeploymentRequestObject
+
+	request.ID = id
+	request.Params = params
+
+	var body UpdateAzureDeploymentJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateAzureDeployment(ctx, request.(UpdateAzureDeploymentRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateAzureDeployment")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdateAzureDeploymentResponseObject); ok {
+		if err := validResponse.VisitUpdateAzureDeploymentResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// VerifyAzureDeployment operation middleware
+func (sh *strictHandler) VerifyAzureDeployment(w http.ResponseWriter, r *http.Request, id string, params VerifyAzureDeploymentParams) {
+	var request VerifyAzureDeploymentRequestObject
+
+	request.ID = id
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.VerifyAzureDeployment(ctx, request.(VerifyAzureDeploymentRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "VerifyAzureDeployment")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(VerifyAzureDeploymentResponseObject); ok {
+		if err := validResponse.VisitVerifyAzureDeploymentResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CreateGcpDeployment operation middleware
+func (sh *strictHandler) CreateGcpDeployment(w http.ResponseWriter, r *http.Request, params CreateGcpDeploymentParams) {
+	var request CreateGcpDeploymentRequestObject
+
+	request.Params = params
+
+	var body CreateGcpDeploymentJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateGcpDeployment(ctx, request.(CreateGcpDeploymentRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateGcpDeployment")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CreateGcpDeploymentResponseObject); ok {
+		if err := validResponse.VisitCreateGcpDeploymentResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeleteGcpDeployment operation middleware
+func (sh *strictHandler) DeleteGcpDeployment(w http.ResponseWriter, r *http.Request, id string, params DeleteGcpDeploymentParams) {
+	var request DeleteGcpDeploymentRequestObject
+
+	request.ID = id
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteGcpDeployment(ctx, request.(DeleteGcpDeploymentRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteGcpDeployment")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteGcpDeploymentResponseObject); ok {
+		if err := validResponse.VisitDeleteGcpDeploymentResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // GetGcpDeployment operation middleware
 func (sh *strictHandler) GetGcpDeployment(w http.ResponseWriter, r *http.Request, id string) {
 	var request GetGcpDeploymentRequestObject
@@ -3903,6 +8478,120 @@ func (sh *strictHandler) GetGcpDeployment(w http.ResponseWriter, r *http.Request
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(GetGcpDeploymentResponseObject); ok {
 		if err := validResponse.VisitGetGcpDeploymentResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateGcpDeployment operation middleware
+func (sh *strictHandler) UpdateGcpDeployment(w http.ResponseWriter, r *http.Request, id string, params UpdateGcpDeploymentParams) {
+	var request UpdateGcpDeploymentRequestObject
+
+	request.ID = id
+	request.Params = params
+
+	var body UpdateGcpDeploymentJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateGcpDeployment(ctx, request.(UpdateGcpDeploymentRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateGcpDeployment")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdateGcpDeploymentResponseObject); ok {
+		if err := validResponse.VisitUpdateGcpDeploymentResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// VerifyGcpDeployment operation middleware
+func (sh *strictHandler) VerifyGcpDeployment(w http.ResponseWriter, r *http.Request, id string, params VerifyGcpDeploymentParams) {
+	var request VerifyGcpDeploymentRequestObject
+
+	request.ID = id
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.VerifyGcpDeployment(ctx, request.(VerifyGcpDeploymentRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "VerifyGcpDeployment")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(VerifyGcpDeploymentResponseObject); ok {
+		if err := validResponse.VisitVerifyGcpDeploymentResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListDeploymentAccounts operation middleware
+func (sh *strictHandler) ListDeploymentAccounts(w http.ResponseWriter, r *http.Request, id string, params ListDeploymentAccountsParams) {
+	var request ListDeploymentAccountsRequestObject
+
+	request.ID = id
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListDeploymentAccounts(ctx, request.(ListDeploymentAccountsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListDeploymentAccounts")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListDeploymentAccountsResponseObject); ok {
+		if err := validResponse.VisitListDeploymentAccountsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetDeploymentCoverage operation middleware
+func (sh *strictHandler) GetDeploymentCoverage(w http.ResponseWriter, r *http.Request, id string) {
+	var request GetDeploymentCoverageRequestObject
+
+	request.ID = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetDeploymentCoverage(ctx, request.(GetDeploymentCoverageRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetDeploymentCoverage")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetDeploymentCoverageResponseObject); ok {
+		if err := validResponse.VisitGetDeploymentCoverageResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -4107,8 +8796,10 @@ func (sh *strictHandler) GetAwsOnboarding(w http.ResponseWriter, r *http.Request
 }
 
 // GetAzureOnboarding operation middleware
-func (sh *strictHandler) GetAzureOnboarding(w http.ResponseWriter, r *http.Request) {
+func (sh *strictHandler) GetAzureOnboarding(w http.ResponseWriter, r *http.Request, params GetAzureOnboardingParams) {
 	var request GetAzureOnboardingRequestObject
+
+	request.Params = params
 
 	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
 		return sh.ssi.GetAzureOnboarding(ctx, request.(GetAzureOnboardingRequestObject))
@@ -4131,8 +8822,10 @@ func (sh *strictHandler) GetAzureOnboarding(w http.ResponseWriter, r *http.Reque
 }
 
 // GetGcpOnboarding operation middleware
-func (sh *strictHandler) GetGcpOnboarding(w http.ResponseWriter, r *http.Request) {
+func (sh *strictHandler) GetGcpOnboarding(w http.ResponseWriter, r *http.Request, params GetGcpOnboardingParams) {
 	var request GetGcpOnboardingRequestObject
+
+	request.Params = params
 
 	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
 		return sh.ssi.GetGcpOnboarding(ctx, request.(GetGcpOnboardingRequestObject))

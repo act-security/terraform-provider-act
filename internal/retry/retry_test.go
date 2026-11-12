@@ -231,3 +231,29 @@ func TestStopsWhenTheContextEnds(t *testing.T) {
 		t.Fatalf("got %v after %d calls, want context.Canceled after 1", err, calls.Load())
 	}
 }
+
+func TestPostWithAnIdempotencyKeyIsRetried(t *testing.T) {
+	rec := &recorder{}
+	srv, calls, bodies := serve(t, step{status: http.StatusTooManyRequests, header: map[string]string{"Retry-After": "1"}})
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, srv.URL, strings.NewReader("a=1"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("Idempotency-Key", "tf-key")
+	resp, err := retry.Do(http.DefaultClient, req, rec.policy())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if closeErr := resp.Body.Close(); closeErr != nil {
+		t.Error(closeErr)
+	}
+	if resp.StatusCode != http.StatusOK || calls.Load() != 2 {
+		t.Fatalf("keyed POST: got %d after %d calls", resp.StatusCode, calls.Load())
+	}
+	if len(*bodies) != 2 || (*bodies)[1] != "a=1" {
+		t.Fatalf("the retried POST did not resend its body: %q", *bodies)
+	}
+	if len(rec.waits) != 1 || rec.waits[0] != time.Second {
+		t.Fatalf("waits %v, want the Retry-After of 1s", rec.waits)
+	}
+}

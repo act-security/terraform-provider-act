@@ -1,0 +1,18 @@
+---
+page_title: "{{ .Name }} {{ .Type }} - {{ .ProviderName }}"
+subcategory: ""
+description: |-
+{{ .Description | plainmarkdown | trimspace | prefixlines "  " }}
+---
+
+# {{ .Name }} ({{ .Type }})
+
+{{ .Description | trimspace }}
+
+## Example Usage
+
+{{ tffile .ExampleFile }}
+
+A data source scoped to a `check` block only warns, so a member account Act cannot reach never blocks an apply. Right after a new organization deployment, `discovery_state` is `pending` or `running` and the counts are still growing.
+
+{{ .SchemaMarkdown | trimspace }}
