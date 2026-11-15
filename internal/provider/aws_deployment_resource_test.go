@@ -16,6 +16,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 
 	"github.com/act-security/terraform-provider-act/internal/fakeapi"
+	"github.com/act-security/terraform-provider-act/internal/fakeapi/gen"
 	"github.com/act-security/terraform-provider-act/internal/provider"
 )
 
@@ -70,7 +71,7 @@ func TestAwsAccountDeploymentLifecycle(t *testing.T) {
 	s := fakeapi.Start(t)
 	s.Setenv(t)
 	provider.FastVerification(t)
-	id := s.DeploymentID("aws:account:"+testAccount, "")
+	id := s.AwsAccountDeploymentID(testAccount)
 
 	resource.UnitTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: factories(),
@@ -134,7 +135,7 @@ func TestAwsAccountDeploymentLifecycle(t *testing.T) {
 			},
 			{
 				PreConfig: func() {
-					if !s.FailDeploymentOutOfBand(id, "ROLE_NOT_FOUND", "The role does not exist") {
+					if !s.FailDeploymentOutOfBand(fakeapi.DeploymentFailure{DeploymentID: id, Code: "ROLE_NOT_FOUND", Message: "The role does not exist"}) {
 						t.Fatal("the deployment is missing from the fake")
 					}
 				},
@@ -229,7 +230,7 @@ func TestAwsAccountDeploymentStopsOnARepeatedDeterministicFailure(t *testing.T) 
 					if n := countRequests(s, "POST", "/v1/deployments/aws"); n != 2 {
 						t.Fatalf("create was called %d times, want 2", n)
 					}
-					if _, ok := s.AwsDeployment(s.DeploymentID("aws:account:"+testAccount, "")); ok {
+					if _, ok := s.AwsDeployment(s.AwsAccountDeploymentID(testAccount)); ok {
 						t.Fatal("a failed create stored the deployment")
 					}
 				},
@@ -258,7 +259,7 @@ func TestAwsAccountDeploymentRejectsARoleInAnotherAccount(t *testing.T) {
 func TestAwsAccountDeploymentPrintsAnImportBlockWhenOneExists(t *testing.T) {
 	s := fakeapi.Start(t)
 	s.Setenv(t)
-	existing := s.SeedLegacyAwsAccountDeployment(testAccount, roleArn(testAccount), "legacy-external-id")
+	existing := s.SeedLegacyAwsAccountDeployment(fakeapi.LegacyAwsAccount{AccountID: testAccount, RoleArn: roleArn(testAccount), ExternalID: "legacy-external-id"})
 	config := requiredProviders + fmt.Sprintf(`
 provider "act" {}
 
@@ -267,7 +268,7 @@ resource "act_aws_account_deployment" "this" {
   account_id    = %q
   role_arn      = %q
 }
-`, s.DeploymentID("aws:account:"+testAccount, ""), testAccount, roleArn(testAccount))
+`, s.AwsAccountDeploymentID(testAccount), testAccount, roleArn(testAccount))
 
 	resource.UnitTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: factories(),
@@ -282,7 +283,7 @@ func TestAwsAccountDeploymentRotatesALegacyExternalID(t *testing.T) {
 	s := fakeapi.Start(t)
 	s.Setenv(t)
 	provider.FastVerification(t)
-	id := s.SeedLegacyAwsAccountDeployment(testAccount, roleArn(testAccount), "legacy-external-id")
+	id := s.SeedLegacyAwsAccountDeployment(fakeapi.LegacyAwsAccount{AccountID: testAccount, RoleArn: roleArn(testAccount), ExternalID: "legacy-external-id"})
 	config := func(source string) string {
 		return requiredProviders + fmt.Sprintf(`
 provider "act" {}
@@ -368,7 +369,7 @@ func TestAwsOrganizationDeploymentLifecycle(t *testing.T) {
 	s := fakeapi.Start(t)
 	s.Setenv(t)
 	provider.FastVerification(t)
-	id := s.DeploymentID("aws:organization:"+testOrg, "")
+	id := s.AwsOrganizationDeploymentID(testOrg)
 	root := `  root_id = "` + testRoot + `"`
 	ous := fmt.Sprintf("  organizational_unit_ids = [%q, %q]", testOU, otherOU)
 
@@ -470,5 +471,53 @@ func TestAwsOrganizationDeploymentLimitsTheOUList(t *testing.T) {
 			PlanOnly:    true,
 			ExpectError: regexp.MustCompile(`(?s)The 60 organizational unit IDs take 1019 characters.*root_id`),
 		}},
+	})
+}
+
+func TestAwsAccountDeploymentRetriesOnceWhenOnlyTheETagMoved(t *testing.T) {
+	s := fakeapi.Start(t)
+	s.Setenv(t)
+	provider.FastVerification(t)
+	id := s.AwsAccountDeploymentID(testAccount)
+
+	resource.UnitTest(t, resource.TestCase{
+		ProtoV6ProviderFactories: factories(),
+		Steps: []resource.TestStep{
+			{Config: accountConfig("")},
+			{
+				PreConfig: func() { s.ChangeDeploymentBeforeNextPatch(id, func(*gen.AwsDeployment) {}) },
+				Config:    accountConfig(`  name = "renamed"`),
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownValue(accountAddress, tfjsonpath.New("name"), knownvalue.StringExact("renamed")),
+				},
+				Check: func(*terraform.State) error {
+					if n := countRequests(s, "PATCH", id); n != 2 {
+						return fmt.Errorf("update was sent %d times, want 2", n)
+					}
+					return nil
+				},
+			},
+		},
+	})
+}
+
+func TestAwsAccountDeploymentStopsWhenSomeoneChangedItDuringTheApply(t *testing.T) {
+	s := fakeapi.Start(t)
+	s.Setenv(t)
+	provider.FastVerification(t)
+	id := s.AwsAccountDeploymentID(testAccount)
+
+	resource.UnitTest(t, resource.TestCase{
+		ProtoV6ProviderFactories: factories(),
+		Steps: []resource.TestStep{
+			{Config: accountConfig("")},
+			{
+				PreConfig: func() {
+					s.ChangeDeploymentBeforeNextPatch(id, func(item *gen.AwsDeployment) { item.Name = "set-in-the-console" })
+				},
+				Config:      accountConfig(`  name = "renamed"`),
+				ExpectError: regexp.MustCompile(`Someone changed deployment ` + id),
+			},
+		},
 	})
 }

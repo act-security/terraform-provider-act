@@ -24,6 +24,14 @@ func (e *APIError) Detail(key string) string {
 	return ""
 }
 
+func (e *APIError) DecodeDetails(target any) error {
+	raw, err := json.Marshal(e.Details)
+	if err != nil {
+		return err
+	}
+	return json.Unmarshal(raw, target)
+}
+
 func (e *APIError) Error() string {
 	msg := fmt.Sprintf("Act API returned %d %s", e.Status, e.Code)
 	if e.Message != "" {

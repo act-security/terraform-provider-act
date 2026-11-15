@@ -11,7 +11,7 @@ import (
 	"io"
 	"net/http"
 	"regexp"
-	"sort"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -29,6 +29,10 @@ const (
 	ModuleVersion        = "1.0.0"
 	RetryClassPropagate  = "propagation"
 	RetryClassDetermined = "deterministic"
+	listPageSize         = 2
+	externalIDLength     = 40
+	maxPatchBodyBytes    = 1 << 20
+	sha256HexLength      = 64
 )
 
 var (
@@ -53,6 +57,7 @@ type deploymentStore struct {
 	idempotency map[string]idempotentDeployment
 	failures    map[string][]VerificationFailure
 	members     map[string][]gen.MemberAccount
+	pending     map[string]func(*gen.AwsDeployment)
 }
 
 type idempotentDeployment struct {
@@ -67,6 +72,7 @@ func newDeploymentStore() *deploymentStore {
 		idempotency: map[string]idempotentDeployment{},
 		failures:    map[string][]VerificationFailure{},
 		members:     map[string][]gen.MemberAccount{},
+		pending:     map[string]func(*gen.AwsDeployment){},
 	}
 }
 
@@ -76,9 +82,9 @@ func (s *storedDeployment) etag() string {
 
 func (s *storedDeployment) naturalKey() string {
 	if s.item.Organization != nil {
-		return "aws:organization:" + s.item.Organization.OrganizationID
+		return organizationTarget(s.item.Organization.OrganizationID).naturalKey
 	}
-	return "aws:account:" + deref(s.item.AccountID)
+	return accountTarget(deref(s.item.AccountID)).naturalKey
 }
 
 func (s *storedDeployment) targets() []string {
@@ -96,9 +102,30 @@ func (s *storedDeployment) targets() []string {
 	return targets
 }
 
-func (f *Fake) DeploymentID(naturalKey, variant string) string {
+type deploymentTarget struct {
+	naturalKey string
+	variant    string
+}
+
+func accountTarget(accountID string) deploymentTarget {
+	return deploymentTarget{naturalKey: "aws:account:" + accountID}
+}
+
+func organizationTarget(organizationID string) deploymentTarget {
+	return deploymentTarget{naturalKey: "aws:organization:" + organizationID}
+}
+
+func (f *Fake) AwsAccountDeploymentID(accountID string) string {
+	return f.deploymentID(accountTarget(accountID))
+}
+
+func (f *Fake) AwsOrganizationDeploymentID(organizationID string) string {
+	return f.deploymentID(organizationTarget(organizationID))
+}
+
+func (f *Fake) deploymentID(target deploymentTarget) string {
 	mac := hmac.New(sha256.New, cellKey)
-	mac.Write([]byte(f.cfg.TenantID + "|" + naturalKey + "|" + variant))
+	mac.Write([]byte(f.cfg.TenantID + "|" + target.naturalKey + "|" + target.variant))
 	b := mac.Sum(nil)[:16]
 	b[6] = b[6]&0x0f | 0x80
 	b[8] = b[8]&0x3f | 0x80
@@ -108,7 +135,7 @@ func (f *Fake) DeploymentID(naturalKey, variant string) string {
 func derivedExternalID(id string) string {
 	mac := hmac.New(sha256.New, cellKey)
 	mac.Write([]byte("external-id|" + id))
-	return hex.EncodeToString(mac.Sum(nil))[:40]
+	return hex.EncodeToString(mac.Sum(nil))[:externalIDLength]
 }
 
 func (f *Fake) QueueVerificationFailures(roleArn string, failures ...VerificationFailure) {
@@ -117,29 +144,39 @@ func (f *Fake) QueueVerificationFailures(roleArn string, failures ...Verificatio
 	f.deployments.failures[roleArn] = append(f.deployments.failures[roleArn], failures...)
 }
 
-func (f *Fake) FailDeploymentOutOfBand(id, code, message string) bool {
+type DeploymentFailure struct {
+	DeploymentID string
+	Code         string
+	Message      string
+}
+
+func (f *Fake) FailDeploymentOutOfBand(failure DeploymentFailure) bool {
 	f.deployments.mu.Lock()
 	defer f.deployments.mu.Unlock()
-	stored, ok := f.deployments.byID[id]
+	stored, ok := f.deployments.byID[failure.DeploymentID]
 	if !ok {
 		return false
 	}
 	stored.item.Status = gen.DeploymentStatusFailed
-	stored.item.ErrorCode = &code
-	stored.item.ErrorMessage = &message
+	stored.item.ErrorCode = &failure.Code
+	stored.item.ErrorMessage = &failure.Message
 	return true
 }
 
-func (f *Fake) RenameDeploymentOutOfBand(id, name string) bool {
+func (f *Fake) ChangeDeploymentBeforeNextPatch(id string, change func(*gen.AwsDeployment)) {
 	f.deployments.mu.Lock()
 	defer f.deployments.mu.Unlock()
-	stored, ok := f.deployments.byID[id]
+	f.deployments.pending[id] = change
+}
+
+func (s *deploymentStore) applyPendingChange(stored *storedDeployment) {
+	change, ok := s.pending[stored.item.ID]
 	if !ok {
-		return false
+		return
 	}
-	stored.item.Name = name
+	delete(s.pending, stored.item.ID)
+	change(&stored.item)
 	stored.version++
-	return true
 }
 
 func (f *Fake) DeleteDeploymentOutOfBand(id string) {
@@ -164,10 +201,17 @@ func (f *Fake) AwsDeployment(id string) (gen.AwsDeployment, bool) {
 	return stored.item, true
 }
 
-func (f *Fake) SeedLegacyAwsAccountDeployment(accountID, roleArn, externalID string) string {
+type LegacyAwsAccount struct {
+	AccountID  string
+	RoleArn    string
+	ExternalID string
+}
+
+func (f *Fake) SeedLegacyAwsAccountDeployment(legacy LegacyAwsAccount) string {
 	f.deployments.mu.Lock()
 	defer f.deployments.mu.Unlock()
 	id := randomUUID()
+	accountID := legacy.AccountID
 	now := f.now().UTC()
 	method := gen.AwsDeploymentMethodCloudformation
 	stored := &storedDeployment{item: gen.AwsDeployment{
@@ -175,10 +219,10 @@ func (f *Fake) SeedLegacyAwsAccountDeployment(accountID, roleArn, externalID str
 		Name:                 "aws-" + accountID,
 		Tags:                 map[string]string{},
 		AccountID:            &accountID,
-		RoleArn:              roleArn,
+		RoleArn:              legacy.RoleArn,
 		DisabledCapabilities: []gen.AwsCapability{},
 		DeploymentMethod:     &method,
-		ExternalID:           externalID,
+		ExternalID:           legacy.ExternalID,
 		ExternalIDSource:     gen.ExternalIDSourceLegacy,
 		ExternalIDKeyVersion: ExternalIDKeyVersion,
 		Status:               gen.DeploymentStatusActive,
@@ -205,14 +249,16 @@ func (s *apiServer) GetAwsOnboarding(_ context.Context, req gen.GetAwsOnboarding
 	if (params.AccountID == nil) == (params.OrganizationID == nil) {
 		return gen.GetAwsOnboarding400JSONResponse(invalid("accountId", "exactly_one_target")), nil
 	}
-	key := "aws:account:" + deref(params.AccountID)
+	target := accountTarget(deref(params.AccountID))
 	if params.OrganizationID != nil {
-		key = "aws:organization:" + *params.OrganizationID
+		target = organizationTarget(*params.OrganizationID)
 	}
+	key := target.naturalKey
+	target.variant = deref(params.Variant)
 	store := s.fake.deployments
 	store.mu.Lock()
 	defer store.mu.Unlock()
-	id := s.fake.DeploymentID(key, deref(params.Variant))
+	id := s.fake.deploymentID(target)
 	externalID, source := derivedExternalID(id), gen.ExternalIDSourceDerived
 	var existing *gen.ExistingDeployment
 	if stored := store.byNaturalKey(key); stored != nil && params.Variant == nil {
@@ -243,14 +289,14 @@ func (s *apiServer) GetAwsOnboarding(_ context.Context, req gen.GetAwsOnboarding
 		MemberRoleName:               roleName,
 		MemberRolePath:               "/",
 		CloudformationTemplateURL:    ConsoleOrigin + "/templates/aws/" + ModuleVersion + "/role.yaml",
-		CloudformationTemplateSha256: strings.Repeat("a", 64),
+		CloudformationTemplateSha256: fakeDigest("a"),
 		ModuleSource:                 ModuleSource,
 		ModuleVersion:                ModuleVersion,
-		ModuleSha256:                 strings.Repeat("b", 64),
-		PermissionsHash:              strings.Repeat("c", 64),
+		ModuleSha256:                 fakeDigest("b"),
+		PermissionsHash:              fakeDigest("c"),
 		DeploymentVersion:            "2026.11",
 		ModuleVersions: []gen.ModuleVersion{{
-			Version: ModuleVersion, Sha256: strings.Repeat("b", 64), PermissionsHash: strings.Repeat("c", 64), DeploymentVersion: "2026.11",
+			Version: ModuleVersion, Sha256: fakeDigest("b"), PermissionsHash: fakeDigest("c"), DeploymentVersion: "2026.11",
 		}},
 	}, nil
 }
@@ -278,28 +324,28 @@ func (s *apiServer) CreateAwsDeployment(_ context.Context, req gen.CreateAwsDepl
 	if (body.AccountID == nil) == (body.Organization == nil) {
 		return gen.CreateAwsDeployment400JSONResponse(invalid("accountId", "exactly_one_target")), nil
 	}
-	natural := "aws:account:" + deref(body.AccountID)
+	target := accountTarget(deref(body.AccountID))
 	if body.Organization != nil {
-		natural = "aws:organization:" + body.Organization.OrganizationID
+		target = organizationTarget(body.Organization.OrganizationID)
 		if (body.Organization.RootID == nil) == (body.Organization.OrganizationalUnitIds == nil) {
 			return gen.CreateAwsDeployment400JSONResponse(invalid("organization.rootId", "exactly_one_scope")), nil
 		}
 	}
-	if existing := store.byNaturalKey(natural); existing != nil {
+	if existing := store.byNaturalKey(target.naturalKey); existing != nil {
 		e := envelope(gen.ErrorEnvelopeErrorCodeAlreadyExists, "A deployment for this target already exists")
 		details := map[string]any{"deploymentId": existing.item.ID}
 		e.Error.Details = &details
 		return gen.CreateAwsDeployment409JSONResponse(e), nil
 	}
-	if body.DeploymentID != s.fake.DeploymentID(natural, "") {
+	if body.DeploymentID != s.fake.deploymentID(target) {
 		return gen.CreateAwsDeployment400JSONResponse(invalid("deploymentId", "not_issued_by_act")), nil
 	}
 	roleAccount := roleArnAccount.FindStringSubmatch(body.RoleArn)
 	if roleAccount == nil {
 		return gen.CreateAwsDeployment400JSONResponse(invalid("roleArn", "invalid_arn")), nil
 	}
-	if body.AccountID != nil && roleAccount[1] != *body.AccountID {
-		return gen.CreateAwsDeployment422JSONResponse(verificationFailed(VerificationFailure{RetryClass: RetryClassDetermined, CloudErrorCode: "ACCOUNT_ID_MISMATCH", Hint: "The role is in another account."})), nil
+	if !roleInAccount(body.RoleArn, body.AccountID) {
+		return gen.CreateAwsDeployment422JSONResponse(verificationFailed(accountMismatch)), nil
 	}
 	if failure, ok := store.nextFailure(body.RoleArn); ok {
 		return gen.CreateAwsDeployment422JSONResponse(verificationFailed(failure)), nil
@@ -414,7 +460,7 @@ func captureBody(next http.Handler) http.Handler {
 			next.ServeHTTP(w, r)
 			return
 		}
-		raw, err := io.ReadAll(io.LimitReader(r.Body, 1<<20))
+		raw, err := io.ReadAll(io.LimitReader(r.Body, maxPatchBodyBytes))
 		if err != nil {
 			writeJSON(w, http.StatusBadRequest, envelope(gen.ErrorEnvelopeErrorCodeInvalidRequest, err.Error()))
 			return
@@ -448,73 +494,99 @@ func (s *apiServer) UpdateAwsDeployment(ctx context.Context, req gen.UpdateAwsDe
 	if !ok {
 		return gen.UpdateAwsDeployment404JSONResponse(envelope(gen.ErrorEnvelopeErrorCodeNotFound, "Not found")), nil
 	}
+	store.applyPendingChange(stored)
 	if req.Params.IfMatch != stored.etag() {
 		return gen.UpdateAwsDeployment412JSONResponse(envelope(gen.ErrorEnvelopeErrorCodePreconditionFailed, "The resource changed since it was read")), nil
 	}
-	body := *req.Body
-	present := presentFields(ctx)
-	next := stored.item
-	reverify := false
-	if body.RoleArn != nil && *body.RoleArn != next.RoleArn {
-		roleAccount := roleArnAccount.FindStringSubmatch(*body.RoleArn)
-		if next.AccountID != nil && (roleAccount == nil || roleAccount[1] != *next.AccountID) {
-			return gen.UpdateAwsDeployment422JSONResponse(verificationFailed(VerificationFailure{RetryClass: RetryClassDetermined, CloudErrorCode: "ACCOUNT_ID_MISMATCH", Hint: "The role is in another account."})), nil
-		}
-		next.RoleArn = *body.RoleArn
-		reverify = true
+	patched, rejection := applyDeploymentPatch(ctx, stored.item, *req.Body)
+	if rejection != nil {
+		return rejection, nil
 	}
-	if body.Name != nil {
-		next.Name = *body.Name
-	}
-	if body.Tags != nil {
-		next.Tags = *body.Tags
-	}
-	if _, ok := present["allowedRegions"]; ok {
-		next.AllowedRegions = body.AllowedRegions
-	}
-	if body.DisabledCapabilities != nil {
-		next.DisabledCapabilities = *body.DisabledCapabilities
-	}
-	if body.DeploymentMethod != nil {
-		next.DeploymentMethod = body.DeploymentMethod
-	}
-	if body.DeletionProtection != nil {
-		next.DeletionProtection = *body.DeletionProtection
-	}
-	if body.Organization != nil {
-		if next.Organization == nil {
-			return gen.UpdateAwsDeployment400JSONResponse(invalid("organization", "not_an_organization")), nil
-		}
-		org := *next.Organization
-		patch := body.Organization
-		if patch.RootID != nil {
-			org.RootID, org.OrganizationalUnitIds = patch.RootID, nil
-			reverify = true
-		}
-		if patch.OrganizationalUnitIds != nil {
-			org.OrganizationalUnitIds, org.RootID = patch.OrganizationalUnitIds, nil
-			reverify = true
-		}
-		if _, ok := presentFields(ctx, "organization")["excludedAccountIds"]; ok {
-			org.ExcludedAccountIds = patch.ExcludedAccountIds
-		}
-		if patch.MemberRoleName != nil {
-			org.MemberRoleName = *patch.MemberRoleName
-		}
-		if patch.MemberRolePath != nil {
-			org.MemberRolePath = *patch.MemberRolePath
-		}
-		next.Organization = &org
-	}
-	if reverify {
-		if failure, ok := store.nextFailure(next.RoleArn); ok {
+	if patched.reverify {
+		if failure, ok := store.nextFailure(patched.item.RoleArn); ok {
 			return gen.UpdateAwsDeployment422JSONResponse(verificationFailed(failure)), nil
 		}
-		next.Status, next.ErrorCode, next.ErrorMessage = gen.DeploymentStatusActive, nil, nil
+		patched.item.Status, patched.item.ErrorCode, patched.item.ErrorMessage = gen.DeploymentStatusActive, nil, nil
 	}
-	stored.item = next
+	stored.item = patched.item
 	stored.version++
 	return gen.UpdateAwsDeployment200JSONResponse{Body: stored.item, Headers: gen.UpdateAwsDeployment200ResponseHeaders{ETag: stored.etag()}}, nil
+}
+
+type patchedDeployment struct {
+	item     gen.AwsDeployment
+	reverify bool
+}
+
+func applyDeploymentPatch(ctx context.Context, current gen.AwsDeployment, body gen.AwsDeploymentPatch) (patchedDeployment, gen.UpdateAwsDeploymentResponseObject) {
+	patched := patchedDeployment{item: current}
+	if body.RoleArn != nil && *body.RoleArn != current.RoleArn {
+		if !roleInAccount(*body.RoleArn, current.AccountID) {
+			return patched, gen.UpdateAwsDeployment422JSONResponse(verificationFailed(accountMismatch))
+		}
+		patched.item.RoleArn, patched.reverify = *body.RoleArn, true
+	}
+	applySettingsPatch(ctx, &patched.item, body)
+	if body.Organization == nil {
+		return patched, nil
+	}
+	if current.Organization == nil {
+		return patched, gen.UpdateAwsDeployment400JSONResponse(invalid("organization", "not_an_organization"))
+	}
+	org, retargeted := applyOrganizationPatch(ctx, *current.Organization, *body.Organization)
+	patched.item.Organization, patched.reverify = &org, patched.reverify || retargeted
+	return patched, nil
+}
+
+var accountMismatch = VerificationFailure{RetryClass: RetryClassDetermined, CloudErrorCode: "ACCOUNT_ID_MISMATCH", Hint: "The role is in another account."}
+
+func roleInAccount(roleArn string, accountID *string) bool {
+	if accountID == nil {
+		return true
+	}
+	match := roleArnAccount.FindStringSubmatch(roleArn)
+	return match != nil && match[1] == *accountID
+}
+
+func applySettingsPatch(ctx context.Context, item *gen.AwsDeployment, body gen.AwsDeploymentPatch) {
+	if body.Name != nil {
+		item.Name = *body.Name
+	}
+	if body.Tags != nil {
+		item.Tags = *body.Tags
+	}
+	if _, ok := presentFields(ctx)["allowedRegions"]; ok {
+		item.AllowedRegions = body.AllowedRegions
+	}
+	if body.DisabledCapabilities != nil {
+		item.DisabledCapabilities = *body.DisabledCapabilities
+	}
+	if body.DeploymentMethod != nil {
+		item.DeploymentMethod = body.DeploymentMethod
+	}
+	if body.DeletionProtection != nil {
+		item.DeletionProtection = *body.DeletionProtection
+	}
+}
+
+func applyOrganizationPatch(ctx context.Context, org gen.AwsOrganization, patch gen.AwsOrganizationPatch) (gen.AwsOrganization, bool) {
+	retargeted := patch.RootID != nil || patch.OrganizationalUnitIds != nil
+	if patch.RootID != nil {
+		org.RootID, org.OrganizationalUnitIds = patch.RootID, nil
+	}
+	if patch.OrganizationalUnitIds != nil {
+		org.OrganizationalUnitIds, org.RootID = patch.OrganizationalUnitIds, nil
+	}
+	if _, ok := presentFields(ctx, "organization")["excludedAccountIds"]; ok {
+		org.ExcludedAccountIds = patch.ExcludedAccountIds
+	}
+	if patch.MemberRoleName != nil {
+		org.MemberRoleName = *patch.MemberRoleName
+	}
+	if patch.MemberRolePath != nil {
+		org.MemberRolePath = *patch.MemberRolePath
+	}
+	return org, retargeted
 }
 
 func (s *apiServer) VerifyAwsDeployment(_ context.Context, req gen.VerifyAwsDeploymentRequestObject) (gen.VerifyAwsDeploymentResponseObject, error) {
@@ -591,7 +663,7 @@ func (s *apiServer) ListDeployments(_ context.Context, req gen.ListDeploymentsRe
 		if params.Status != nil && *params.Status != summary.Status {
 			continue
 		}
-		if params.Target != nil && !contains(summary.Targets, *params.Target) {
+		if params.Target != nil && !slices.Contains(summary.Targets, *params.Target) {
 			continue
 		}
 		if params.Tag != nil && !hasTags(summary.Tags, *params.Tag) {
@@ -599,8 +671,8 @@ func (s *apiServer) ListDeployments(_ context.Context, req gen.ListDeploymentsRe
 		}
 		items = append(items, summary)
 	}
-	sort.Slice(items, func(i, j int) bool { return items[i].ID < items[j].ID })
-	size := 2
+	slices.SortFunc(items, func(a, b gen.DeploymentSummary) int { return strings.Compare(a.ID, b.ID) })
+	size := listPageSize
 	if params.PageSize != nil {
 		size = *params.PageSize
 	}
@@ -706,6 +778,10 @@ func (s *apiServer) ListDeploymentAccounts(_ context.Context, req gen.ListDeploy
 	return gen.ListDeploymentAccounts200JSONResponse{Items: items}, nil
 }
 
+func fakeDigest(fill string) string {
+	return strings.Repeat(fill, sha256HexLength)
+}
+
 func consoleURL(id string) string {
 	return ConsoleOrigin + "/settings/deployments/" + id
 }
@@ -719,15 +795,6 @@ func deref(value *string) string {
 		return ""
 	}
 	return *value
-}
-
-func contains(values []string, want string) bool {
-	for _, value := range values {
-		if value == want {
-			return true
-		}
-	}
-	return false
 }
 
 func hasTags(tags, want map[string]string) bool {

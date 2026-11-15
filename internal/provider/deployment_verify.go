@@ -7,12 +7,15 @@ import (
 	"math/big"
 	"time"
 
+	"github.com/act-security/terraform-provider-act/internal/apigen"
 	"github.com/act-security/terraform-provider-act/internal/client"
 )
 
+type retryClass string
+
 const (
-	retryClassPropagation = "propagation"
-	codeVerificationFail  = "verification_failed"
+	retryClassPropagation   retryClass = "propagation"
+	retryClassDeterministic retryClass = "deterministic"
 )
 
 type verificationPolicy struct {
@@ -35,12 +38,16 @@ var awsVerification = verificationPolicy{
 	now:    time.Now,
 }
 
+type verificationDetails struct {
+	RetryClass     retryClass `json:"retryClass"`
+	CloudErrorCode string     `json:"cloudErrorCode"`
+	Attribute      string     `json:"attribute"`
+	Hint           string     `json:"hint"`
+}
+
 type verificationFailure struct {
-	retryClass     string
-	cloudErrorCode string
-	attribute      string
-	hint           string
-	err            *client.APIError
+	verificationDetails
+	err *client.APIError
 }
 
 type verificationOutcome struct {
@@ -52,20 +59,18 @@ type verificationOutcome struct {
 
 func asVerificationFailure(err error) (*verificationFailure, bool) {
 	var apiErr *client.APIError
-	if !errors.As(err, &apiErr) || apiErr.Code != codeVerificationFail {
+	if !errors.As(err, &apiErr) || apiErr.Code != string(apigen.ErrorEnvelopeErrorCodeVerificationFailed) {
 		return nil, false
 	}
-	return &verificationFailure{
-		retryClass:     apiErr.Detail("retryClass"),
-		cloudErrorCode: apiErr.Detail("cloudErrorCode"),
-		attribute:      apiErr.Detail("attribute"),
-		hint:           apiErr.Detail("hint"),
-		err:            apiErr,
-	}, true
+	failure := &verificationFailure{err: apiErr}
+	if decodeErr := apiErr.DecodeDetails(&failure.verificationDetails); decodeErr != nil {
+		failure.verificationDetails = verificationDetails{RetryClass: retryClassDeterministic, CloudErrorCode: apiErr.Message}
+	}
+	return failure, true
 }
 
 func (f *verificationFailure) sameAs(other *verificationFailure) bool {
-	return other != nil && f.retryClass == other.retryClass && f.cloudErrorCode == other.cloudErrorCode && f.attribute == other.attribute
+	return other != nil && f.verificationDetails == other.verificationDetails
 }
 
 func (p verificationPolicy) run(ctx context.Context, call func(ctx context.Context) error) (verificationOutcome, error) {
@@ -83,7 +88,7 @@ func (p verificationPolicy) run(ctx context.Context, call func(ctx context.Conte
 		if !ok {
 			return outcome, err
 		}
-		repeated := failure.retryClass != retryClassPropagation && failure.sameAs(outcome.last)
+		repeated := failure.RetryClass != retryClassPropagation && failure.sameAs(outcome.last)
 		outcome.last = failure
 		if repeated {
 			return outcome, err

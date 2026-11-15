@@ -24,6 +24,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
+	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	"github.com/act-security/terraform-provider-act/internal/apigen"
@@ -32,6 +33,10 @@ import (
 
 const (
 	defaultDeploymentTimeout = 5 * time.Minute
+	maxDeploymentNameLength  = 64
+	maxDeploymentTags        = 50
+	maxTagKeyLength          = 64
+	maxTagValueLength        = 256
 	externalIDDerived        = "derived"
 	externalIDLegacy         = "legacy"
 )
@@ -132,7 +137,7 @@ func (r *awsDeploymentResource[M, P]) Schema(ctx context.Context, _ resource.Sch
 			MarkdownDescription: "The name Act shows for the deployment, 1 to 64 characters. Act picks one when you leave it out.",
 			Optional:            true,
 			Computed:            true,
-			Validators:          []validator.String{stringvalidator.LengthBetween(1, 64)},
+			Validators:          []validator.String{stringvalidator.LengthBetween(1, maxDeploymentNameLength)},
 			PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 		},
 		"tags": schema.MapAttribute{
@@ -140,9 +145,9 @@ func (r *awsDeploymentResource[M, P]) Schema(ctx context.Context, _ resource.Sch
 			ElementType:         types.StringType,
 			Optional:            true,
 			Validators: []validator.Map{
-				mapvalidator.SizeAtMost(50),
-				mapvalidator.KeysAre(stringvalidator.LengthBetween(1, 64)),
-				mapvalidator.ValueStringsAre(stringvalidator.LengthAtMost(256)),
+				mapvalidator.SizeAtMost(maxDeploymentTags),
+				mapvalidator.KeysAre(stringvalidator.LengthBetween(1, maxTagKeyLength)),
+				mapvalidator.ValueStringsAre(stringvalidator.LengthAtMost(maxTagValueLength)),
 			},
 		},
 		"allowed_regions": schema.SetAttribute{
@@ -256,87 +261,222 @@ func (r *awsDeploymentResource[M, P]) ValidateConfig(ctx context.Context, req re
 }
 
 func (r *awsDeploymentResource[M, P]) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
-	diags := &resp.Diagnostics
-	if req.State.Raw.IsNull() {
-		if req.Plan.Raw.IsNull() {
-			return
-		}
-		var plan M
-		diags.Append(req.Plan.Get(ctx, &plan)...)
-		if !diags.HasError() && P(&plan).common().ExternalIDSource.ValueString() == externalIDLegacy {
-			diags.AddAttributeError(path.Root("external_id_source"), "A new deployment cannot use a legacy external ID", "Act gives every new deployment a derived external ID. Leave external_id_source out, or set it to \"derived\".")
-		}
+	switch {
+	case req.State.Raw.IsNull() && req.Plan.Raw.IsNull():
 		return
-	}
-	var state M
-	diags.Append(req.State.Get(ctx, &state)...)
-	if diags.HasError() {
-		return
-	}
-	prior := P(&state).common()
-	if req.Plan.Raw.IsNull() {
-		if prior.DeletionProtection.ValueBool() {
-			diags.AddError(
-				"The "+r.kind.title+" deployment has deletion protection",
-				fmt.Sprintf("Act refuses to delete %s while deletion_protection is true, so this plan stops here instead of failing halfway through the apply. Set deletion_protection = false and apply first. To stop managing it without disconnecting it, use a removed block with lifecycle { destroy = false } or terraform state rm.", prior.ID.ValueString()),
-			)
-		}
-		return
-	}
-	var plan M
-	diags.Append(req.Plan.Get(ctx, &plan)...)
-	if diags.HasError() {
-		return
-	}
-	next := P(&plan).common()
-	replaced := !next.DeploymentID.IsUnknown() && !next.DeploymentID.Equal(prior.DeploymentID)
-	if key := P(&plan).targetKey(); !key.IsUnknown() && !key.Equal(P(&state).targetKey()) {
-		replaced = true
-	}
-	if replaced && prior.DeletionProtection.ValueBool() {
-		diags.AddError(
-			"The "+r.kind.title+" deployment has deletion protection",
-			fmt.Sprintf("This change replaces %s, which deletes it first, and Act refuses to delete it while deletion_protection is true. Set deletion_protection = false and apply first.", prior.ID.ValueString()),
-		)
-		return
-	}
-	rotating := prior.ExternalIDSource.ValueString() == externalIDLegacy && next.ExternalIDSource.ValueString() == externalIDDerived
-	if prior.ExternalIDSource.ValueString() == externalIDDerived && next.ExternalIDSource.ValueString() == externalIDLegacy {
-		diags.AddAttributeError(path.Root("external_id_source"), "The external ID cannot go back to legacy", "This deployment already uses a derived external ID. Set external_id_source to \"derived\" or leave it out.")
-		return
-	}
-	if rotating {
-		diags.Append(resp.Plan.SetAttribute(ctx, path.Root("external_id"), types.StringUnknown())...)
-		var configured types.Int64
-		diags.Append(req.Config.GetAttribute(ctx, path.Root("external_id_key_version"), &configured)...)
-		if configured.IsNull() {
-			diags.Append(resp.Plan.SetAttribute(ctx, path.Root("external_id_key_version"), types.Int64Unknown())...)
-		}
-	} else if !next.ExternalIDKeyVersion.IsUnknown() && !prior.ExternalIDKeyVersion.IsNull() && !next.ExternalIDKeyVersion.Equal(prior.ExternalIDKeyVersion) {
-		diags.AddAttributeError(
-			path.Root("external_id_key_version"),
-			"The external ID key version cannot change in place",
-			fmt.Sprintf("The deployment's external ID uses key version %d. It only changes when a legacy external ID rotates to derived. Pass external_id_key_version from data.act_aws_onboarding_parameters, which returns the deployment's own value.", prior.ExternalIDKeyVersion.ValueInt64()),
-		)
-	}
-	if prior.Status.ValueString() == string(apigen.DeploymentStatusFailed) && next.ReverifyOnFailure.ValueBool() {
-		for _, attribute := range []string{"status", "error_code", "error_message"} {
-			diags.Append(resp.Plan.SetAttribute(ctx, path.Root(attribute), types.StringUnknown())...)
-		}
+	case req.State.Raw.IsNull():
+		r.planCreate(ctx, req.Plan, &resp.Diagnostics)
+	case req.Plan.Raw.IsNull():
+		r.planDestroy(ctx, req.State, &resp.Diagnostics)
+	default:
+		r.planUpdate(ctx, req, resp)
 	}
 }
 
 func (r *awsDeploymentResource[M, P]) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	diags := &resp.Diagnostics
 	var plan M
-	diags.Append(req.Plan.Get(ctx, &plan)...)
-	if diags.HasError() {
+	if diags.Append(req.Plan.Get(ctx, &plan)...); diags.HasError() {
 		return
 	}
 	model := P(&plan)
+	body := buildCreateBody(ctx, model, diags)
+	timeout, timeoutDiags := model.common().Timeouts.Create(ctx, defaultDeploymentTimeout)
+	if diags.Append(timeoutDiags...); diags.HasError() {
+		return
+	}
+	ctx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+	result, outcome, err := r.createVerified(ctx, body)
+	if err != nil {
+		r.addWriteError(diags, writeFailure{action: "create", target: model.targetLabel(), outcome: outcome, err: err})
+		return
+	}
+	r.store(ctx, storedResult[P]{model: model, result: result, state: &resp.State, private: resp.Private, diags: diags})
+	diags.AddWarning("Act verified the role", proofOfLife(connectionReport{target: model.targetLabel(), deployment: result.Deployment, outcome: outcome})+r.coverageNote(ctx, result.Deployment.ID))
+}
+
+func (r *awsDeploymentResource[M, P]) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
+	diags := &resp.Diagnostics
+	var state M
+	if diags.Append(req.State.Get(ctx, &state)...); diags.HasError() {
+		return
+	}
+	model := P(&state)
+	result, err := r.data.Client.GetAwsDeployment(ctx, model.common().ID.ValueString())
+	switch {
+	case err != nil:
+		diags.AddError("Reading the "+r.kind.title+" deployment failed", err.Error())
+	case result == nil:
+		resp.State.RemoveResource(ctx)
+	case !r.scopeMatches(result.Deployment):
+		diags.AddError("Wrong deployment type", fmt.Sprintf("Deployment %s %s", result.Deployment.ID, r.kind.wrongScopeMessage))
+	default:
+		defaultReverifyOnFailure(model.common())
+		r.store(ctx, storedResult[P]{model: model, result: result, state: &resp.State, private: resp.Private, diags: diags, quiet: true})
+		r.warnIfFailing(model, diags)
+	}
+}
+
+func (r *awsDeploymentResource[M, P]) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+	diags := &resp.Diagnostics
+	var plan, state M
+	diags.Append(req.Plan.Get(ctx, &plan)...)
+	if diags.Append(req.State.Get(ctx, &state)...); diags.HasError() {
+		return
+	}
+	timeout, timeoutDiags := P(&plan).common().Timeouts.Update(ctx, defaultDeploymentTimeout)
+	if diags.Append(timeoutDiags...); diags.HasError() {
+		return
+	}
+	ctx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+	write := r.newWrite(writeInput[P]{next: P(&plan), prior: P(&state), etag: privateString(ctx, req.Private, privateETag), diags: diags})
+	if !write.runAll(ctx, r.updateSteps(ctx, write)) {
+		return
+	}
+	if result, ok := write.latest(ctx); ok {
+		r.store(ctx, storedResult[P]{model: write.next, result: result, state: &resp.State, private: resp.Private, diags: diags})
+	}
+}
+
+func (r *awsDeploymentResource[M, P]) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
+	diags := &resp.Diagnostics
+	var state M
+	if diags.Append(req.State.Get(ctx, &state)...); diags.HasError() {
+		return
+	}
+	model := P(&state)
+	cleanup, err := r.data.Client.DeleteAwsDeployment(ctx, model.common().ID.ValueString())
+	if err != nil {
+		r.addDeleteError(model, err, diags)
+		return
+	}
+	reportCleanup(cleanupReport{target: model.targetLabel(), items: cleanup}, diags)
+}
+
+func (r *awsDeploymentResource[M, P]) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	id, ok := r.resolveImportID(ctx, strings.TrimSpace(req.ID), &resp.Diagnostics)
+	if ok {
+		resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("id"), id)...)
+	}
+}
+
+func (r *awsDeploymentResource[M, P]) planCreate(ctx context.Context, plan tfsdk.Plan, diags *diag.Diagnostics) {
+	var model M
+	if diags.Append(plan.Get(ctx, &model)...); diags.HasError() {
+		return
+	}
+	if P(&model).common().ExternalIDSource.ValueString() == externalIDLegacy {
+		diags.AddAttributeError(path.Root("external_id_source"), "A new deployment cannot use a legacy external ID", "Act gives every new deployment a derived external ID. Leave external_id_source out, or set it to \"derived\".")
+	}
+}
+
+func (r *awsDeploymentResource[M, P]) planDestroy(ctx context.Context, state tfsdk.State, diags *diag.Diagnostics) {
+	var model M
+	if diags.Append(state.Get(ctx, &model)...); diags.HasError() {
+		return
+	}
+	if prior := P(&model).common(); prior.DeletionProtection.ValueBool() {
+		diags.AddError(
+			"The "+r.kind.title+" deployment has deletion protection",
+			fmt.Sprintf("Act refuses to delete %s while deletion_protection is true, so this plan stops here instead of failing halfway through the apply. Set deletion_protection = false and apply first. To stop managing it without disconnecting it, use a removed block with lifecycle { destroy = false } or terraform state rm.", prior.ID.ValueString()),
+		)
+	}
+}
+
+func (r *awsDeploymentResource[M, P]) planUpdate(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
+	diags := &resp.Diagnostics
+	var plan, state M
+	diags.Append(req.Plan.Get(ctx, &plan)...)
+	if diags.Append(req.State.Get(ctx, &state)...); diags.HasError() {
+		return
+	}
+	change := planChange{title: r.kind.title, next: P(&plan), prior: P(&state), config: req.Config, plan: &resp.Plan, diags: diags}
+	if change.refuseProtectedReplacement() || change.refuseLegacyExternalID() {
+		return
+	}
+	change.planExternalIDRotation(ctx)
+	change.planHeal(ctx)
+}
+
+type planChange struct {
+	title  string
+	next   awsDeploymentModel
+	prior  awsDeploymentModel
+	config tfsdk.Config
+	plan   *tfsdk.Plan
+	diags  *diag.Diagnostics
+}
+
+func (c planChange) refuseProtectedReplacement() bool {
+	next, prior := c.next.common(), c.prior.common()
+	key := c.next.targetKey()
+	replaced := (!next.DeploymentID.IsUnknown() && !next.DeploymentID.Equal(prior.DeploymentID)) ||
+		(!key.IsUnknown() && !key.Equal(c.prior.targetKey()))
+	if !replaced || !prior.DeletionProtection.ValueBool() {
+		return false
+	}
+	c.diags.AddError(
+		"The "+c.title+" deployment has deletion protection",
+		fmt.Sprintf("This change replaces %s, which deletes it first, and Act refuses to delete it while deletion_protection is true. Set deletion_protection = false and apply first.", prior.ID.ValueString()),
+	)
+	return true
+}
+
+func (c planChange) refuseLegacyExternalID() bool {
+	if c.prior.common().ExternalIDSource.ValueString() != externalIDDerived || c.next.common().ExternalIDSource.ValueString() != externalIDLegacy {
+		return false
+	}
+	c.diags.AddAttributeError(path.Root("external_id_source"), "The external ID cannot go back to legacy", "This deployment already uses a derived external ID. Set external_id_source to \"derived\" or leave it out.")
+	return true
+}
+
+func (c planChange) planExternalIDRotation(ctx context.Context) {
+	next, prior := c.next.common(), c.prior.common()
+	if rotatesExternalID(rotation{prior: prior, next: next}) {
+		c.diags.Append(c.plan.SetAttribute(ctx, path.Root("external_id"), types.StringUnknown())...)
+		var configured types.Int64
+		c.diags.Append(c.config.GetAttribute(ctx, path.Root("external_id_key_version"), &configured)...)
+		if configured.IsNull() {
+			c.diags.Append(c.plan.SetAttribute(ctx, path.Root("external_id_key_version"), types.Int64Unknown())...)
+		}
+		return
+	}
+	if next.ExternalIDKeyVersion.IsUnknown() || prior.ExternalIDKeyVersion.IsNull() || next.ExternalIDKeyVersion.Equal(prior.ExternalIDKeyVersion) {
+		return
+	}
+	c.diags.AddAttributeError(
+		path.Root("external_id_key_version"),
+		"The external ID key version cannot change in place",
+		fmt.Sprintf("The deployment's external ID uses key version %d. It only changes when a legacy external ID rotates to derived. Pass external_id_key_version from data.act_aws_onboarding_parameters, which returns the deployment's own value.", prior.ExternalIDKeyVersion.ValueInt64()),
+	)
+}
+
+func (c planChange) planHeal(ctx context.Context) {
+	if !heals(rotation{prior: c.prior.common(), next: c.next.common()}) {
+		return
+	}
+	for _, attribute := range []string{"status", "error_code", "error_message"} {
+		c.diags.Append(c.plan.SetAttribute(ctx, path.Root(attribute), types.StringUnknown())...)
+	}
+}
+
+type rotation struct {
+	prior *awsDeploymentCommon
+	next  *awsDeploymentCommon
+}
+
+func rotatesExternalID(r rotation) bool {
+	return r.prior.ExternalIDSource.ValueString() == externalIDLegacy && r.next.ExternalIDSource.ValueString() == externalIDDerived
+}
+
+func heals(r rotation) bool {
+	return r.prior.Status.ValueString() == string(apigen.DeploymentStatusFailed) && r.next.ReverifyOnFailure.ValueBool()
+}
+
+func buildCreateBody(ctx context.Context, model awsDeploymentModel, diags *diag.Diagnostics) apigen.AwsDeploymentCreate {
 	c := model.common()
-	timeout, timeoutDiags := c.Timeouts.Create(ctx, defaultDeploymentTimeout)
-	diags.Append(timeoutDiags...)
 	body := apigen.AwsDeploymentCreate{
 		DeploymentID:       c.DeploymentID.ValueString(),
 		RoleArn:            c.RoleArn.ValueString(),
@@ -349,35 +489,26 @@ func (r *awsDeploymentResource[M, P]) Create(ctx context.Context, req resource.C
 		values := capabilityList(*capabilities)
 		body.DisabledCapabilities = &values
 	}
-	if !c.DeploymentMethod.IsUnknown() && !c.DeploymentMethod.IsNull() {
-		method := apigen.AwsDeploymentMethod(c.DeploymentMethod.ValueString())
-		body.DeploymentMethod = &method
+	if method := knownString(c.DeploymentMethod); method != nil {
+		value := apigen.AwsDeploymentMethod(*method)
+		body.DeploymentMethod = &value
 	}
 	if !c.ExternalIDKeyVersion.IsUnknown() && !c.ExternalIDKeyVersion.IsNull() {
 		version := int(c.ExternalIDKeyVersion.ValueInt64())
 		body.ExternalIDKeyVersion = &version
 	}
 	model.setTarget(ctx, &body, diags)
-	if diags.HasError() {
-		return
-	}
-	ctx, cancel := context.WithTimeout(ctx, timeout)
-	defer cancel()
+	return body
+}
+
+func (r *awsDeploymentResource[M, P]) createVerified(ctx context.Context, body apigen.AwsDeploymentCreate) (*client.AwsDeploymentResult, verificationOutcome, error) {
 	var result *client.AwsDeploymentResult
 	outcome, err := awsVerification.run(ctx, func(ctx context.Context) error {
 		var callErr error
-		result, callErr = r.data.Client.CreateAwsDeployment(ctx, body, idempotencyKey())
+		result, callErr = r.data.Client.CreateAwsDeployment(ctx, client.AwsDeploymentCreateRequest{Body: body, IdempotencyKey: idempotencyKey()})
 		return callErr
 	})
-	if err != nil {
-		r.addWriteError(diags, "create", model.targetLabel(), outcome, err)
-		return
-	}
-	r.writeState(ctx, model, result.Deployment, diags)
-	diags.Append(resp.State.Set(ctx, &plan)...)
-	setPrivate(ctx, resp.Private, privateETag, result.ETag, diags)
-	diags.AddWarning("Act verified the role", proofOfLife(model.targetLabel(), result.Deployment, outcome)+r.coverageNote(ctx, result.Deployment.ID))
-	addDeploymentWarnings(diags, result.Deployment)
+	return result, outcome, err
 }
 
 func (r *awsDeploymentResource[M, P]) coverageNote(ctx context.Context, id string) string {
@@ -386,7 +517,7 @@ func (r *awsDeploymentResource[M, P]) coverageNote(ctx context.Context, id strin
 	}
 	coverage, err := r.data.Client.GetDeploymentCoverage(ctx, id)
 	if err != nil {
-		return ""
+		return "\n\nAct could not report the coverage yet (" + err.Error() + "). Read data.act_deployment_coverage to follow it."
 	}
 	return fmt.Sprintf(
 		"\n\nCoverage now: %d of %d accounts connected, %d pending, %d failed. Account discovery is %s. Read data.act_deployment_coverage to follow it; the resource does not store it.",
@@ -394,204 +525,250 @@ func (r *awsDeploymentResource[M, P]) coverageNote(ctx context.Context, id strin
 	)
 }
 
-func (r *awsDeploymentResource[M, P]) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
-	diags := &resp.Diagnostics
-	var state M
-	diags.Append(req.State.Get(ctx, &state)...)
-	if diags.HasError() {
-		return
+type storedResult[P awsDeploymentModel] struct {
+	model   P
+	result  *client.AwsDeploymentResult
+	state   *tfsdk.State
+	private privateSetter
+	diags   *diag.Diagnostics
+	quiet   bool
+}
+
+func (r *awsDeploymentResource[M, P]) store(ctx context.Context, s storedResult[P]) {
+	r.writeState(ctx, s.model, s.result.Deployment, s.diags)
+	s.diags.Append(s.state.Set(ctx, s.model)...)
+	setPrivate(ctx, s.private, privateETag, s.result.ETag, s.diags)
+	if !s.quiet {
+		addDeploymentWarnings(s.diags, s.result.Deployment)
 	}
-	model := P(&state)
-	c := model.common()
-	result, err := r.data.Client.GetAwsDeployment(ctx, c.ID.ValueString())
-	if err != nil {
-		diags.AddError("Reading the "+r.kind.title+" deployment failed", err.Error())
-		return
-	}
-	if result == nil {
-		resp.State.RemoveResource(ctx)
-		return
-	}
-	if !r.scopeMatches(result.Deployment) {
-		diags.AddError("Wrong deployment type", fmt.Sprintf("Deployment %s %s", c.ID.ValueString(), r.kind.wrongScopeMessage))
-		return
-	}
-	r.writeState(ctx, model, result.Deployment, diags)
+}
+
+func defaultReverifyOnFailure(c *awsDeploymentCommon) {
 	if c.ReverifyOnFailure.IsNull() {
 		c.ReverifyOnFailure = types.BoolValue(true)
 	}
-	diags.Append(resp.State.Set(ctx, &state)...)
-	setPrivate(ctx, resp.Private, privateETag, result.ETag, diags)
-	if result.Deployment.Status == apigen.DeploymentStatusFailed {
-		next := "The next apply asks Act to verify it again."
-		if !c.ReverifyOnFailure.ValueBool() {
-			next = "reverify_on_failure is false, so Terraform does not verify it again."
-		}
-		diags.AddWarning(
-			"The "+r.kind.title+" deployment is failing",
-			fmt.Sprintf("Act cannot use the role of %s: %s %s. Fix the role, for example by applying the configuration that creates it. %s", model.targetLabel(), derefString(result.Deployment.ErrorCode), derefString(result.Deployment.ErrorMessage), next),
-		)
+}
+
+func (r *awsDeploymentResource[M, P]) warnIfFailing(model P, diags *diag.Diagnostics) {
+	c := model.common()
+	if c.Status.ValueString() != string(apigen.DeploymentStatusFailed) {
+		return
+	}
+	next := "The next apply asks Act to verify it again."
+	if !c.ReverifyOnFailure.ValueBool() {
+		next = "reverify_on_failure is false, so Terraform does not verify it again."
+	}
+	diags.AddWarning(
+		"The "+r.kind.title+" deployment is failing",
+		fmt.Sprintf("Act cannot use the role of %s: %s %s. Fix the role, for example by applying the configuration that creates it. %s", model.targetLabel(), c.ErrorCode.ValueString(), c.ErrorMessage.ValueString(), next),
+	)
+}
+
+type writeInput[P awsDeploymentModel] struct {
+	next  P
+	prior P
+	etag  string
+	diags *diag.Diagnostics
+}
+
+type deploymentWrite[M any, P interface {
+	*M
+	awsDeploymentModel
+}] struct {
+	resource *awsDeploymentResource[M, P]
+	next     P
+	prior    P
+	ref      client.AwsDeploymentRef
+	result   *client.AwsDeploymentResult
+	diags    *diag.Diagnostics
+}
+
+type writeStep struct {
+	action   string
+	needed   func(last *client.AwsDeploymentResult) bool
+	send     func(ctx context.Context, ref client.AwsDeploymentRef) (*client.AwsDeploymentResult, error)
+	announce bool
+}
+
+func (r *awsDeploymentResource[M, P]) newWrite(in writeInput[P]) *deploymentWrite[M, P] {
+	return &deploymentWrite[M, P]{
+		resource: r,
+		next:     in.next,
+		prior:    in.prior,
+		ref:      client.AwsDeploymentRef{ID: in.prior.common().ID.ValueString(), ETag: in.etag},
+		diags:    in.diags,
 	}
 }
 
-func (r *awsDeploymentResource[M, P]) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	diags := &resp.Diagnostics
-	var plan, state M
-	diags.Append(req.Plan.Get(ctx, &plan)...)
-	diags.Append(req.State.Get(ctx, &state)...)
-	if diags.HasError() {
-		return
+func (r *awsDeploymentResource[M, P]) updateSteps(ctx context.Context, w *deploymentWrite[M, P]) []writeStep {
+	patch := r.buildPatch(ctx, w.next, w.prior, w.diags)
+	change := rotation{prior: w.prior.common(), next: w.next.common()}
+	return []writeStep{
+		{
+			action: "update",
+			needed: func(*client.AwsDeploymentResult) bool { return len(patch) > 0 },
+			send: func(ctx context.Context, ref client.AwsDeploymentRef) (*client.AwsDeploymentResult, error) {
+				return r.data.Client.UpdateAwsDeployment(ctx, client.AwsDeploymentUpdateRequest{AwsDeploymentRef: ref, Patch: patch})
+			},
+		},
+		{
+			action: "rotate the external ID of",
+			needed: func(*client.AwsDeploymentResult) bool { return rotatesExternalID(change) },
+			send:   r.data.Client.RotateAwsExternalID,
+		},
+		{
+			action: "verify",
+			needed: func(last *client.AwsDeploymentResult) bool {
+				return heals(change) && (last == nil || last.Deployment.Status != apigen.DeploymentStatusActive)
+			},
+			send:     r.data.Client.VerifyAwsDeployment,
+			announce: true,
+		},
 	}
-	model, prior := P(&plan), P(&state)
-	next, current := model.common(), prior.common()
-	timeout, timeoutDiags := next.Timeouts.Update(ctx, defaultDeploymentTimeout)
-	diags.Append(timeoutDiags...)
-	patch := r.buildPatch(ctx, model, prior, diags)
-	if diags.HasError() {
-		return
+}
+
+func (w *deploymentWrite[M, P]) runAll(ctx context.Context, steps []writeStep) bool {
+	if w.diags.HasError() {
+		return false
 	}
-	ctx, cancel := context.WithTimeout(ctx, timeout)
-	defer cancel()
-	id := current.ID.ValueString()
-	etag := privateString(ctx, req.Private, privateETag)
-	var result *client.AwsDeploymentResult
-	outcome := verificationOutcome{}
-	call := func(action string, do func(ctx context.Context, etag string) (*client.AwsDeploymentResult, error)) bool {
-		var err error
-		outcome, err = awsVerification.run(ctx, func(ctx context.Context) error {
-			var callErr error
-			result, callErr = do(ctx, etag)
-			if client.IsStatus(callErr, http.StatusPreconditionFailed) {
-				fresh, ok := r.refreshETag(ctx, id, prior, diags)
-				if !ok {
-					return callErr
-				}
-				etag = fresh
-				result, callErr = do(ctx, etag)
-			}
-			return callErr
-		})
-		if err != nil {
-			if !diags.HasError() {
-				r.addWriteError(diags, action, model.targetLabel(), outcome, err)
-			}
+	for _, step := range steps {
+		if step.needed(w.result) && !w.run(ctx, step) {
 			return false
 		}
-		etag = result.ETag
-		return true
 	}
-	if len(patch) > 0 && !call("update", func(ctx context.Context, etag string) (*client.AwsDeploymentResult, error) {
-		return r.data.Client.UpdateAwsDeployment(ctx, id, etag, patch)
-	}) {
-		return
-	}
-	if current.ExternalIDSource.ValueString() == externalIDLegacy && next.ExternalIDSource.ValueString() == externalIDDerived {
-		if !call("rotate the external ID of", func(ctx context.Context, etag string) (*client.AwsDeploymentResult, error) {
-			return r.data.Client.RotateAwsExternalID(ctx, id, etag)
-		}) {
-			return
-		}
-	}
-	healing := current.Status.ValueString() == string(apigen.DeploymentStatusFailed) && next.ReverifyOnFailure.ValueBool()
-	if healing && (result == nil || result.Deployment.Status != apigen.DeploymentStatusActive) {
-		if !call("verify", func(ctx context.Context, etag string) (*client.AwsDeploymentResult, error) {
-			return r.data.Client.VerifyAwsDeployment(ctx, id, etag)
-		}) {
-			return
-		}
-		diags.AddWarning("Act verified the role again", proofOfLife(model.targetLabel(), result.Deployment, outcome))
-	}
-	if result == nil {
-		fresh, err := r.data.Client.GetAwsDeployment(ctx, id)
-		if err != nil || fresh == nil {
-			diags.AddError("Reading the "+r.kind.title+" deployment failed", fmt.Sprintf("Deployment %s: %v", id, err))
-			return
-		}
-		result = fresh
-	}
-	r.writeState(ctx, model, result.Deployment, diags)
-	diags.Append(resp.State.Set(ctx, &plan)...)
-	setPrivate(ctx, resp.Private, privateETag, result.ETag, diags)
-	addDeploymentWarnings(diags, result.Deployment)
+	return true
 }
 
-func (r *awsDeploymentResource[M, P]) refreshETag(ctx context.Context, id string, prior P, diags *diag.Diagnostics) (string, bool) {
-	fresh, err := r.data.Client.GetAwsDeployment(ctx, id)
-	if err != nil || fresh == nil {
-		return "", false
-	}
-	remote := *prior
-	copied := P(&remote)
-	r.writeState(ctx, copied, fresh.Deployment, diags)
-	if !sameIntent(copied.common(), prior.common()) || !copied.sameTarget(prior) {
-		diags.AddError(
-			"The "+r.kind.title+" deployment changed in Act",
-			fmt.Sprintf("Someone changed deployment %s since Terraform last read it, so nothing was sent. Run terraform apply again to plan against the current settings.", id),
-		)
-		return "", false
-	}
-	return fresh.ETag, true
-}
-
-func (r *awsDeploymentResource[M, P]) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	diags := &resp.Diagnostics
-	var state M
-	diags.Append(req.State.Get(ctx, &state)...)
-	if diags.HasError() {
-		return
-	}
-	model := P(&state)
-	id := model.common().ID.ValueString()
-	cleanup, err := r.data.Client.DeleteAwsDeployment(ctx, id)
+func (w *deploymentWrite[M, P]) run(ctx context.Context, step writeStep) bool {
+	outcome, err := awsVerification.run(ctx, func(ctx context.Context) error { return w.sendOnce(ctx, step) })
 	if err != nil {
-		var apiErr *client.APIError
-		if asAPIError(err, &apiErr) && apiErr.Code == string(apigen.ErrorEnvelopeErrorCodeDeletionProtected) {
-			diags.AddError("The "+r.kind.title+" deployment has deletion protection", fmt.Sprintf("Act refused to delete %s. Set deletion_protection = false and apply before you destroy it.", id))
-			return
+		if !w.diags.HasError() {
+			w.resource.addWriteError(w.diags, writeFailure{action: step.action, target: w.next.targetLabel(), outcome: outcome, err: err})
 		}
-		diags.AddError("Disconnecting the "+r.kind.title+" deployment failed", err.Error())
+		return false
+	}
+	w.ref.ETag = w.result.ETag
+	if step.announce {
+		w.diags.AddWarning("Act verified the role again", proofOfLife(connectionReport{target: w.next.targetLabel(), deployment: w.result.Deployment, outcome: outcome}))
+	}
+	return true
+}
+
+func (w *deploymentWrite[M, P]) sendOnce(ctx context.Context, step writeStep) error {
+	result, err := step.send(ctx, w.ref)
+	if client.IsStatus(err, http.StatusPreconditionFailed) && w.refreshETag(ctx) {
+		result, err = step.send(ctx, w.ref)
+	}
+	if err == nil {
+		w.result = result
+	}
+	return err
+}
+
+func (w *deploymentWrite[M, P]) refreshETag(ctx context.Context) bool {
+	fresh, err := w.resource.data.Client.GetAwsDeployment(ctx, w.ref.ID)
+	switch {
+	case err != nil:
+		w.diags.AddError("Reading the "+w.resource.kind.title+" deployment failed", fmt.Sprintf("Act answered 412 for deployment %s, and reading it again failed: %v", w.ref.ID, err))
+		return false
+	case fresh == nil:
+		w.diags.AddError("The "+w.resource.kind.title+" deployment is gone", fmt.Sprintf("Deployment %s was deleted in Act during this apply. Run terraform apply again to create it.", w.ref.ID))
+		return false
+	}
+	remote := *w.prior
+	copied := P(&remote)
+	w.resource.writeState(ctx, copied, fresh.Deployment, w.diags)
+	if !sameIntent(copied.common(), w.prior.common()) || !copied.sameTarget(w.prior) {
+		w.diags.AddError(
+			"The "+w.resource.kind.title+" deployment changed in Act",
+			fmt.Sprintf("Someone changed deployment %s since Terraform last read it, so nothing was sent. Run terraform apply again to plan against the current settings.", w.ref.ID),
+		)
+		return false
+	}
+	w.ref.ETag = fresh.ETag
+	return true
+}
+
+func (w *deploymentWrite[M, P]) latest(ctx context.Context) (*client.AwsDeploymentResult, bool) {
+	if w.result != nil {
+		return w.result, true
+	}
+	fresh, err := w.resource.data.Client.GetAwsDeployment(ctx, w.ref.ID)
+	switch {
+	case err != nil:
+		w.diags.AddError("Reading the "+w.resource.kind.title+" deployment failed", err.Error())
+		return nil, false
+	case fresh == nil:
+		w.diags.AddError("The "+w.resource.kind.title+" deployment is gone", fmt.Sprintf("Deployment %s was deleted in Act during this apply. Run terraform apply again to create it.", w.ref.ID))
+		return nil, false
+	}
+	return fresh, true
+}
+
+func (r *awsDeploymentResource[M, P]) addDeleteError(model P, err error, diags *diag.Diagnostics) {
+	id := model.common().ID.ValueString()
+	var apiErr *client.APIError
+	if asAPIError(err, &apiErr) && apiErr.Code == string(apigen.ErrorEnvelopeErrorCodeDeletionProtected) {
+		diags.AddError("The "+r.kind.title+" deployment has deletion protection", fmt.Sprintf("Act refused to delete %s. Set deletion_protection = false and apply before you destroy it.", id))
 		return
 	}
-	if len(cleanup) > 0 {
-		lines := make([]string, 0, len(cleanup))
-		for _, item := range cleanup {
-			lines = append(lines, "- "+item.Resource+": "+item.Description)
-		}
-		diags.AddWarning("Act disconnected "+model.targetLabel(), "Act stopped scanning and deleted the credentials it held. These still exist in AWS:\n\n"+strings.Join(lines, "\n"))
+	diags.AddError("Disconnecting the "+r.kind.title+" deployment failed", err.Error())
+}
+
+type cleanupReport struct {
+	target string
+	items  []apigen.CleanupItem
+}
+
+func reportCleanup(report cleanupReport, diags *diag.Diagnostics) {
+	if len(report.items) == 0 {
+		return
+	}
+	lines := make([]string, 0, len(report.items))
+	for _, item := range report.items {
+		lines = append(lines, "- "+item.Resource+": "+item.Description)
+	}
+	diags.AddWarning("Act disconnected "+report.target, "Act stopped scanning and deleted the credentials it held. These still exist in AWS:\n\n"+strings.Join(lines, "\n"))
+}
+
+func (r *awsDeploymentResource[M, P]) resolveImportID(ctx context.Context, id string, diags *diag.Diagnostics) (string, bool) {
+	if uuidPattern.MatchString(id) {
+		return id, true
+	}
+	if !r.kind.importKey(id) {
+		diags.AddError("Invalid import ID", "Use "+r.kind.importFormats+".")
+		return "", false
+	}
+	matches, err := r.deploymentsCovering(ctx, id)
+	if err != nil {
+		diags.AddError("Listing deployments failed", err.Error())
+		return "", false
+	}
+	switch len(matches) {
+	case 0:
+		diags.AddError("No deployment to import", fmt.Sprintf("This tenant has no AWS %s deployment for %s.", r.kind.scope, id))
+		return "", false
+	case 1:
+		return matches[0], true
+	default:
+		diags.AddError("More than one deployment matches", fmt.Sprintf("Deployments %s all cover %s. Import one by its ID.", strings.Join(matches, ", "), id))
+		return "", false
 	}
 }
 
-func (r *awsDeploymentResource[M, P]) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	id := strings.TrimSpace(req.ID)
-	if !uuidPattern.MatchString(id) {
-		if !r.kind.importKey(id) {
-			resp.Diagnostics.AddError("Invalid import ID", "Use "+r.kind.importFormats+".")
-			return
-		}
-		cloud := apigen.CloudAws
-		items, err := r.data.Client.ListDeployments(ctx, client.DeploymentFilter{Cloud: &cloud, Target: &id})
-		if err != nil {
-			resp.Diagnostics.AddError("Listing deployments failed", err.Error())
-			return
-		}
-		matches := []string{}
-		for _, item := range items {
-			if item.Scope == r.kind.scope {
-				matches = append(matches, item.ID)
-			}
-		}
-		switch len(matches) {
-		case 0:
-			resp.Diagnostics.AddError("No deployment to import", fmt.Sprintf("This tenant has no AWS %s deployment for %s.", r.kind.scope, id))
-			return
-		case 1:
-			id = matches[0]
-		default:
-			resp.Diagnostics.AddError("More than one deployment matches", fmt.Sprintf("Deployments %s all cover %s. Import one by its ID.", strings.Join(matches, ", "), id))
-			return
+func (r *awsDeploymentResource[M, P]) deploymentsCovering(ctx context.Context, target string) ([]string, error) {
+	cloud := apigen.CloudAws
+	items, err := r.data.Client.ListDeployments(ctx, client.DeploymentFilter{Cloud: &cloud, Target: &target})
+	if err != nil {
+		return nil, err
+	}
+	matches := []string{}
+	for _, item := range items {
+		if item.Scope == r.kind.scope {
+			matches = append(matches, item.ID)
 		}
 	}
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("id"), id)...)
+	return matches, nil
 }
 
 func (r *awsDeploymentResource[M, P]) scopeMatches(item apigen.AwsDeployment) bool {
@@ -607,13 +784,9 @@ func (r *awsDeploymentResource[M, P]) writeState(ctx context.Context, model P, i
 	c.DeploymentID = types.StringValue(item.ID)
 	c.RoleArn = types.StringValue(item.RoleArn)
 	c.Name = types.StringValue(item.Name)
-	c.Tags = nullableStringMap(ctx, item.Tags, c.Tags, diags)
+	c.Tags = nullableStringMap(ctx, mapWithPrior{values: item.Tags, prior: c.Tags}, diags)
 	c.AllowedRegions = nullableStringSet(ctx, item.AllowedRegions, diags)
-	capabilities := make([]string, 0, len(item.DisabledCapabilities))
-	for _, capability := range item.DisabledCapabilities {
-		capabilities = append(capabilities, string(capability))
-	}
-	c.DisabledCapabilities = stringSet(ctx, capabilities, diags)
+	c.DisabledCapabilities = stringSet(ctx, capabilityNames(item.DisabledCapabilities), diags)
 	c.DeploymentMethod = types.StringNull()
 	if item.DeploymentMethod != nil {
 		c.DeploymentMethod = types.StringValue(string(*item.DeploymentMethod))
@@ -668,65 +841,97 @@ func (r *awsDeploymentResource[M, P]) buildPatch(ctx context.Context, model, pri
 	return patch
 }
 
-func (r *awsDeploymentResource[M, P]) addWriteError(diags *diag.Diagnostics, action, target string, outcome verificationOutcome, err error) {
-	summary := fmt.Sprintf("Could not %s the %s deployment", action, r.kind.title)
+type writeFailure struct {
+	action  string
+	target  string
+	outcome verificationOutcome
+	err     error
+}
+
+type alreadyExistsDetails struct {
+	DeploymentID string `json:"deploymentId"`
+}
+
+type invalidRequestDetails struct {
+	Attribute string `json:"attribute"`
+	Reason    string `json:"reason"`
+}
+
+func (r *awsDeploymentResource[M, P]) addWriteError(diags *diag.Diagnostics, failure writeFailure) {
+	summary := fmt.Sprintf("Could not %s the %s deployment", failure.action, r.kind.title)
 	var apiErr *client.APIError
-	if !asAPIError(err, &apiErr) {
-		diags.AddError(summary, err.Error())
+	if !asAPIError(failure.err, &apiErr) {
+		diags.AddError(summary, failure.err.Error())
 		return
 	}
-	switch {
-	case apiErr.Code == string(apigen.ErrorEnvelopeErrorCodeAlreadyExists):
-		existing := apiErr.Detail("deploymentId")
-		if existing == "" {
-			existing = target
-		}
-		diags.AddError(summary, fmt.Sprintf("Act already has a deployment for %s. Terraform does not take it over silently. Import it instead:\n\nimport {\n  to = %s.<name>\n  id = %q\n}", target, r.typeName(), existing))
-	case apiErr.Code == codeVerificationFail:
-		failure, _ := asVerificationFailure(err)
-		detail := verificationDetail(failure, outcome)
-		if failure.attribute == "roleArn" || failure.attribute == "" {
-			diags.AddAttributeError(path.Root("role_arn"), summary, detail)
-			return
-		}
-		diags.AddError(summary, detail)
-	case apiErr.Status == http.StatusPreconditionFailed:
+	switch apigen.ErrorEnvelopeErrorCode(apiErr.Code) {
+	case apigen.ErrorEnvelopeErrorCodeAlreadyExists:
+		diags.AddError(summary, r.importInstead(apiErr, failure.target))
+	case apigen.ErrorEnvelopeErrorCodeVerificationFailed:
+		addVerificationError(diags, summary, failure)
+	case apigen.ErrorEnvelopeErrorCodePreconditionFailed:
 		diags.AddError(summary, "The deployment changed in Act since Terraform last read it. Run terraform apply again to plan against the current settings.")
-	case apiErr.Code == string(apigen.ErrorEnvelopeErrorCodeInvalidRequest):
-		if attribute := wireAttribute(apiErr.Detail("attribute")); attribute != "" {
-			diags.AddAttributeError(path.Root(attribute), summary, fmt.Sprintf("Act rejected %s: %s.", attribute, apiErr.Detail("reason")))
-			return
-		}
-		diags.AddError(summary, err.Error())
+	case apigen.ErrorEnvelopeErrorCodeInvalidRequest:
+		addInvalidRequestError(diags, summary, apiErr)
 	default:
-		diags.AddError(summary, err.Error())
+		diags.AddError(summary, apiErr.Error())
 	}
 }
 
-func verificationDetail(failure *verificationFailure, outcome verificationOutcome) string {
-	code := failure.cloudErrorCode
-	if code == "" {
-		code = failure.err.Message
+func (r *awsDeploymentResource[M, P]) importInstead(apiErr *client.APIError, target string) string {
+	var details alreadyExistsDetails
+	existing := target
+	if apiErr.DecodeDetails(&details) == nil && details.DeploymentID != "" {
+		existing = details.DeploymentID
 	}
-	detail := "Act could not use the role: " + code + "."
-	if failure.hint != "" {
-		detail += " " + failure.hint
+	return fmt.Sprintf("Act already has a deployment for %s. Terraform does not take it over silently. Import it instead:\n\nimport {\n  to = %s.<name>\n  id = %q\n}", target, r.typeName(), existing)
+}
+
+func addVerificationError(diags *diag.Diagnostics, summary string, failure writeFailure) {
+	verification, _ := asVerificationFailure(failure.err)
+	detail := verification.describe(failure.outcome)
+	if verification.Attribute == "roleArn" || verification.Attribute == "" {
+		diags.AddAttributeError(path.Root("role_arn"), summary, detail)
+		return
+	}
+	diags.AddError(summary, detail)
+}
+
+func addInvalidRequestError(diags *diag.Diagnostics, summary string, apiErr *client.APIError) {
+	var details invalidRequestDetails
+	if apiErr.DecodeDetails(&details) != nil || wireAttributes[details.Attribute] == "" {
+		diags.AddError(summary, apiErr.Error())
+		return
+	}
+	attribute := wireAttributes[details.Attribute]
+	diags.AddAttributeError(path.Root(attribute), summary, fmt.Sprintf("Act rejected %s: %s.", attribute, details.Reason))
+}
+
+func (f *verificationFailure) describe(outcome verificationOutcome) string {
+	detail := "Act could not use the role: " + f.CloudErrorCode + "."
+	if f.Hint != "" {
+		detail += " " + f.Hint
 	}
 	switch {
-	case failure.retryClass == retryClassPropagation && outcome.timedOut:
-		detail += fmt.Sprintf(" Act kept trying for %s (%d attempts) while AWS propagated the role, then gave up. Nothing was stored. Apply again, or raise timeouts if the role takes longer to propagate.", outcome.elapsed.Round(time.Second), outcome.attempts)
+	case f.RetryClass == retryClassPropagation && outcome.timedOut:
+		return detail + fmt.Sprintf(" Act kept trying for %s (%d attempts) while AWS propagated the role, then gave up. Nothing was stored. Apply again, or raise timeouts if the role takes longer to propagate.", outcome.elapsed.Round(time.Second), outcome.attempts)
 	case outcome.attempts > 1:
-		detail += fmt.Sprintf(" Act got the same answer %d times, so this needs a fix on the AWS side. Nothing was stored.", outcome.attempts)
+		return detail + fmt.Sprintf(" Act got the same answer %d times, so this needs a fix on the AWS side. Nothing was stored.", outcome.attempts)
 	default:
-		detail += " Nothing was stored."
+		return detail + " Nothing was stored."
 	}
-	return detail
 }
 
-func proofOfLife(target string, item apigen.AwsDeployment, outcome verificationOutcome) string {
-	message := fmt.Sprintf("Connected. Act started the first scan of %s; open %s", target, item.ConsoleURL)
-	if outcome.attempts > 1 {
-		message += fmt.Sprintf("\n\nVerified after %s and %d attempts while AWS propagated the role.", outcome.elapsed.Round(time.Second), outcome.attempts)
+type connectionReport struct {
+	target     string
+	deployment apigen.AwsDeployment
+	outcome    verificationOutcome
+}
+
+func proofOfLife(report connectionReport) string {
+	message := fmt.Sprintf("Connected. Act started the first scan of %s; open %s", report.target, report.deployment.ConsoleURL)
+	if report.outcome.attempts > 1 {
+		message += fmt.Sprintf("\n\nVerified after %s and %d attempts while AWS propagated the role.", report.outcome.elapsed.Round(time.Second), report.outcome.attempts)
 	}
 	return message
 }
@@ -753,10 +958,6 @@ var wireAttributes = map[string]string{
 	"organization.excludedAccountIds":    "excluded_account_ids",
 	"organization.memberRoleName":        "member_role_name",
 	"organization.memberRolePath":        "member_role_path",
-}
-
-func wireAttribute(name string) string {
-	return wireAttributes[name]
 }
 
 func sameIntent(a, b *awsDeploymentCommon) bool {

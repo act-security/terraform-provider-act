@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/act-security/terraform-provider-act/internal/apigen"
 	"github.com/act-security/terraform-provider-act/internal/client"
 )
 
@@ -33,7 +34,7 @@ func (c *fakeClock) policy(budget time.Duration) verificationPolicy {
 func failure(retryClass, code string) error {
 	return &client.APIError{
 		Status:  422,
-		Code:    codeVerificationFail,
+		Code:    string(apigen.ErrorEnvelopeErrorCodeVerificationFailed),
 		Details: map[string]any{"retryClass": retryClass, "cloudErrorCode": code, "attribute": "roleArn"},
 	}
 }

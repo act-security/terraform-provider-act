@@ -283,13 +283,6 @@ func knownString(value types.String) *string {
 	return &v
 }
 
-func derefString(value *string) string {
-	if value == nil {
-		return ""
-	}
-	return *value
-}
-
 func stringSlice(ctx context.Context, value types.Set, diags *diag.Diagnostics) *[]string {
 	if value.IsNull() || value.IsUnknown() {
 		return nil
@@ -315,6 +308,14 @@ func sliceOrNil(values *[]string) any {
 	return *values
 }
 
+func capabilityNames(capabilities []apigen.AwsCapability) []string {
+	names := make([]string, 0, len(capabilities))
+	for _, capability := range capabilities {
+		names = append(names, string(capability))
+	}
+	return names
+}
+
 func capabilityList(values []string) []apigen.AwsCapability {
 	capabilities := make([]apigen.AwsCapability, 0, len(values))
 	for _, value := range values {
@@ -336,12 +337,17 @@ func nullableStringSet(ctx context.Context, values *[]string, diags *diag.Diagno
 	return stringSet(ctx, *values, diags)
 }
 
-func nullableStringMap(ctx context.Context, values map[string]string, prior types.Map, diags *diag.Diagnostics) types.Map {
-	if len(values) == 0 && (prior.IsNull() || prior.IsUnknown()) {
+type mapWithPrior struct {
+	values map[string]string
+	prior  types.Map
+}
+
+func nullableStringMap(ctx context.Context, in mapWithPrior, diags *diag.Diagnostics) types.Map {
+	if len(in.values) == 0 && (in.prior.IsNull() || in.prior.IsUnknown()) {
 		return types.MapNull(types.StringType)
 	}
 	elements := map[string]attr.Value{}
-	for key, value := range values {
+	for key, value := range in.values {
 		elements[key] = types.StringValue(value)
 	}
 	result, mapDiags := types.MapValue(types.StringType, elements)

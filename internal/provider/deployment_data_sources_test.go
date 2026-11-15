@@ -84,8 +84,8 @@ func TestDeploymentDataSources(t *testing.T) {
 	s := fakeapi.Start(t)
 	s.Setenv(t)
 	provider.FastVerification(t)
-	accountID := s.DeploymentID("aws:account:"+testAccount, "")
-	orgID := s.DeploymentID("aws:organization:"+testOrg, "")
+	accountID := s.AwsAccountDeploymentID(testAccount)
+	orgID := s.AwsOrganizationDeploymentID(testOrg)
 	failing := "ROLE_MISSING"
 	s.SetMemberAccounts(orgID, []gen.MemberAccount{
 		{AccountID: "333333333333", Status: gen.MemberAccountStatusConnected},
@@ -168,7 +168,7 @@ data "act_aws_onboarding_parameters" "both" {
 func TestAwsOnboardingParametersForAnAccount(t *testing.T) {
 	s := fakeapi.Start(t)
 	s.Setenv(t)
-	id := s.DeploymentID("aws:account:"+testAccount, "")
+	id := s.AwsAccountDeploymentID(testAccount)
 	address := "data.act_aws_onboarding_parameters.this"
 
 	resource.UnitTest(t, resource.TestCase{

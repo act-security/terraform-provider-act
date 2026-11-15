@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -18,6 +19,8 @@ import (
 	"github.com/act-security/terraform-provider-act/internal/apigen"
 	"github.com/act-security/terraform-provider-act/internal/client"
 )
+
+const maxTargetLength = 128
 
 var (
 	cloudNames            = []string{string(apigen.CloudAws), string(apigen.CloudAzure), string(apigen.CloudGcp)}
@@ -195,54 +198,58 @@ func (d *awsOnboardingDataSource) Read(ctx context.Context, req datasource.ReadR
 		resp.Diagnostics.AddError("Reading the AWS onboarding values failed", err.Error())
 		return
 	}
-	model.DeploymentID = types.StringValue(values.DeploymentID)
-	model.ExistingDeployment = nil
+	model.fillFrom(*values)
+	resp.Diagnostics.Append(resp.State.Set(ctx, &model)...)
+}
+
+func (m *awsOnboardingModel) fillFrom(values apigen.AwsOnboarding) {
+	m.DeploymentID = types.StringValue(values.DeploymentID)
+	m.ExistingDeployment = nil
 	if existing := values.ExistingDeployment; existing != nil {
-		model.ExistingDeployment = &existingDeploymentModel{
+		m.ExistingDeployment = &existingDeploymentModel{
 			ID:         types.StringValue(existing.ID),
 			Status:     types.StringValue(string(existing.Status)),
 			CreatedVia: types.StringNull(),
 		}
 		if existing.CreatedVia != nil {
-			model.ExistingDeployment.CreatedVia = types.StringValue(string(*existing.CreatedVia))
+			m.ExistingDeployment.CreatedVia = types.StringValue(string(*existing.CreatedVia))
 		}
 	}
-	model.ActPrincipalArn = types.StringValue(values.ActPrincipalArn)
-	model.DeprecatedPrincipalArns = []types.String{}
+	m.ActPrincipalArn = types.StringValue(values.ActPrincipalArn)
+	m.DeprecatedPrincipalArns = []types.String{}
 	for _, principal := range values.DeprecatedPrincipals {
-		model.DeprecatedPrincipalArns = append(model.DeprecatedPrincipalArns, types.StringValue(principal.Arn))
+		m.DeprecatedPrincipalArns = append(m.DeprecatedPrincipalArns, types.StringValue(principal.Arn))
 	}
-	model.ExternalID = types.StringValue(values.ExternalID)
-	model.ExternalIDSource = types.StringValue(string(values.ExternalIDSource))
-	model.TargetExternalID = types.StringValue(values.TargetExternalID)
-	model.ExternalIDKeyVersion = types.Int64Value(int64(values.ExternalIDKeyVersion))
-	model.RoleName = types.StringValue(values.RoleName)
-	model.RoleArn = types.StringPointerValue(values.RoleArn)
-	model.AssumeRolePolicyJSON = types.StringValue(values.AssumeRolePolicyJSON)
-	model.CustomPolicyDocuments = map[string]types.String{}
+	m.ExternalID = types.StringValue(values.ExternalID)
+	m.ExternalIDSource = types.StringValue(string(values.ExternalIDSource))
+	m.TargetExternalID = types.StringValue(values.TargetExternalID)
+	m.ExternalIDKeyVersion = types.Int64Value(int64(values.ExternalIDKeyVersion))
+	m.RoleName = types.StringValue(values.RoleName)
+	m.RoleArn = types.StringPointerValue(values.RoleArn)
+	m.AssumeRolePolicyJSON = types.StringValue(values.AssumeRolePolicyJSON)
+	m.CustomPolicyDocuments = map[string]types.String{}
 	for name, document := range values.CustomPolicyDocuments {
-		model.CustomPolicyDocuments[name] = types.StringValue(document)
+		m.CustomPolicyDocuments[name] = types.StringValue(document)
 	}
-	model.ManagedPolicyArns = stringValues(values.ManagedPolicyArns)
-	model.MemberRoleName = types.StringValue(values.MemberRoleName)
-	model.MemberRolePath = types.StringValue(values.MemberRolePath)
-	model.CloudformationTemplateURL = types.StringValue(values.CloudformationTemplateURL)
-	model.CloudformationTemplateSha256 = types.StringValue(values.CloudformationTemplateSha256)
-	model.ModuleSource = types.StringValue(values.ModuleSource)
-	model.ModuleVersion = types.StringValue(values.ModuleVersion)
-	model.ModuleSha256 = types.StringValue(values.ModuleSha256)
-	model.PermissionsHash = types.StringValue(values.PermissionsHash)
-	model.DeploymentVersion = types.StringValue(values.DeploymentVersion)
-	model.ModuleVersions = []moduleVersionModel{}
+	m.ManagedPolicyArns = stringValues(values.ManagedPolicyArns)
+	m.MemberRoleName = types.StringValue(values.MemberRoleName)
+	m.MemberRolePath = types.StringValue(values.MemberRolePath)
+	m.CloudformationTemplateURL = types.StringValue(values.CloudformationTemplateURL)
+	m.CloudformationTemplateSha256 = types.StringValue(values.CloudformationTemplateSha256)
+	m.ModuleSource = types.StringValue(values.ModuleSource)
+	m.ModuleVersion = types.StringValue(values.ModuleVersion)
+	m.ModuleSha256 = types.StringValue(values.ModuleSha256)
+	m.PermissionsHash = types.StringValue(values.PermissionsHash)
+	m.DeploymentVersion = types.StringValue(values.DeploymentVersion)
+	m.ModuleVersions = []moduleVersionModel{}
 	for _, version := range values.ModuleVersions {
-		model.ModuleVersions = append(model.ModuleVersions, moduleVersionModel{
+		m.ModuleVersions = append(m.ModuleVersions, moduleVersionModel{
 			Version:           types.StringValue(version.Version),
 			Sha256:            types.StringValue(version.Sha256),
 			PermissionsHash:   types.StringValue(version.PermissionsHash),
 			DeploymentVersion: types.StringValue(version.DeploymentVersion),
 		})
 	}
-	resp.Diagnostics.Append(resp.State.Set(ctx, &model)...)
 }
 
 type deploymentSummaryModel struct {
@@ -321,7 +328,7 @@ func (d *deploymentDataSource) Schema(_ context.Context, _ datasource.SchemaRequ
 	attributes["target"] = schema.StringAttribute{
 		MarkdownDescription: "Find the deployment that covers this target instead, such as a 12-digit AWS account ID or an organization ID. Set this or `id`. Exactly one deployment must match.",
 		Optional:            true,
-		Validators:          []validator.String{stringvalidator.LengthBetween(1, 128)},
+		Validators:          []validator.String{stringvalidator.LengthBetween(1, maxTargetLength)},
 	}
 	attributes["cloud"] = schema.StringAttribute{
 		MarkdownDescription: "`aws`, `azure` or `gcp`. Set it to narrow a `target` lookup.",
@@ -341,20 +348,32 @@ func (d *deploymentDataSource) ConfigValidators(context.Context) []datasource.Co
 
 func (d *deploymentDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
 	var model deploymentLookupModel
-	resp.Diagnostics.Append(req.Config.Get(ctx, &model)...)
-	if resp.Diagnostics.HasError() {
+	if resp.Diagnostics.Append(req.Config.Get(ctx, &model)...); resp.Diagnostics.HasError() {
 		return
 	}
+	items, err := d.data.Client.ListDeployments(ctx, lookupFilter(model))
+	if err != nil {
+		resp.Diagnostics.AddError("Listing deployments failed", err.Error())
+		return
+	}
+	match, ok := onlyMatch(model, items, &resp.Diagnostics)
+	if !ok {
+		return
+	}
+	model.deploymentSummaryModel = summaryModel(match)
+	resp.Diagnostics.Append(resp.State.Set(ctx, &model)...)
+}
+
+func lookupFilter(model deploymentLookupModel) client.DeploymentFilter {
 	filter := client.DeploymentFilter{Target: knownString(model.Target)}
 	if cloud := knownString(model.Cloud); cloud != nil {
 		value := apigen.Cloud(*cloud)
 		filter.Cloud = &value
 	}
-	items, err := d.data.Client.ListDeployments(ctx, filter)
-	if err != nil {
-		resp.Diagnostics.AddError("Listing deployments failed", err.Error())
-		return
-	}
+	return filter
+}
+
+func onlyMatch(model deploymentLookupModel, items []apigen.DeploymentSummary, diags *diag.Diagnostics) (apigen.DeploymentSummary, bool) {
 	matches := []apigen.DeploymentSummary{}
 	for _, item := range items {
 		if model.ID.IsNull() || item.ID == model.ID.ValueString() {
@@ -367,19 +386,18 @@ func (d *deploymentDataSource) Read(ctx context.Context, req datasource.ReadRequ
 	}
 	switch len(matches) {
 	case 0:
-		resp.Diagnostics.AddError("Deployment not found", fmt.Sprintf("No deployment in this tenant matches %s.", wanted))
-		return
+		diags.AddError("Deployment not found", fmt.Sprintf("No deployment in this tenant matches %s.", wanted))
+		return apigen.DeploymentSummary{}, false
 	case 1:
+		return matches[0], true
 	default:
 		ids := make([]string, 0, len(matches))
 		for _, item := range matches {
 			ids = append(ids, item.ID)
 		}
-		resp.Diagnostics.AddError("More than one deployment matches", fmt.Sprintf("Deployments %s all cover %s. Look one up by id.", strings.Join(ids, ", "), wanted))
-		return
+		diags.AddError("More than one deployment matches", fmt.Sprintf("Deployments %s all cover %s. Look one up by id.", strings.Join(ids, ", "), wanted))
+		return apigen.DeploymentSummary{}, false
 	}
-	model.deploymentSummaryModel = summaryModel(matches[0])
-	resp.Diagnostics.Append(resp.State.Set(ctx, &model)...)
 }
 
 type deploymentsDataSource struct{ actDataSource }
@@ -416,7 +434,7 @@ func (d *deploymentsDataSource) Schema(_ context.Context, _ datasource.SchemaReq
 			"target": schema.StringAttribute{
 				MarkdownDescription: "Only deployments that cover this target, such as an AWS account ID.",
 				Optional:            true,
-				Validators:          []validator.String{stringvalidator.LengthBetween(1, 128)},
+				Validators:          []validator.String{stringvalidator.LengthBetween(1, maxTargetLength)},
 			},
 			"tags": schema.MapAttribute{
 				MarkdownDescription: "Only deployments that carry all of these Act tags.",
@@ -538,25 +556,29 @@ func (d *deploymentCoverageDataSource) Read(ctx context.Context, req datasource.
 		resp.Diagnostics.AddError("Reading the deployment coverage failed", err.Error())
 		return
 	}
-	model.AccountsExpected = types.Int64Value(int64(coverage.AccountsExpected))
-	model.AccountsConnected = types.Int64Value(int64(coverage.AccountsConnected))
-	model.AccountsFailed = types.Int64Value(int64(coverage.AccountsFailed))
-	model.AccountsPending = types.Int64Value(int64(coverage.AccountsPending))
-	model.DiscoveryState = types.StringValue(string(coverage.DiscoveryState))
-	model.LastDiscoveryAt = types.StringNull()
+	model.fillFrom(*coverage)
+	resp.Diagnostics.Append(resp.State.Set(ctx, &model)...)
+}
+
+func (m *deploymentCoverageModel) fillFrom(coverage apigen.DeploymentCoverage) {
+	m.AccountsExpected = types.Int64Value(int64(coverage.AccountsExpected))
+	m.AccountsConnected = types.Int64Value(int64(coverage.AccountsConnected))
+	m.AccountsFailed = types.Int64Value(int64(coverage.AccountsFailed))
+	m.AccountsPending = types.Int64Value(int64(coverage.AccountsPending))
+	m.DiscoveryState = types.StringValue(string(coverage.DiscoveryState))
+	m.LastDiscoveryAt = types.StringNull()
 	if coverage.LastDiscoveryAt != nil {
-		model.LastDiscoveryAt = types.StringValue(coverage.LastDiscoveryAt.UTC().Format(time.RFC3339))
+		m.LastDiscoveryAt = types.StringValue(coverage.LastDiscoveryAt.UTC().Format(time.RFC3339))
 	}
-	model.FailedAccounts = []failedAccountModel{}
+	m.FailedAccounts = []failedAccountModel{}
 	for _, failed := range coverage.FailedAccounts {
-		model.FailedAccounts = append(model.FailedAccounts, failedAccountModel{
+		m.FailedAccounts = append(m.FailedAccounts, failedAccountModel{
 			AccountID:    types.StringValue(failed.AccountID),
 			ErrorCode:    types.StringValue(failed.ErrorCode),
 			Cause:        types.StringPointerValue(failed.Cause),
 			FailingSince: types.StringValue(failed.FailingSince.UTC().Format(time.RFC3339)),
 		})
 	}
-	resp.Diagnostics.Append(resp.State.Set(ctx, &model)...)
 }
 
 type deploymentAccountsDataSource struct{ actDataSource }
@@ -621,7 +643,7 @@ func (d *deploymentAccountsDataSource) Read(ctx context.Context, req datasource.
 		filter := apigen.MemberAccountStatus(*value)
 		status = &filter
 	}
-	accounts, err := d.data.Client.ListDeploymentAccounts(ctx, model.DeploymentID.ValueString(), status)
+	accounts, err := d.data.Client.ListDeploymentAccounts(ctx, client.DeploymentAccountsQuery{DeploymentID: model.DeploymentID.ValueString(), Status: status})
 	if err != nil {
 		resp.Diagnostics.AddError("Listing the deployment's accounts failed", err.Error())
 		return

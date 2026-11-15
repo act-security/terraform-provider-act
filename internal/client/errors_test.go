@@ -26,3 +26,17 @@ func TestNewAPIError(t *testing.T) {
 		t.Fatalf("newAPIError for a non-envelope body = %+v", plain)
 	}
 }
+
+func TestDecodeDetailsIntoATypedShape(t *testing.T) {
+	apiErr := &APIError{Details: map[string]any{"retryClass": "propagation", "attempt": 2}}
+	var details struct {
+		RetryClass string `json:"retryClass"`
+		Attempt    int    `json:"attempt"`
+	}
+	if err := apiErr.DecodeDetails(&details); err != nil || details.RetryClass != "propagation" || details.Attempt != 2 {
+		t.Fatalf("decoded %+v, %v", details, err)
+	}
+	if err := (&APIError{Details: map[string]any{"attempt": "two"}}).DecodeDetails(&details); err == nil {
+		t.Fatal("a detail of the wrong type decoded without an error")
+	}
+}

@@ -16,6 +16,26 @@ type AwsDeploymentResult struct {
 
 type AwsDeploymentPatch map[string]any
 
+type AwsDeploymentCreateRequest struct {
+	Body           apigen.AwsDeploymentCreate
+	IdempotencyKey string
+}
+
+type AwsDeploymentRef struct {
+	ID   string
+	ETag string
+}
+
+type AwsDeploymentUpdateRequest struct {
+	AwsDeploymentRef
+	Patch AwsDeploymentPatch
+}
+
+type DeploymentAccountsQuery struct {
+	DeploymentID string
+	Status       *apigen.MemberAccountStatus
+}
+
 type DeploymentFilter struct {
 	Cloud  *apigen.Cloud
 	Status *apigen.DeploymentStatus
@@ -70,8 +90,8 @@ func (c *Client) GetAwsDeployment(ctx context.Context, id string) (*AwsDeploymen
 	return &AwsDeploymentResult{Deployment: *resp.JSON200, ETag: resp.HTTPResponse.Header.Get("ETag")}, nil
 }
 
-func (c *Client) CreateAwsDeployment(ctx context.Context, body apigen.AwsDeploymentCreate, idempotencyKey string) (*AwsDeploymentResult, error) {
-	resp, err := c.api.CreateAwsDeploymentWithResponse(ctx, &apigen.CreateAwsDeploymentParams{IdempotencyKey: idempotencyKey}, body)
+func (c *Client) CreateAwsDeployment(ctx context.Context, req AwsDeploymentCreateRequest) (*AwsDeploymentResult, error) {
+	resp, err := c.api.CreateAwsDeploymentWithResponse(ctx, &apigen.CreateAwsDeploymentParams{IdempotencyKey: req.IdempotencyKey}, req.Body)
 	if err != nil {
 		return nil, err
 	}
@@ -81,23 +101,12 @@ func (c *Client) CreateAwsDeployment(ctx context.Context, body apigen.AwsDeploym
 	return &AwsDeploymentResult{Deployment: *resp.JSON201, ETag: resp.HTTPResponse.Header.Get("ETag")}, nil
 }
 
-func (c *Client) UpdateAwsDeployment(ctx context.Context, id, etag string, patch AwsDeploymentPatch) (*AwsDeploymentResult, error) {
-	body, err := json.Marshal(patch)
+func (c *Client) UpdateAwsDeployment(ctx context.Context, req AwsDeploymentUpdateRequest) (*AwsDeploymentResult, error) {
+	body, err := json.Marshal(req.Patch)
 	if err != nil {
 		return nil, err
 	}
-	resp, err := c.api.UpdateAwsDeploymentWithBodyWithResponse(ctx, id, &apigen.UpdateAwsDeploymentParams{IfMatch: etag}, "application/json", bytes.NewReader(body))
-	if err != nil {
-		return nil, err
-	}
-	if resp.JSON200 == nil {
-		return nil, newAPIError(resp.StatusCode(), resp.Body)
-	}
-	return &AwsDeploymentResult{Deployment: *resp.JSON200, ETag: resp.HTTPResponse.Header.Get("ETag")}, nil
-}
-
-func (c *Client) VerifyAwsDeployment(ctx context.Context, id, etag string) (*AwsDeploymentResult, error) {
-	resp, err := c.api.VerifyAwsDeploymentWithResponse(ctx, id, &apigen.VerifyAwsDeploymentParams{IfMatch: etag})
+	resp, err := c.api.UpdateAwsDeploymentWithBodyWithResponse(ctx, req.ID, &apigen.UpdateAwsDeploymentParams{IfMatch: req.ETag}, "application/json", bytes.NewReader(body))
 	if err != nil {
 		return nil, err
 	}
@@ -107,8 +116,19 @@ func (c *Client) VerifyAwsDeployment(ctx context.Context, id, etag string) (*Aws
 	return &AwsDeploymentResult{Deployment: *resp.JSON200, ETag: resp.HTTPResponse.Header.Get("ETag")}, nil
 }
 
-func (c *Client) RotateAwsExternalID(ctx context.Context, id, etag string) (*AwsDeploymentResult, error) {
-	resp, err := c.api.RotateAwsExternalIDWithResponse(ctx, id, &apigen.RotateAwsExternalIDParams{IfMatch: etag})
+func (c *Client) VerifyAwsDeployment(ctx context.Context, ref AwsDeploymentRef) (*AwsDeploymentResult, error) {
+	resp, err := c.api.VerifyAwsDeploymentWithResponse(ctx, ref.ID, &apigen.VerifyAwsDeploymentParams{IfMatch: ref.ETag})
+	if err != nil {
+		return nil, err
+	}
+	if resp.JSON200 == nil {
+		return nil, newAPIError(resp.StatusCode(), resp.Body)
+	}
+	return &AwsDeploymentResult{Deployment: *resp.JSON200, ETag: resp.HTTPResponse.Header.Get("ETag")}, nil
+}
+
+func (c *Client) RotateAwsExternalID(ctx context.Context, ref AwsDeploymentRef) (*AwsDeploymentResult, error) {
+	resp, err := c.api.RotateAwsExternalIDWithResponse(ctx, ref.ID, &apigen.RotateAwsExternalIDParams{IfMatch: ref.ETag})
 	if err != nil {
 		return nil, err
 	}
@@ -144,11 +164,11 @@ func (c *Client) GetDeploymentCoverage(ctx context.Context, id string) (*apigen.
 	return resp.JSON200, nil
 }
 
-func (c *Client) ListDeploymentAccounts(ctx context.Context, id string, status *apigen.MemberAccountStatus) ([]apigen.MemberAccount, error) {
+func (c *Client) ListDeploymentAccounts(ctx context.Context, query DeploymentAccountsQuery) ([]apigen.MemberAccount, error) {
 	items := []apigen.MemberAccount{}
-	params := &apigen.ListDeploymentAccountsParams{Status: status}
+	params := &apigen.ListDeploymentAccountsParams{Status: query.Status}
 	for {
-		resp, err := c.api.ListDeploymentAccountsWithResponse(ctx, id, params)
+		resp, err := c.api.ListDeploymentAccountsWithResponse(ctx, query.DeploymentID, params)
 		if err != nil {
 			return nil, err
 		}
