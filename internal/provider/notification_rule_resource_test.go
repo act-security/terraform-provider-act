@@ -57,19 +57,17 @@ func notificationRuleConfig(slackID string, c ruleConfig) string {
 	return requiredProviders + fmt.Sprintf(`
 provider "act" {}
 
-data "act_email_integration" "this" {}
+data "act_integration" "email" {
+  type = "email"
+}
 
 data "act_slack_channel" "alerts" {
   name = "#Security-Alerts"
 }
 
 resource "act_notification_recipient" "oncall" {
-  name = "On-call"
-
-  email {
-    integration_id = data.act_email_integration.this.id
-    recipients     = ["oncall@acme.com"]
-  }
+  name   = "On-call"
+  emails = ["oncall@acme.com"]
 }
 
 resource "act_notification_rule" "this" {
@@ -78,7 +76,7 @@ resource "act_notification_rule" "this" {
   recipient_ids = [act_notification_recipient.oncall.id]
 %s
   email {
-    integration_id = data.act_email_integration.this.id
+    integration_id = data.act_integration.email.id
     recipients     = [%s]
   }
 %s}
@@ -94,7 +92,7 @@ func TestNotificationRuleLifecycle(t *testing.T) {
 	s.Setenv(t)
 	slackID := s.SeedIntegration("slack", "xoxb-seeded")
 	var id string
-	full := ruleConfig{name: "Simulations", recipients: `"Lee@Acme.com", "ops@acme.com"`, slack: true, condition: true}
+	full := ruleConfig{name: "Simulations", recipients: `"lee@acme.com", "ops@acme.com"`, slack: true, condition: true}
 
 	resource.UnitTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: factories(),
@@ -105,10 +103,10 @@ func TestNotificationRuleLifecycle(t *testing.T) {
 					statecheck.ExpectKnownValue(ruleAddress, tfjsonpath.New("enabled"), knownvalue.Bool(true)),
 					statecheck.ExpectKnownValue(ruleAddress, tfjsonpath.New("revision"), knownvalue.Int64Exact(1)),
 					statecheck.ExpectKnownValue(ruleAddress, tfjsonpath.New("min_client_revision"), knownvalue.Int64Exact(1)),
-					statecheck.ExpectKnownValue(ruleAddress, tfjsonpath.New("created_via"), knownvalue.StringExact("api")),
+					statecheck.ExpectKnownValue(ruleAddress, tfjsonpath.New("created_via"), knownvalue.StringExact("terraform")),
 					statecheck.ExpectKnownValue(ruleAddress, tfjsonpath.New("web_url"), knownvalue.NotNull()),
 					statecheck.ExpectKnownValue(ruleAddress, tfjsonpath.New("email").AtSliceIndex(0).AtMapKey("recipients"), knownvalue.SetExact([]knownvalue.Check{
-						knownvalue.StringExact("Lee@Acme.com"),
+						knownvalue.StringExact("lee@acme.com"),
 						knownvalue.StringExact("ops@acme.com"),
 					})),
 					statecheck.ExpectKnownValue(ruleAddress, tfjsonpath.New("condition").AtSliceIndex(0).AtMapKey("operator"), knownvalue.StringExact("in")),
@@ -133,7 +131,7 @@ func TestNotificationRuleLifecycle(t *testing.T) {
 				},
 			},
 			{
-				Config:   notificationRuleConfig(slackID, ruleConfig{name: "Simulations", recipients: `"ops@acme.com", "LEE@acme.com"`, slack: true, condition: true}),
+				Config:   notificationRuleConfig(slackID, ruleConfig{name: "Simulations", recipients: `"ops@acme.com", "lee@acme.com"`, slack: true, condition: true}),
 				PlanOnly: true,
 			},
 			{
@@ -170,14 +168,13 @@ func TestNotificationRuleLifecycle(t *testing.T) {
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue(ruleAddress, tfjsonpath.New("name"), knownvalue.StringExact("Simulations")),
 					statecheck.ExpectKnownValue(ruleAddress, tfjsonpath.New("revision"), knownvalue.Int64Exact(4)),
-					statecheck.ExpectKnownValue(ruleAddress, tfjsonpath.New("last_modified_via"), knownvalue.StringExact("api")),
+					statecheck.ExpectKnownValue(ruleAddress, tfjsonpath.New("last_modified_via"), knownvalue.StringExact("terraform")),
 				},
 			},
 			{
-				ResourceName:            ruleAddress,
-				ImportState:             true,
-				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"email.0.recipients"},
+				ResourceName:      ruleAddress,
+				ImportState:       true,
+				ImportStateVerify: true,
 			},
 			{
 				PreConfig: func() { s.DeleteNotificationRuleOutOfBand(id) },
@@ -250,22 +247,22 @@ func TestNotificationRecipientLifecycleAndInUse(t *testing.T) {
 		return requiredProviders + fmt.Sprintf(`
 provider "act" {}
 
-data "act_email_integration" "this" {}
-
 resource "act_notification_recipient" "this" {
-  name = %q
+  name     = %q
+  user_ids = [%q]
+  emails   = ["platform@acme.com"]
 
-  email {
-    integration_id = data.act_email_integration.this.id
-    recipients     = ["Platform@Acme.com"]
+  slack_channel {
+    integration_id = %q
+    channel_id     = "C0PLATFORM1"
   }
 
-  slack {
+  slack_channel {
     integration_id = %q
-    channel_ids    = ["C0PLATFORM1"]
+    channel_id     = "C0SECURITY1"
   }
 }
-`, name, slackID)
+`, name, fakeapi.UserLeeID, slackID, slackID)
 	}
 	var id, ruleID string
 
@@ -276,8 +273,16 @@ resource "act_notification_recipient" "this" {
 				Config: recipient("Platform team"),
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue(address, tfjsonpath.New("revision"), knownvalue.Int64Exact(1)),
+					statecheck.ExpectKnownValue(address, tfjsonpath.New("min_client_revision"), knownvalue.Int64Exact(1)),
+					statecheck.ExpectKnownValue(address, tfjsonpath.New("created_via"), knownvalue.StringExact("terraform")),
 					statecheck.ExpectKnownValue(address, tfjsonpath.New("rule_ids"), knownvalue.SetSizeExact(0)),
-					statecheck.ExpectKnownValue(address, tfjsonpath.New("email").AtSliceIndex(0).AtMapKey("recipients"), knownvalue.SetExact([]knownvalue.Check{knownvalue.StringExact("Platform@Acme.com")})),
+					statecheck.ExpectKnownValue(address, tfjsonpath.New("slack_channel"), knownvalue.SetSizeExact(2)),
+					statecheck.ExpectKnownValue(address, tfjsonpath.New("members"), knownvalue.ListExact([]knownvalue.Check{
+						knownvalue.ObjectPartial(map[string]knownvalue.Check{"type": knownvalue.StringExact("email"), "address": knownvalue.StringExact("platform@acme.com")}),
+						knownvalue.ObjectPartial(map[string]knownvalue.Check{"type": knownvalue.StringExact("slack_channel"), "channel_id": knownvalue.StringExact("C0PLATFORM1"), "channel_name": knownvalue.StringExact(fakeapi.SlackChannelPlatformName)}),
+						knownvalue.ObjectPartial(map[string]knownvalue.Check{"type": knownvalue.StringExact("slack_channel"), "channel_id": knownvalue.StringExact("C0SECURITY1")}),
+						knownvalue.ObjectPartial(map[string]knownvalue.Check{"type": knownvalue.StringExact("user"), "user_name": knownvalue.StringExact("Lee Park"), "in_tenant": knownvalue.Bool(true)}),
+					})),
 				},
 				Check: captureID(address, &id),
 			},
@@ -291,14 +296,30 @@ resource "act_notification_recipient" "this" {
 				},
 			},
 			{
-				ResourceName:            address,
-				ImportState:             true,
-				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"email.0.recipients"},
+				ResourceName:      address,
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			{
+				PreConfig: func() { s.RemoveUserFromTenant(fakeapi.UserLeeID) },
+				Config:    recipient("Platform, after Lee left"),
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownValue(address, tfjsonpath.New("revision"), knownvalue.Int64Exact(3)),
+					statecheck.ExpectKnownValue(address, tfjsonpath.New("members").AtSliceIndex(3).AtMapKey("in_tenant"), knownvalue.Bool(false)),
+				},
+			},
+			{
+				PreConfig: func() {
+					if !s.SetNotificationRecipientMinClientRevision(id, 2) {
+						t.Fatal("the recipient is missing from the fake")
+					}
+				},
+				Config:      recipient("Platform again"),
+				ExpectError: regexp.MustCompile(`does\s+not\s+send\s+one`),
 			},
 			{
 				PreConfig: func() { ruleID = s.SeedNotificationRule("Made in the console", id) },
-				Config:    recipient("Platform"),
+				Config:    recipient("Platform, after Lee left"),
 				Check: func(st *terraform.State) error {
 					got := st.RootModule().Resources[address].Primary.Attributes["rule_ids.0"]
 					if got != ruleID {
@@ -317,6 +338,54 @@ resource "act_notification_recipient" "this" {
 			},
 		},
 	})
+}
+
+func TestNotificationRecipientWriteErrors(t *testing.T) {
+	tests := []struct {
+		name    string
+		members string
+		want    string
+	}{
+		{name: "no members", members: ``, want: `needs at least one of user_ids`},
+		{name: "user outside the tenant", members: `user_ids = ["auth0|nobody"]`, want: `unknown_user\s+\("auth0\|nobody"\)`},
+		{name: "uppercase address", members: `emails = ["Lee@acme.com"]`, want: `must be lowercase`},
+		{
+			name: "Slack integration that is not installed",
+			members: `slack_channel {
+    integration_id = "00000000-0000-4000-8000-0000000000ff"
+    channel_id     = "C0PLATFORM1"
+  }`,
+			want: `00000000-0000-4000-8000-0000000000ff is not installed or not\s+connected`,
+		},
+		{
+			name: "Slack channel name instead of an ID",
+			members: `slack_channel {
+    integration_id = "00000000-0000-4000-8000-0000000000ff"
+    channel_id     = "#platform"
+  }`,
+			want: `must be a Slack channel\s+ID`,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := fakeapi.Start(t)
+			s.Setenv(t)
+			resource.UnitTest(t, resource.TestCase{
+				ProtoV6ProviderFactories: factories(),
+				Steps: []resource.TestStep{{
+					Config: requiredProviders + `
+provider "act" {}
+
+resource "act_notification_recipient" "this" {
+  name = "Broken"
+  ` + tt.members + `
+}
+`,
+					ExpectError: regexp.MustCompile(tt.want),
+				}},
+			})
+		})
+	}
 }
 
 func TestNotificationRuleWriteErrors(t *testing.T) {
@@ -373,6 +442,15 @@ func TestNotificationRuleWriteErrors(t *testing.T) {
 			want: `must be a Slack channel\s+ID`,
 		},
 		{
+			name: "uppercase email address",
+			rule: `event_types = ["connector.unhealthy"]
+  email {
+    integration_id = "` + fakeapi.EmailIntegrationID + `"
+    recipients     = ["Lee@acme.com"]
+  }`,
+			want: `must be lowercase`,
+		},
+		{
 			name: "two email blocks",
 			rule: `event_types = ["connector.unhealthy"]
   email {
@@ -420,7 +498,13 @@ func TestNotificationDataSources(t *testing.T) {
 				Config: requiredProviders + `
 provider "act" {}
 
-data "act_email_integration" "this" {}
+data "act_user" "lee" {
+  email = "LEE@ACME.COM"
+}
+
+data "act_user" "sam" {
+  email = "sam.rivera@acme.com"
+}
 
 data "act_slack_channel" "by_name" {
   name = "#SECURITY-ALERTS"
@@ -433,7 +517,10 @@ data "act_slack_channel" "by_id" {
 data "act_notification_event_types" "all" {}
 `,
 				ConfigStateChecks: []statecheck.StateCheck{
-					statecheck.ExpectKnownValue("data.act_email_integration.this", tfjsonpath.New("id"), knownvalue.StringExact(fakeapi.EmailIntegrationID)),
+					statecheck.ExpectKnownValue("data.act_user.lee", tfjsonpath.New("id"), knownvalue.StringExact(fakeapi.UserLeeID)),
+					statecheck.ExpectKnownValue("data.act_user.lee", tfjsonpath.New("name"), knownvalue.StringExact("Lee Park")),
+					statecheck.ExpectKnownValue("data.act_user.sam", tfjsonpath.New("id"), knownvalue.StringExact(fakeapi.UserSamID)),
+					statecheck.ExpectKnownValue("data.act_user.sam", tfjsonpath.New("name"), knownvalue.Null()),
 					statecheck.ExpectKnownValue("data.act_slack_channel.by_name", tfjsonpath.New("id"), knownvalue.StringExact(fakeapi.SlackChannelSecurityID)),
 					statecheck.ExpectKnownValue("data.act_slack_channel.by_name", tfjsonpath.New("channel_name"), knownvalue.StringExact(fakeapi.SlackChannelSecurityName)),
 					statecheck.ExpectKnownValue("data.act_slack_channel.by_id", tfjsonpath.New("channel_name"), knownvalue.StringExact(fakeapi.SlackChannelPlatformName)),
@@ -455,6 +542,16 @@ data "act_slack_channel" "missing" {
 }
 `,
 				ExpectError: regexp.MustCompile(`No channel named "#nowhere"`),
+			},
+			{
+				Config: requiredProviders + `
+provider "act" {}
+
+data "act_user" "missing" {
+  email = "nobody@acme.com"
+}
+`,
+				ExpectError: regexp.MustCompile(`No user of this tenant has the email address\s+"nobody@acme.com"`),
 			},
 		},
 	})
@@ -483,7 +580,7 @@ func TestNotificationRuleWithoutChangesWritesNothing(t *testing.T) {
 	s := fakeapi.Start(t)
 	s.Setenv(t)
 	slackID := s.SeedIntegration("slack", "xoxb-seeded")
-	config := notificationRuleConfig(slackID, ruleConfig{name: "Quiet", recipients: `"Lee@acme.com"`})
+	config := notificationRuleConfig(slackID, ruleConfig{name: "Quiet", recipients: `"lee@acme.com"`})
 
 	resource.UnitTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: factories(),

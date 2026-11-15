@@ -62,7 +62,7 @@ func (r *notificationRuleResource) Metadata(_ context.Context, req resource.Meta
 }
 
 func (r *notificationRuleResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
-	blocks := actionBlocks("to notify")
+	blocks := actionBlocks()
 	blocks["condition"] = schema.ListNestedBlock{
 		MarkdownDescription: fmt.Sprintf("Narrows one event type to the events whose `field` has one of `values`. Up to %d. The `act_notification_event_types` data source lists the fields each event type takes.", maxRuleConditions),
 		Validators:          []validator.List{listvalidator.SizeAtMost(maxRuleConditions)},
@@ -90,7 +90,7 @@ func (r *notificationRuleResource) Schema(_ context.Context, _ resource.SchemaRe
 		}},
 	}
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "A notification rule: when an event of one of `event_types` happens and passes the rule's `condition` blocks for its type, Act sends it by email, to Slack and to the address-book entries in `recipient_ids`. Notification rules are in preview; the tenant needs them enabled.",
+		MarkdownDescription: "A notification rule: when an event of one of `event_types` happens and passes the rule's `condition` blocks for its type, Act sends it by email, to Slack and to the recipient groups in `recipient_ids`. Notification rules are in preview; the tenant needs them enabled.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				MarkdownDescription: "The rule ID.",
@@ -295,7 +295,7 @@ func ruleModelOf(ctx context.Context, rule apigen.NotificationRule, prior notifi
 			Values:    stringSet(ctx, condition.Values, diags),
 		})
 	}
-	email, slack := actionModelsOf(ctx, rule.Actions, prior.Email, diags)
+	email, slack := actionModelsOf(ctx, rule.Actions, diags)
 	return notificationRuleModel{
 		ID:                types.StringValue(rule.ID),
 		Name:              types.StringValue(rule.Name),

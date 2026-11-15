@@ -161,7 +161,7 @@ func (p *actProvider) DataSources(context.Context) []func() datasource.DataSourc
 		NewCurrentIdentityDataSource,
 		NewIntegrationDataSource,
 		NewIntegrationTypesDataSource,
-		NewEmailIntegrationDataSource,
+		NewUserDataSource,
 		NewSlackChannelDataSource,
 		NewNotificationEventTypesDataSource,
 	}

@@ -2,19 +2,21 @@
 page_title: "act_notification_rule Resource - act"
 subcategory: ""
 description: |-
-  A notification rule: when an event of one of event_types happens and passes the rule's condition blocks for its type, Act sends it by email, to Slack and to the address-book entries in recipient_ids. Notification rules are in preview; the tenant needs them enabled.
+  A notification rule: when an event of one of event_types happens and passes the rule's condition blocks for its type, Act sends it by email, to Slack and to the recipient groups in recipient_ids. Notification rules are in preview; the tenant needs them enabled.
 ---
 
 # act_notification_rule (Resource)
 
-A notification rule: when an event of one of `event_types` happens and passes the rule's `condition` blocks for its type, Act sends it by email, to Slack and to the address-book entries in `recipient_ids`. Notification rules are in preview; the tenant needs them enabled.
+A notification rule: when an event of one of `event_types` happens and passes the rule's `condition` blocks for its type, Act sends it by email, to Slack and to the recipient groups in `recipient_ids`. Notification rules are in preview; the tenant needs them enabled.
 
-The rule's event types are joined by OR. A `condition` narrows one of them; event types without a condition always match. Act sends each matching event to every `email` address, every `slack` channel and every address-book entry in `recipient_ids`.
+The rule's event types are joined by OR. A `condition` narrows one of them; event types without a condition always match. Act sends each matching event to every `email` address, every `slack` channel and every recipient group in `recipient_ids`.
 
 ## Example Usage
 
 ```terraform
-data "act_email_integration" "this" {}
+data "act_integration" "email" {
+  type = "email"
+}
 
 data "act_slack_channel" "security" {
   name = "#security-alerts"
@@ -31,7 +33,7 @@ resource "act_notification_rule" "simulations" {
   }
 
   email {
-    integration_id = data.act_email_integration.this.id
+    integration_id = data.act_integration.email.id
     recipients     = ["secops@example.com"]
   }
 
@@ -48,7 +50,7 @@ resource "act_notification_rule" "simulations" {
 
 Every apply sends the whole rule with the revision Terraform last read. If someone changed the rule in the Act console after the plan, Act refuses the update and nothing changes; run `terraform apply` again to plan against the current rule. Removing a `condition`, `email` or `slack` block, or `recipient_ids`, removes it in Act too.
 
-Act stores email addresses in lowercase and every list sorted. A plan never shows a change for a difference in case or order.
+Email addresses must be lowercase. Act returns every list sorted, so a plan never shows a change for a difference in order.
 
 When Act adds rule features this provider version does not know, `min_client_revision` goes above 1 and the provider warns. Act keeps those parts when Terraform updates the rule.
 
@@ -63,7 +65,7 @@ When Act adds rule features this provider version does not know, `min_client_rev
 ### Optional
 
 - `condition` (Block List) Narrows one event type to the events whose `field` has one of `values`. Up to 10. The `act_notification_event_types` data source lists the fields each event type takes. (see [below for nested schema](#nestedblock--condition))
-- `email` (Block List) Send email. At most one block. Act stores addresses in lowercase; a plan never shows a change for a difference in case or order. (see [below for nested schema](#nestedblock--email))
+- `email` (Block List) Send email. At most one block. (see [below for nested schema](#nestedblock--email))
 - `enabled` (Boolean) Whether the rule sends notifications. Defaults to `true`.
 - `recipient_ids` (Set of String) IDs of `act_notification_recipient` entries to notify as well, up to 20.
 - `slack` (Block List) Post to Slack. At most one block. (see [below for nested schema](#nestedblock--slack))
@@ -96,8 +98,8 @@ Optional:
 
 Required:
 
-- `integration_id` (String) The ID of the Act-managed email integration, from the `act_email_integration` data source.
-- `recipients` (Set of String) The email addresses to notify, up to 100.
+- `integration_id` (String) The ID of the Act-managed email integration, from the `act_integration` data source with `type = "email"`.
+- `recipients` (Set of String) The email addresses to notify, up to 100, in lowercase.
 
 
 <a id="nestedblock--slack"></a>
@@ -105,7 +107,7 @@ Required:
 
 Required:
 
-- `channel_ids` (Set of String) The Slack channel IDs to notify, up to 50, such as `C05PLATGRD2`. Act does not take channel names; look an ID up with the `act_slack_channel` data source.
+- `channel_ids` (Set of String) The Slack channel IDs to post to, up to 50, such as `C05PLATGRD2`. Act does not take channel names; look an ID up with the `act_slack_channel` data source.
 - `integration_id` (String) The ID of the Slack integration, from `act_slack_integration` or the `act_integration` data source.
 
 ## Import
@@ -115,5 +117,3 @@ Import by rule ID:
 ```shell
 terraform import act_notification_rule.simulations 3f1c2b9e-6a1d-4c8e-9f2a-7b5d4e3c2a10
 ```
-
-Imported email addresses are in lowercase. A configuration that spells them differently plans no change.

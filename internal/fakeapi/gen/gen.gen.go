@@ -374,14 +374,17 @@ func (e NotificationActionType) Valid() bool {
 
 // Defines values for NotificationChangeSource.
 const (
-	NotificationChangeSourceAPI NotificationChangeSource = "api"
-	NotificationChangeSourceUI  NotificationChangeSource = "ui"
+	NotificationChangeSourceAPI       NotificationChangeSource = "api"
+	NotificationChangeSourceTerraform NotificationChangeSource = "terraform"
+	NotificationChangeSourceUI        NotificationChangeSource = "ui"
 )
 
 // Valid indicates whether the value is a known member of the NotificationChangeSource enum.
 func (e NotificationChangeSource) Valid() bool {
 	switch e {
 	case NotificationChangeSourceAPI:
+		return true
+	case NotificationChangeSourceTerraform:
 		return true
 	case NotificationChangeSourceUI:
 		return true
@@ -438,6 +441,27 @@ func (e NotificationMatchResult) Valid() bool {
 	case NotificationMatchResultPartiallySent:
 		return true
 	case NotificationMatchResultSent:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for NotificationRecipientMemberType.
+const (
+	NotificationRecipientMemberTypeEmail        NotificationRecipientMemberType = "email"
+	NotificationRecipientMemberTypeSlackChannel NotificationRecipientMemberType = "slack_channel"
+	NotificationRecipientMemberTypeUser         NotificationRecipientMemberType = "user"
+)
+
+// Valid indicates whether the value is a known member of the NotificationRecipientMemberType enum.
+func (e NotificationRecipientMemberType) Valid() bool {
+	switch e {
+	case NotificationRecipientMemberTypeEmail:
+		return true
+	case NotificationRecipientMemberTypeSlackChannel:
+		return true
+	case NotificationRecipientMemberTypeUser:
 		return true
 	default:
 		return false
@@ -514,6 +538,18 @@ func (e ListNotificationRulesParamsEnabled) Valid() bool {
 	default:
 		return false
 	}
+}
+
+// ActUser defines model for ActUser.
+type ActUser struct {
+	Email string  `json:"email"`
+	ID    string  `json:"id"`
+	Name  *string `json:"name"`
+}
+
+// ActUserList defines model for ActUserList.
+type ActUserList struct {
+	Items []ActUser `json:"items"`
 }
 
 // AuthMethod defines model for AuthMethod.
@@ -823,11 +859,12 @@ type NotificationAction struct {
 // NotificationActionType defines model for NotificationActionType.
 type NotificationActionType string
 
-// NotificationChangeSource defines model for NotificationChangeSource.
+// NotificationChangeSource Where a change came from: `ui` is the Act app, `terraform` is the Act Terraform provider, and `api` is any other public API client.
 type NotificationChangeSource string
 
-// NotificationCondition defines model for NotificationCondition.
+// NotificationCondition Narrows one event type of the rule: an event of that type matches only when `field` holds one of `values`. `GET /notification-event-types` lists the fields and values each event type takes.
 type NotificationCondition struct {
+	// EventType The event type of the rule this condition narrows.
 	EventType string                        `json:"eventType"`
 	Field     NotificationConditionField    `json:"field"`
 	Operator  NotificationConditionOperator `json:"operator"`
@@ -849,8 +886,11 @@ type NotificationConditionOperator string
 
 // NotificationEmailAction defines model for NotificationEmailAction.
 type NotificationEmailAction struct {
-	IntegrationID string                `json:"integrationId"`
-	Recipients    []openapi_types.Email `json:"recipients"`
+	// IntegrationID The Act-managed email integration, from `GET /integrations?type=email`.
+	IntegrationID string `json:"integrationId"`
+
+	// Recipients Email addresses, each listed once, with no ASCII uppercase letter (A-Z) and no surrounding whitespace. Responses list them as sent, sorted.
+	Recipients []openapi_types.Email `json:"recipients"`
 }
 
 // NotificationEventTypeInfo defines model for NotificationEventTypeInfo.
@@ -880,15 +920,53 @@ type NotificationMatchResult string
 
 // NotificationRecipient defines model for NotificationRecipient.
 type NotificationRecipient struct {
-	CreatedAt       time.Time                `json:"createdAt"`
-	CreatedVia      NotificationChangeSource `json:"createdVia"`
-	ID              string                   `json:"id"`
+	CreatedAt time.Time `json:"createdAt"`
+
+	// CreatedVia Where a change came from: `ui` is the Act app, `terraform` is the Act Terraform provider, and `api` is any other public API client.
+	CreatedVia NotificationChangeSource `json:"createdVia"`
+	ID         string                   `json:"id"`
+
+	// LastModifiedVia Where a change came from: `ui` is the Act app, `terraform` is the Act Terraform provider, and `api` is any other public API client.
 	LastModifiedVia NotificationChangeSource `json:"lastModifiedVia"`
-	Methods         []NotificationAction     `json:"methods"`
-	Name            string                   `json:"name"`
-	Revision        int                      `json:"revision"`
-	RuleIds         []string                 `json:"ruleIds"`
-	UpdatedAt       time.Time                `json:"updatedAt"`
+
+	// Members Sorted by type (`email`, `slack_channel`, `user`), then by address, by `integrationId` and `channelId`, or by `userId`, by code unit.
+	Members []NotificationRecipientMember `json:"members"`
+
+	// MinClientRevision The oldest client revision that can show and edit this recipient. A recipient with a member type an older client does not know has a higher value; such a client should not replace it.
+	MinClientRevision int    `json:"minClientRevision"`
+	Name              string `json:"name"`
+
+	// Revision Increases on every change. The `ETag` header carries it in quotes.
+	Revision int `json:"revision"`
+
+	// RuleIds The rules that name this recipient. It cannot be deleted while any do.
+	RuleIds   []string  `json:"ruleIds"`
+	UpdatedAt time.Time `json:"updatedAt"`
+}
+
+// NotificationRecipientEmailMember defines model for NotificationRecipientEmailMember.
+type NotificationRecipientEmailMember struct {
+	// Address An email address with no ASCII uppercase letter (A-Z) and no surrounding whitespace.
+	Address openapi_types.Email `json:"address"`
+}
+
+// NotificationRecipientMember defines model for NotificationRecipientMember.
+type NotificationRecipientMember struct {
+	Email        *NotificationRecipientEmailMember        `json:"email,omitempty"`
+	SlackChannel *NotificationRecipientSlackChannelMember `json:"slackChannel,omitempty"`
+	Type         NotificationRecipientMemberType          `json:"type"`
+	User         *NotificationRecipientUserMember         `json:"user,omitempty"`
+}
+
+// NotificationRecipientMemberType defines model for NotificationRecipientMemberType.
+type NotificationRecipientMemberType string
+
+// NotificationRecipientMemberWrite One member of a recipient group. `type` names the object that carries it: `user` for an Act user, who is reached through the receiver they chose in their profile; `email` for an address; `slackChannel` for a channel.
+type NotificationRecipientMemberWrite struct {
+	Email        *NotificationRecipientEmailMember             `json:"email,omitempty"`
+	SlackChannel *NotificationRecipientSlackChannelMemberWrite `json:"slackChannel,omitempty"`
+	Type         NotificationRecipientMemberType               `json:"type"`
+	User         *NotificationRecipientUserMemberWrite         `json:"user,omitempty"`
 }
 
 // NotificationRecipientPage defines model for NotificationRecipientPage.
@@ -897,29 +975,79 @@ type NotificationRecipientPage struct {
 	NextPageToken *string                 `json:"nextPageToken"`
 }
 
-// NotificationRecipientWrite A tenant-wide address-book entry: a name and the addresses it stands for, at most one method per type.
+// NotificationRecipientSlackChannelMember defines model for NotificationRecipientSlackChannelMember.
+type NotificationRecipientSlackChannelMember struct {
+	// ChannelID A Slack channel ID; `GET /integrations/slack/channels` finds a public channel by name.
+	ChannelID   string  `json:"channelId"`
+	ChannelName *string `json:"channelName"`
+
+	// IntegrationID A connected Slack integration, from `GET /integrations?type=slack`.
+	IntegrationID string `json:"integrationId"`
+}
+
+// NotificationRecipientSlackChannelMemberWrite defines model for NotificationRecipientSlackChannelMemberWrite.
+type NotificationRecipientSlackChannelMemberWrite struct {
+	// ChannelID A Slack channel ID; `GET /integrations/slack/channels` finds a public channel by name.
+	ChannelID string `json:"channelId"`
+
+	// IntegrationID A connected Slack integration, from `GET /integrations?type=slack`.
+	IntegrationID string `json:"integrationId"`
+}
+
+// NotificationRecipientUserMember defines model for NotificationRecipientUserMember.
+type NotificationRecipientUserMember struct {
+	Email *string `json:"email"`
+
+	// InTenant False once the user has left the tenant. Such a member stays stored, receives nothing, and may be sent back unchanged.
+	InTenant bool    `json:"inTenant"`
+	Name     *string `json:"name"`
+
+	// UserID An Act user of this tenant, from `GET /users?email=`.
+	UserID string `json:"userId"`
+}
+
+// NotificationRecipientUserMemberWrite defines model for NotificationRecipientUserMemberWrite.
+type NotificationRecipientUserMemberWrite struct {
+	// UserID An Act user of this tenant, from `GET /users?email=`.
+	UserID string `json:"userId"`
+}
+
+// NotificationRecipientWrite A tenant-wide recipient group that rules can name: a name and its members.
 type NotificationRecipientWrite struct {
-	Methods []NotificationAction `json:"methods"`
-	Name    string               `json:"name"`
+	// Members Each member is listed once: a user by `userId`, an email by `address`, a Slack channel by `integrationId` and `channelId`. A user member and an email member with the same address are two members. A new user must be in this tenant; a stored user who has left it may be sent back unchanged.
+	Members []NotificationRecipientMemberWrite `json:"members"`
+	Name    string                             `json:"name"`
 }
 
 // NotificationRule defines model for NotificationRule.
 type NotificationRule struct {
-	Actions           []NotificationAction      `json:"actions"`
-	Conditions        []NotificationCondition   `json:"conditions"`
-	CreatedAt         time.Time                 `json:"createdAt"`
-	CreatedVia        NotificationChangeSource  `json:"createdVia"`
-	Enabled           bool                      `json:"enabled"`
-	EventTypes        []string                  `json:"eventTypes"`
-	ID                string                    `json:"id"`
-	LastDelivery      *NotificationLastDelivery `json:"lastDelivery"`
-	LastModifiedVia   NotificationChangeSource  `json:"lastModifiedVia"`
-	MinClientRevision int                       `json:"minClientRevision"`
-	Name              string                    `json:"name"`
-	RecipientIds      []string                  `json:"recipientIds"`
-	Revision          int                       `json:"revision"`
-	UpdatedAt         time.Time                 `json:"updatedAt"`
-	WebURL            *string                   `json:"webUrl"`
+	Actions    []NotificationAction    `json:"actions"`
+	Conditions []NotificationCondition `json:"conditions"`
+	CreatedAt  time.Time               `json:"createdAt"`
+
+	// CreatedVia Where a change came from: `ui` is the Act app, `terraform` is the Act Terraform provider, and `api` is any other public API client.
+	CreatedVia NotificationChangeSource `json:"createdVia"`
+	Enabled    bool                     `json:"enabled"`
+	EventTypes []string                 `json:"eventTypes"`
+	ID         string                   `json:"id"`
+
+	// LastDelivery The latest event this rule matched, if any.
+	LastDelivery *NotificationLastDelivery `json:"lastDelivery"`
+
+	// LastModifiedVia Where a change came from: `ui` is the Act app, `terraform` is the Act Terraform provider, and `api` is any other public API client.
+	LastModifiedVia NotificationChangeSource `json:"lastModifiedVia"`
+
+	// MinClientRevision The oldest Act app revision that can show and edit this rule. A rule that uses features an older app lacks has a higher value.
+	MinClientRevision int      `json:"minClientRevision"`
+	Name              string   `json:"name"`
+	RecipientIds      []string `json:"recipientIds"`
+
+	// Revision Increases on every change. The `ETag` header carries it in quotes.
+	Revision  int       `json:"revision"`
+	UpdatedAt time.Time `json:"updatedAt"`
+
+	// WebURL The rule in the Act app, or null where the app address is not configured.
+	WebURL *string `json:"webUrl"`
 }
 
 // NotificationRuleActivity defines model for NotificationRuleActivity.
@@ -946,6 +1074,7 @@ type NotificationRuleLimits struct {
 	MaxEnabledRulesPerEventType int `json:"maxEnabledRulesPerEventType"`
 	MaxEventTypesPerRule        int `json:"maxEventTypesPerRule"`
 	MaxNameLength               int `json:"maxNameLength"`
+	MaxRecipientMembers         int `json:"maxRecipientMembers"`
 	MaxRecipientNameLength      int `json:"maxRecipientNameLength"`
 	MaxRecipientsPerRule        int `json:"maxRecipientsPerRule"`
 	MaxSlackChannels            int `json:"maxSlackChannels"`
@@ -959,13 +1088,15 @@ type NotificationRulePage struct {
 
 // NotificationRuleValidate A rule to check without saving it. With `id`, it is checked as a replace of that rule.
 type NotificationRuleValidate struct {
-	Actions      *[]NotificationAction    `json:"actions,omitempty"`
-	Conditions   *[]NotificationCondition `json:"conditions,omitempty"`
-	Enabled      *bool                    `json:"enabled,omitempty"`
-	EventTypes   []string                 `json:"eventTypes"`
-	ID           *string                  `json:"id,omitempty"`
-	Name         string                   `json:"name"`
-	RecipientIds *[]string                `json:"recipientIds,omitempty"`
+	Actions    *[]NotificationAction    `json:"actions,omitempty"`
+	Conditions *[]NotificationCondition `json:"conditions,omitempty"`
+	Enabled    *bool                    `json:"enabled,omitempty"`
+	EventTypes []string                 `json:"eventTypes"`
+	ID         *string                  `json:"id,omitempty"`
+	Name       string                   `json:"name"`
+
+	// RecipientIds Address-book recipients the rule also sends to, each listed once.
+	RecipientIds *[]string `json:"recipientIds,omitempty"`
 }
 
 // NotificationRuleValidation defines model for NotificationRuleValidation.
@@ -983,18 +1114,23 @@ type NotificationRuleValidationError struct {
 
 // NotificationRuleWrite A notification rule. Event types are joined by OR. On create, a member left out takes its empty value (enabled defaults to true). On replace, a member left out keeps its stored value, so a client that does not know a member never clears it; send an empty array to clear a list.
 type NotificationRuleWrite struct {
-	Actions      *[]NotificationAction    `json:"actions,omitempty"`
-	Conditions   *[]NotificationCondition `json:"conditions,omitempty"`
-	Enabled      *bool                    `json:"enabled,omitempty"`
-	EventTypes   []string                 `json:"eventTypes"`
-	Name         string                   `json:"name"`
-	RecipientIds *[]string                `json:"recipientIds,omitempty"`
+	Actions    *[]NotificationAction    `json:"actions,omitempty"`
+	Conditions *[]NotificationCondition `json:"conditions,omitempty"`
+	Enabled    *bool                    `json:"enabled,omitempty"`
+	EventTypes []string                 `json:"eventTypes"`
+	Name       string                   `json:"name"`
+
+	// RecipientIds Address-book recipients the rule also sends to, each listed once.
+	RecipientIds *[]string `json:"recipientIds,omitempty"`
 }
 
 // NotificationSlackAction defines model for NotificationSlackAction.
 type NotificationSlackAction struct {
-	ChannelIds    []string `json:"channelIds"`
-	IntegrationID string   `json:"integrationId"`
+	// ChannelIds Slack channel IDs, each listed once; `GET /integrations/slack/channels` finds a public channel by name. Responses list them sorted.
+	ChannelIds []string `json:"channelIds"`
+
+	// IntegrationID A connected Slack integration, from `GET /integrations?type=slack`.
+	IntegrationID string `json:"integrationId"`
 }
 
 // Principal defines model for Principal.
@@ -1136,6 +1272,11 @@ type GetAwsOnboardingParams struct {
 	DeploymentID string `form:"deploymentId" json:"deploymentId"`
 }
 
+// ListUsersParams defines parameters for ListUsers.
+type ListUsersParams struct {
+	Email openapi_types.Email `form:"email" json:"email"`
+}
+
 // CreateIntegrationJSONRequestBody defines body for CreateIntegration for application/json ContentType.
 type CreateIntegrationJSONRequestBody = IntegrationCreate
 
@@ -1180,9 +1321,6 @@ type ServerInterface interface {
 	// CreateIntegration Install an integration. Secrets are write-only and are never returned
 	// (POST /v1/integrations)
 	CreateIntegration(w http.ResponseWriter, r *http.Request, params CreateIntegrationParams)
-	// GetEmailIntegration Return the Act-managed email integration that email actions name
-	// (GET /v1/integrations/email)
-	GetEmailIntegration(w http.ResponseWriter, r *http.Request)
 	// ListSlackChannels Look up public Slack channels by exact name or ID, for actions that take channel IDs
 	// (GET /v1/integrations/slack/channels)
 	ListSlackChannels(w http.ResponseWriter, r *http.Request, params ListSlackChannelsParams)
@@ -1198,19 +1336,19 @@ type ServerInterface interface {
 	// ListNotificationEventTypes List the event types a rule can match, the actions and conditions each takes, and the rule limits
 	// (GET /v1/notification-event-types)
 	ListNotificationEventTypes(w http.ResponseWriter, r *http.Request)
-	// ListNotificationRecipients List the address-book recipients rules can name, one page at a time
+	// ListNotificationRecipients List the recipient groups rules can name, one page at a time
 	// (GET /v1/notification-recipients)
 	ListNotificationRecipients(w http.ResponseWriter, r *http.Request, params ListNotificationRecipientsParams)
-	// CreateNotificationRecipient Create an address-book recipient
+	// CreateNotificationRecipient Create a recipient group
 	// (POST /v1/notification-recipients)
 	CreateNotificationRecipient(w http.ResponseWriter, r *http.Request, params CreateNotificationRecipientParams)
-	// DeleteNotificationRecipient Delete an address-book recipient. Refused with 409 while a rule names it
+	// DeleteNotificationRecipient Delete a recipient group. Refused with 409 while a rule names it
 	// (DELETE /v1/notification-recipients/{id})
 	DeleteNotificationRecipient(w http.ResponseWriter, r *http.Request, id string, params DeleteNotificationRecipientParams)
-	// GetNotificationRecipient Return one address-book recipient
+	// GetNotificationRecipient Return one recipient group
 	// (GET /v1/notification-recipients/{id})
 	GetNotificationRecipient(w http.ResponseWriter, r *http.Request, id string)
-	// ReplaceNotificationRecipient Replace an address-book recipient; the rules that name it send to its new addresses
+	// ReplaceNotificationRecipient Replace a recipient group; the rules that name it send to its new members
 	// (PUT /v1/notification-recipients/{id})
 	ReplaceNotificationRecipient(w http.ResponseWriter, r *http.Request, id string, params ReplaceNotificationRecipientParams)
 	// ListNotificationRules List the notification rules of the calling tenant, one page at a time
@@ -1243,6 +1381,9 @@ type ServerInterface interface {
 	// GetGcpOnboarding Return the values a GCP deployment needs before it is reserved
 	// (GET /v1/onboarding/gcp)
 	GetGcpOnboarding(w http.ResponseWriter, r *http.Request)
+	// ListUsers Find the Act user of the calling tenant with an exact email address
+	// (GET /v1/users)
+	ListUsers(w http.ResponseWriter, r *http.Request, params ListUsersParams)
 	// GetWhoami Return the tenant, region and principal of the calling token
 	// (GET /v1/whoami)
 	GetWhoami(w http.ResponseWriter, r *http.Request)
@@ -1538,20 +1679,6 @@ func (siw *ServerInterfaceWrapper) CreateIntegration(w http.ResponseWriter, r *h
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.CreateIntegration(w, r, params)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// GetEmailIntegration operation middleware
-func (siw *ServerInterfaceWrapper) GetEmailIntegration(w http.ResponseWriter, r *http.Request) {
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetEmailIntegration(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -2354,6 +2481,39 @@ func (siw *ServerInterfaceWrapper) GetGcpOnboarding(w http.ResponseWriter, r *ht
 	handler.ServeHTTP(w, r)
 }
 
+// ListUsers operation middleware
+func (siw *ServerInterfaceWrapper) ListUsers(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListUsersParams
+
+	// ------------- Required query parameter "email" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "email", r.URL.Query(), &params.Email, runtime.BindQueryParameterOptions{Type: "string", Format: "email"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "email"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "email", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListUsers(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetWhoami operation middleware
 func (siw *ServerInterfaceWrapper) GetWhoami(w http.ResponseWriter, r *http.Request) {
 
@@ -2495,7 +2655,6 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/v1/integration-types", wrapper.ListIntegrationTypes)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/v1/integrations", wrapper.ListIntegrations)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/v1/integrations", wrapper.CreateIntegration)
-	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/v1/integrations/email", wrapper.GetEmailIntegration)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/v1/integrations/slack/channels", wrapper.ListSlackChannels)
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/v1/integrations/{id}", wrapper.DeleteIntegration)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/v1/integrations/{id}", wrapper.GetIntegration)
@@ -2516,6 +2675,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/v1/onboarding/aws", wrapper.GetAwsOnboarding)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/v1/onboarding/azure", wrapper.GetAzureOnboarding)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/v1/onboarding/gcp", wrapper.GetGcpOnboarding)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/v1/users", wrapper.ListUsers)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/v1/whoami", wrapper.GetWhoami)
 
 	return m
@@ -3645,173 +3805,6 @@ type CreateIntegration503JSONResponse struct {
 }
 
 func (response CreateIntegration503JSONResponse) VisitCreateIntegrationResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	if response.Headers.RetryAfter != nil {
-		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
-	}
-	w.WriteHeader(503)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type GetEmailIntegrationRequestObject struct {
-}
-
-type GetEmailIntegrationResponseObject interface {
-	VisitGetEmailIntegrationResponse(w http.ResponseWriter) error
-}
-
-type GetEmailIntegration200ResponseHeaders struct {
-	ETag string
-}
-
-type GetEmailIntegration200JSONResponse struct {
-	Body    Integration
-	Headers GetEmailIntegration200ResponseHeaders
-}
-
-func (response GetEmailIntegration200JSONResponse) VisitGetEmailIntegrationResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.Header().Set("ETag", fmt.Sprint(response.Headers.ETag))
-	w.WriteHeader(200)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type GetEmailIntegration400JSONResponse ErrorEnvelope
-
-func (response GetEmailIntegration400JSONResponse) VisitGetEmailIntegrationResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(400)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type GetEmailIntegration401ResponseHeaders struct {
-	WWWAuthenticate *string
-}
-
-type GetEmailIntegration401JSONResponse struct {
-	Body    ErrorEnvelope
-	Headers GetEmailIntegration401ResponseHeaders
-}
-
-func (response GetEmailIntegration401JSONResponse) VisitGetEmailIntegrationResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	if response.Headers.WWWAuthenticate != nil {
-		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
-	}
-	w.WriteHeader(401)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type GetEmailIntegration403ResponseHeaders struct {
-	WWWAuthenticate *string
-}
-
-type GetEmailIntegration403JSONResponse struct {
-	Body    ErrorEnvelope
-	Headers GetEmailIntegration403ResponseHeaders
-}
-
-func (response GetEmailIntegration403JSONResponse) VisitGetEmailIntegrationResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	if response.Headers.WWWAuthenticate != nil {
-		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
-	}
-	w.WriteHeader(403)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type GetEmailIntegration404JSONResponse ErrorEnvelope
-
-func (response GetEmailIntegration404JSONResponse) VisitGetEmailIntegrationResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(404)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type GetEmailIntegration429ResponseHeaders struct {
-	RetryAfter *int
-}
-
-type GetEmailIntegration429JSONResponse struct {
-	Body    ErrorEnvelope
-	Headers GetEmailIntegration429ResponseHeaders
-}
-
-func (response GetEmailIntegration429JSONResponse) VisitGetEmailIntegrationResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	if response.Headers.RetryAfter != nil {
-		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
-	}
-	w.WriteHeader(429)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type GetEmailIntegration500JSONResponse ErrorEnvelope
-
-func (response GetEmailIntegration500JSONResponse) VisitGetEmailIntegrationResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(500)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type GetEmailIntegration503ResponseHeaders struct {
-	RetryAfter *int
-}
-
-type GetEmailIntegration503JSONResponse struct {
-	Body    ErrorEnvelope
-	Headers GetEmailIntegration503ResponseHeaders
-}
-
-func (response GetEmailIntegration503JSONResponse) VisitGetEmailIntegrationResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
@@ -7179,6 +7172,152 @@ func (response GetGcpOnboarding503JSONResponse) VisitGetGcpOnboardingResponse(w 
 	return err
 }
 
+type ListUsersRequestObject struct {
+	Params ListUsersParams
+}
+
+type ListUsersResponseObject interface {
+	VisitListUsersResponse(w http.ResponseWriter) error
+}
+
+type ListUsers200JSONResponse ActUserList
+
+func (response ListUsers200JSONResponse) VisitListUsersResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListUsers400JSONResponse ErrorEnvelope
+
+func (response ListUsers400JSONResponse) VisitListUsersResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListUsers401ResponseHeaders struct {
+	WWWAuthenticate *string
+}
+
+type ListUsers401JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers ListUsers401ResponseHeaders
+}
+
+func (response ListUsers401JSONResponse) VisitListUsersResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListUsers403ResponseHeaders struct {
+	WWWAuthenticate *string
+}
+
+type ListUsers403JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers ListUsers403ResponseHeaders
+}
+
+func (response ListUsers403JSONResponse) VisitListUsersResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListUsers429ResponseHeaders struct {
+	RetryAfter *int
+}
+
+type ListUsers429JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers ListUsers429ResponseHeaders
+}
+
+func (response ListUsers429JSONResponse) VisitListUsersResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	w.WriteHeader(429)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListUsers500JSONResponse ErrorEnvelope
+
+func (response ListUsers500JSONResponse) VisitListUsersResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListUsers503ResponseHeaders struct {
+	RetryAfter *int
+}
+
+type ListUsers503JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers ListUsers503ResponseHeaders
+}
+
+func (response ListUsers503JSONResponse) VisitListUsersResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type GetWhoamiRequestObject struct {
 }
 
@@ -7347,9 +7486,6 @@ type StrictServerInterface interface {
 	// CreateIntegration Install an integration. Secrets are write-only and are never returned
 	// (POST /v1/integrations)
 	CreateIntegration(ctx context.Context, request CreateIntegrationRequestObject) (CreateIntegrationResponseObject, error)
-	// GetEmailIntegration Return the Act-managed email integration that email actions name
-	// (GET /v1/integrations/email)
-	GetEmailIntegration(ctx context.Context, request GetEmailIntegrationRequestObject) (GetEmailIntegrationResponseObject, error)
 	// ListSlackChannels Look up public Slack channels by exact name or ID, for actions that take channel IDs
 	// (GET /v1/integrations/slack/channels)
 	ListSlackChannels(ctx context.Context, request ListSlackChannelsRequestObject) (ListSlackChannelsResponseObject, error)
@@ -7365,19 +7501,19 @@ type StrictServerInterface interface {
 	// ListNotificationEventTypes List the event types a rule can match, the actions and conditions each takes, and the rule limits
 	// (GET /v1/notification-event-types)
 	ListNotificationEventTypes(ctx context.Context, request ListNotificationEventTypesRequestObject) (ListNotificationEventTypesResponseObject, error)
-	// ListNotificationRecipients List the address-book recipients rules can name, one page at a time
+	// ListNotificationRecipients List the recipient groups rules can name, one page at a time
 	// (GET /v1/notification-recipients)
 	ListNotificationRecipients(ctx context.Context, request ListNotificationRecipientsRequestObject) (ListNotificationRecipientsResponseObject, error)
-	// CreateNotificationRecipient Create an address-book recipient
+	// CreateNotificationRecipient Create a recipient group
 	// (POST /v1/notification-recipients)
 	CreateNotificationRecipient(ctx context.Context, request CreateNotificationRecipientRequestObject) (CreateNotificationRecipientResponseObject, error)
-	// DeleteNotificationRecipient Delete an address-book recipient. Refused with 409 while a rule names it
+	// DeleteNotificationRecipient Delete a recipient group. Refused with 409 while a rule names it
 	// (DELETE /v1/notification-recipients/{id})
 	DeleteNotificationRecipient(ctx context.Context, request DeleteNotificationRecipientRequestObject) (DeleteNotificationRecipientResponseObject, error)
-	// GetNotificationRecipient Return one address-book recipient
+	// GetNotificationRecipient Return one recipient group
 	// (GET /v1/notification-recipients/{id})
 	GetNotificationRecipient(ctx context.Context, request GetNotificationRecipientRequestObject) (GetNotificationRecipientResponseObject, error)
-	// ReplaceNotificationRecipient Replace an address-book recipient; the rules that name it send to its new addresses
+	// ReplaceNotificationRecipient Replace a recipient group; the rules that name it send to its new members
 	// (PUT /v1/notification-recipients/{id})
 	ReplaceNotificationRecipient(ctx context.Context, request ReplaceNotificationRecipientRequestObject) (ReplaceNotificationRecipientResponseObject, error)
 	// ListNotificationRules List the notification rules of the calling tenant, one page at a time
@@ -7410,6 +7546,9 @@ type StrictServerInterface interface {
 	// GetGcpOnboarding Return the values a GCP deployment needs before it is reserved
 	// (GET /v1/onboarding/gcp)
 	GetGcpOnboarding(ctx context.Context, request GetGcpOnboardingRequestObject) (GetGcpOnboardingResponseObject, error)
+	// ListUsers Find the Act user of the calling tenant with an exact email address
+	// (GET /v1/users)
+	ListUsers(ctx context.Context, request ListUsersRequestObject) (ListUsersResponseObject, error)
 	// GetWhoami Return the tenant, region and principal of the calling token
 	// (GET /v1/whoami)
 	GetWhoami(ctx context.Context, request GetWhoamiRequestObject) (GetWhoamiResponseObject, error)
@@ -7634,30 +7773,6 @@ func (sh *strictHandler) CreateIntegration(w http.ResponseWriter, r *http.Reques
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(CreateIntegrationResponseObject); ok {
 		if err := validResponse.VisitCreateIntegrationResponse(w); err != nil {
-			sh.options.ResponseErrorHandlerFunc(w, r, err)
-		}
-	} else if response != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
-	}
-}
-
-// GetEmailIntegration operation middleware
-func (sh *strictHandler) GetEmailIntegration(w http.ResponseWriter, r *http.Request) {
-	var request GetEmailIntegrationRequestObject
-
-	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
-		return sh.ssi.GetEmailIntegration(ctx, request.(GetEmailIntegrationRequestObject))
-	}
-	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "GetEmailIntegration")
-	}
-
-	response, err := handler(r.Context(), w, r, request)
-
-	if err != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(GetEmailIntegrationResponseObject); ok {
-		if err := validResponse.VisitGetEmailIntegrationResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -8219,6 +8334,32 @@ func (sh *strictHandler) GetGcpOnboarding(w http.ResponseWriter, r *http.Request
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(GetGcpOnboardingResponseObject); ok {
 		if err := validResponse.VisitGetGcpOnboardingResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListUsers operation middleware
+func (sh *strictHandler) ListUsers(w http.ResponseWriter, r *http.Request, params ListUsersParams) {
+	var request ListUsersRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListUsers(ctx, request.(ListUsersRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListUsers")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListUsersResponseObject); ok {
+		if err := validResponse.VisitListUsersResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

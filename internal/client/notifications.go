@@ -4,6 +4,8 @@ import (
 	"context"
 	"net/http"
 
+	openapi_types "github.com/oapi-codegen/runtime/types"
+
 	"github.com/act-security/terraform-provider-act/internal/apigen"
 )
 
@@ -23,18 +25,18 @@ func (c *Client) ListNotificationEventTypes(ctx context.Context) (*apigen.Notifi
 	return resp.JSON200, nil
 }
 
-func (c *Client) GetEmailIntegration(ctx context.Context) (*apigen.Integration, error) {
-	resp, err := c.api.GetEmailIntegrationWithResponse(ctx)
+func (c *Client) FindUserByEmail(ctx context.Context, email string) (*apigen.ActUser, error) {
+	resp, err := c.api.ListUsersWithResponse(ctx, &apigen.ListUsersParams{Email: openapi_types.Email(email)})
 	if err != nil {
 		return nil, err
-	}
-	if resp.StatusCode() == http.StatusNotFound {
-		return nil, nil
 	}
 	if resp.JSON200 == nil {
 		return nil, newAPIError(resp.StatusCode(), resp.Body)
 	}
-	return resp.JSON200, nil
+	if len(resp.JSON200.Items) == 0 {
+		return nil, nil
+	}
+	return &resp.JSON200.Items[0], nil
 }
 
 func (c *Client) FindSlackChannels(ctx context.Context, name string, integrationID *string) ([]apigen.SlackChannel, error) {

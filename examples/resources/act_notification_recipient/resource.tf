@@ -1,15 +1,14 @@
-data "act_email_integration" "this" {}
+data "act_user" "lee" {
+  email = "lee@example.com"
+}
 
 resource "act_notification_recipient" "platform" {
-  name = "Platform team"
+  name     = "Platform team"
+  user_ids = [data.act_user.lee.id]
+  emails   = ["platform@example.com"]
 
-  email {
-    integration_id = data.act_email_integration.this.id
-    recipients     = ["platform@example.com"]
-  }
-
-  slack {
+  slack_channel {
     integration_id = act_slack_integration.this.id
-    channel_ids    = ["C05PLATGRD2"]
+    channel_id     = "C05PLATGRD2"
   }
 }

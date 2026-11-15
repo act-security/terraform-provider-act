@@ -1,16 +1,13 @@
 package provider
 
 import (
-	"context"
 	"errors"
 	"net/http"
-	"slices"
 	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
@@ -21,7 +18,7 @@ import (
 func sampleRuleWrite() apigen.NotificationRuleWrite {
 	conditions := []apigen.NotificationCondition{{EventType: "simulation.finished", Field: "source", Operator: "in", Values: []string{"campaigns"}}}
 	actions := []apigen.NotificationAction{
-		{Type: apigen.NotificationActionTypeEmail, Email: &apigen.NotificationEmailAction{IntegrationID: "e", Recipients: []openapi_types.Email{"Lee@Acme.com"}}},
+		{Type: apigen.NotificationActionTypeEmail, Email: &apigen.NotificationEmailAction{IntegrationID: "e", Recipients: []openapi_types.Email{"lee@acme.com"}}},
 		{Type: apigen.NotificationActionTypeSlack, Slack: &apigen.NotificationSlackAction{IntegrationID: "s", ChannelIds: []string{"C1", "#ops"}}},
 	}
 	recipients := []string{"r-0", "r-1"}
@@ -51,23 +48,46 @@ func TestAttributePath(t *testing.T) {
 		{"/actions/1/slack/channelIds", path.Root("slack").AtListIndex(0).AtName("channel_ids"), true},
 		{"/actions/1/slack/channelIds/1", path.Root("slack").AtListIndex(0).AtName("channel_ids").AtSetValue(types.StringValue("#ops")), true},
 		{"/actions/0/email/integrationId", path.Root("email").AtListIndex(0).AtName("integration_id"), true},
-		{"/actions/0/email/recipients/0", path.Root("email").AtListIndex(0).AtName("recipients").AtSetValue(types.StringValue("Lee@Acme.com")), true},
+		{"/actions/0/email/recipients/0", path.Root("email").AtListIndex(0).AtName("recipients").AtSetValue(types.StringValue("lee@acme.com")), true},
 		{"/actions/1", path.Root("slack").AtListIndex(0), true},
 		{"/actions/0/email", path.Root("email").AtListIndex(0), true},
 		{"/actions/1/teams", path.Empty(), false},
-		{"/methods/0/email", path.Empty(), false},
 		{"/unknown", path.Empty(), false},
 		{"", path.Empty(), false},
 	}
 	for _, tt := range tests {
-		got, ok := attributePath(tt.pointer, "actions", body)
+		got, ok := ruleAttributePath(tt.pointer, body)
 		if ok != tt.ok || !got.Equal(tt.want) {
-			t.Errorf("attributePath(%q) = %s, %t; want %s, %t", tt.pointer, got, ok, tt.want, tt.ok)
+			t.Errorf("ruleAttributePath(%q) = %s, %t; want %s, %t", tt.pointer, got, ok, tt.want, tt.ok)
 		}
 	}
-	recipient := apigen.NotificationRecipientWrite{Name: "r", Methods: (*body.Actions)[1:]}
-	if got, ok := attributePath("/methods/0/slack/channelIds/0", "methods", recipient); !ok || !got.Equal(path.Root("slack").AtListIndex(0).AtName("channel_ids").AtSetValue(types.StringValue("C1"))) {
-		t.Errorf("recipient pointer mapped to %s, %t", got, ok)
+}
+
+func TestRecipientAttributePath(t *testing.T) {
+	body := apigen.NotificationRecipientWrite{Name: "r", Members: []apigen.NotificationRecipientMemberWrite{
+		{Type: apigen.NotificationRecipientMemberTypeEmail, Email: &apigen.NotificationRecipientEmailMember{Address: "ops@acme.com"}},
+		{Type: apigen.NotificationRecipientMemberTypeSlackChannel, SlackChannel: &apigen.NotificationRecipientSlackChannelMemberWrite{IntegrationID: "s", ChannelID: "C1"}},
+		{Type: apigen.NotificationRecipientMemberTypeUser, User: &apigen.NotificationRecipientUserMemberWrite{UserID: "auth0|lee"}},
+	}}
+	tests := []struct {
+		pointer string
+		want    path.Path
+		ok      bool
+	}{
+		{"/name", path.Root("name"), true},
+		{"/members/0/email/address", path.Root("emails").AtSetValue(types.StringValue("ops@acme.com")), true},
+		{"/members/0", path.Root("emails").AtSetValue(types.StringValue("ops@acme.com")), true},
+		{"/members/1/slackChannel/integrationId", path.Root("slack_channel"), true},
+		{"/members/2/user/userId", path.Root("user_ids").AtSetValue(types.StringValue("auth0|lee")), true},
+		{"/members/9", path.Empty(), false},
+		{"/members", path.Empty(), false},
+		{"", path.Empty(), false},
+	}
+	for _, tt := range tests {
+		got, ok := recipientAttributePath(tt.pointer, body)
+		if ok != tt.ok || !got.Equal(tt.want) {
+			t.Errorf("recipientAttributePath(%q) = %s, %t; want %s, %t", tt.pointer, got, ok, tt.want, tt.ok)
+		}
 	}
 }
 
@@ -148,34 +168,35 @@ func TestAddNotificationWriteError(t *testing.T) {
 	}
 }
 
-func TestKeepSpelling(t *testing.T) {
-	got := keepSpelling([]string{"Lee@Acme.com", " Ops@Acme.com"}, []string{"lee@acme.com", "new@acme.com", "ops@acme.com"})
-	want := []string{"Lee@Acme.com", "new@acme.com", " Ops@Acme.com"}
-	if !slices.Equal(got, want) {
-		t.Fatalf("keepSpelling = %q, want %q", got, want)
+func TestLowercaseEmailPattern(t *testing.T) {
+	for value, want := range map[string]bool{
+		"lee@acme.com":   true,
+		"o'neil@acme.io": true,
+		"Lee@acme.com":   false,
+		"lee@ACME.com":   false,
+		" lee@acme.com":  false,
+		"lee@acme.com ":  false,
+		"":               false,
+	} {
+		if got := lowercaseEmailPattern.MatchString(value); got != want {
+			t.Errorf("lowercaseEmailPattern(%q) = %t, want %t", value, got, want)
+		}
 	}
 }
 
-func TestCaseInsensitiveSet(t *testing.T) {
-	set := func(values ...string) types.Set {
-		return stringSet(context.Background(), values, &diag.Diagnostics{})
+func TestWarnAboutRecipient(t *testing.T) {
+	var diags diag.Diagnostics
+	warnAboutRecipient(&diags, apigen.NotificationRecipient{ID: "r", Name: "n", MinClientRevision: supportedClientRevision, Members: []apigen.NotificationRecipientMember{
+		{Type: apigen.NotificationRecipientMemberTypeUser, User: &apigen.NotificationRecipientUserMember{UserID: "auth0|lee", InTenant: true}},
+	}})
+	if len(diags) != 0 {
+		t.Fatalf("a current recipient warned: %v", diags)
 	}
-	tests := []struct {
-		name          string
-		config, state types.Set
-		keepState     bool
-	}{
-		{"case only", set("LEE@acme.com", "ops@acme.com"), set("ops@acme.com", "lee@acme.com"), true},
-		{"new address", set("lee@acme.com", "new@acme.com"), set("lee@acme.com"), false},
-		{"swapped address", set("lee@acme.com", "new@acme.com"), set("lee@acme.com", "old@acme.com"), false},
-		{"no state", set("lee@acme.com"), types.SetNull(types.StringType), false},
-	}
-	for _, tt := range tests {
-		resp := &planmodifier.SetResponse{PlanValue: tt.config}
-		caseInsensitiveSet{}.PlanModifySet(context.Background(), planmodifier.SetRequest{ConfigValue: tt.config, StateValue: tt.state, PlanValue: tt.config}, resp)
-		if kept := resp.PlanValue.Equal(tt.state); kept != tt.keepState {
-			t.Errorf("%s: kept state = %t, want %t", tt.name, kept, tt.keepState)
-		}
+	warnAboutRecipient(&diags, apigen.NotificationRecipient{ID: "r", Name: "n", MinClientRevision: supportedClientRevision + 1, Members: []apigen.NotificationRecipientMember{
+		{Type: apigen.NotificationRecipientMemberTypeUser, User: &apigen.NotificationRecipientUserMember{UserID: "auth0|gone", InTenant: false}},
+	}})
+	if len(diags) != 2 || !strings.Contains(diags[0].Detail(), "needs client revision 2") || !strings.Contains(diags[1].Detail(), "auth0|gone") {
+		t.Fatalf("a newer recipient with a departed user gave %v", diags)
 	}
 }
 

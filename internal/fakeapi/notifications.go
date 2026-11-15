@@ -20,8 +20,19 @@ const (
 	SlackChannelSecurityName = "security-alerts"
 	SlackChannelPlatformID   = "C0PLATFORM1"
 	SlackChannelPlatformName = "platform"
+	UserLeeID                = "auth0|lee"
+	UserLeeEmail             = "lee@acme.com"
+	UserSamID                = "auth0|sam"
+	UserSamEmail             = "Sam.Rivera@Acme.com"
 	currentClientRevision    = 1
+	maxRecipientMembers      = 100
+	terraformUserAgentPrefix = "terraform-provider-act/"
 )
+
+var seededUsers = []gen.ActUser{
+	{ID: UserLeeID, Email: UserLeeEmail, Name: ptr("Lee Park")},
+	{ID: UserSamID, Email: UserSamEmail, Name: nil},
+}
 
 var slackChannels = []gen.SlackChannel{
 	{ID: SlackChannelSecurityID, Name: SlackChannelSecurityName},
@@ -54,6 +65,7 @@ var notificationLimits = gen.NotificationRuleLimits{
 	MaxSlackChannels:            50,
 	MaxEnabledRulesPerEventType: 50,
 	MaxRecipientNameLength:      100,
+	MaxRecipientMembers:         maxRecipientMembers,
 	ActivityRetentionMonths:     6,
 }
 
@@ -61,6 +73,7 @@ type notificationStore struct {
 	mu                    sync.Mutex
 	rules                 map[string]*gen.NotificationRule
 	recipients            map[string]*gen.NotificationRecipient
+	users                 map[string]gen.ActUser
 	ruleKeys              map[string]idempotentNotification
 	recipientKeys         map[string]idempotentNotification
 	loseNextCreateReply   bool
@@ -78,9 +91,27 @@ func newNotificationStore() *notificationStore {
 	return &notificationStore{
 		rules:         map[string]*gen.NotificationRule{},
 		recipients:    map[string]*gen.NotificationRecipient{},
+		users:         usersByID(seededUsers),
 		ruleKeys:      map[string]idempotentNotification{},
 		recipientKeys: map[string]idempotentNotification{},
 	}
+}
+
+func usersByID(users []gen.ActUser) map[string]gen.ActUser {
+	out := map[string]gen.ActUser{}
+	for _, user := range users {
+		out[user.ID] = user
+	}
+	return out
+}
+
+type userAgentKey struct{}
+
+func changeSourceOf(ctx context.Context) gen.NotificationChangeSource {
+	if agent, ok := ctx.Value(userAgentKey{}).(string); ok && strings.HasPrefix(agent, terraformUserAgentPrefix) {
+		return gen.NotificationChangeSourceTerraform
+	}
+	return gen.NotificationChangeSourceAPI
 }
 
 func revisionTag(revision int) string {
@@ -151,7 +182,8 @@ func (f *Fake) slackIntegrationID() (string, bool) {
 	return "", false
 }
 
-func (f *Fake) normalizeActions(actions []gen.NotificationAction, member string) ([]gen.NotificationAction, *writeError) {
+func (f *Fake) normalizeActions(actions []gen.NotificationAction) ([]gen.NotificationAction, *writeError) {
+	const member = "actions"
 	out := make([]gen.NotificationAction, 0, len(actions))
 	seen := map[gen.NotificationActionType]bool{}
 	for i, action := range actions {
@@ -168,9 +200,13 @@ func (f *Fake) normalizeActions(actions []gen.NotificationAction, member string)
 			if err := f.checkIntegration(action.Email.IntegrationID, gen.IntegrationTypeEmail, at+"/integrationId"); err != nil {
 				return nil, err
 			}
+			recipients, failure := checkedEmails(action.Email.Recipients, at+"/recipients")
+			if failure != nil {
+				return nil, failure
+			}
 			out = append(out, gen.NotificationAction{Type: action.Type, Email: &gen.NotificationEmailAction{
 				IntegrationID: action.Email.IntegrationID,
-				Recipients:    normalizeEmails(action.Email.Recipients),
+				Recipients:    recipients,
 			}})
 		case gen.NotificationActionTypeSlack:
 			if action.Slack == nil || len(action.Slack.ChannelIds) == 0 {
@@ -207,16 +243,24 @@ func (f *Fake) checkIntegration(id string, want gen.IntegrationType, pointer str
 	return nil
 }
 
-func normalizeEmails(values []openapi_types.Email) []openapi_types.Email {
-	lowered := make([]string, 0, len(values))
-	for _, value := range values {
-		lowered = append(lowered, strings.ToLower(strings.TrimSpace(string(value))))
+func checkedEmails(values []openapi_types.Email, pointer string) ([]openapi_types.Email, *writeError) {
+	seen := map[openapi_types.Email]bool{}
+	for i, value := range values {
+		if seen[value] {
+			return nil, &writeError{http.StatusBadRequest, domainInvalid("duplicate_email", pointer)}
+		}
+		seen[value] = true
+		if hasASCIIUppercase(string(value)) {
+			return nil, &writeError{http.StatusBadRequest, domainInvalid("email_not_lowercase", fmt.Sprintf("%s/%d", pointer, i))}
+		}
 	}
-	out := []openapi_types.Email{}
-	for _, value := range sortedUnique(lowered) {
-		out = append(out, openapi_types.Email(value))
-	}
-	return out
+	out := slices.Clone(values)
+	slices.Sort(out)
+	return out, nil
+}
+
+func hasASCIIUppercase(value string) bool {
+	return strings.ContainsFunc(value, func(r rune) bool { return r >= 'A' && r <= 'Z' })
 }
 
 func sortedUnique(values []string) []string {
@@ -248,10 +292,9 @@ func (f *Fake) normalizeRule(body gen.NotificationRuleWrite, previous *gen.Notif
 	if body.Enabled != nil {
 		rule.Enabled = *body.Enabled
 	}
-	for _, eventType := range body.EventTypes {
+	for i, eventType := range body.EventTypes {
 		if _, ok := eventTypeKnown(eventType); !ok {
-			e := domainInvalid("event_type_not_available", "")
-			(*e.Error.Details)["pointer"] = nil
+			e := domainInvalid("event_type_not_available", fmt.Sprintf("/eventTypes/%d", i))
 			(*e.Error.Details)["eventType"] = eventType
 			return gen.NotificationRule{}, &writeError{http.StatusBadRequest, e}
 		}
@@ -287,7 +330,7 @@ func (f *Fake) normalizeRule(body gen.NotificationRuleWrite, previous *gen.Notif
 		}
 	}
 	if body.Actions != nil {
-		actions, err := f.normalizeActions(*body.Actions, "actions")
+		actions, err := f.normalizeActions(*body.Actions)
 		if err != nil {
 			return gen.NotificationRule{}, err
 		}
@@ -304,15 +347,15 @@ func (f *Fake) normalizeRule(body gen.NotificationRuleWrite, previous *gen.Notif
 	return rule, nil
 }
 
-func (f *Fake) commitRule(rule gen.NotificationRule, previous *gen.NotificationRule) *gen.NotificationRule {
+func (f *Fake) commitRule(rule gen.NotificationRule, previous *gen.NotificationRule, via gen.NotificationChangeSource) *gen.NotificationRule {
 	now := f.now().UTC()
-	rule.LastModifiedVia = gen.NotificationChangeSourceAPI
+	rule.LastModifiedVia = via
 	rule.UpdatedAt = now
 	rule.MinClientRevision = currentClientRevision
 	if previous == nil {
 		rule.ID = randomUUID()
 		rule.Revision = 1
-		rule.CreatedVia = gen.NotificationChangeSourceAPI
+		rule.CreatedVia = via
 		rule.CreatedAt = now
 	} else {
 		rule.ID = previous.ID
@@ -344,6 +387,17 @@ func (f *Fake) ruleIDsFor(recipientID string) []string {
 func (f *Fake) recipientView(recipient *gen.NotificationRecipient) gen.NotificationRecipient {
 	view := *recipient
 	view.RuleIds = f.ruleIDsFor(recipient.ID)
+	view.Members = make([]gen.NotificationRecipientMember, 0, len(recipient.Members))
+	for _, member := range recipient.Members {
+		if member.User != nil {
+			user, inTenant := f.notifications.users[member.User.UserID]
+			member.User = &gen.NotificationRecipientUserMember{UserID: member.User.UserID, InTenant: inTenant}
+			if inTenant {
+				member.User.Email, member.User.Name = &user.Email, user.Name
+			}
+		}
+		view.Members = append(view.Members, member)
+	}
 	return view
 }
 
@@ -351,25 +405,27 @@ func (s *apiServer) notificationsEnabled() bool {
 	return !s.fake.cfg.NotificationRulesDisabled
 }
 
-func (s *apiServer) GetEmailIntegration(context.Context, gen.GetEmailIntegrationRequestObject) (gen.GetEmailIntegrationResponseObject, error) {
-	store := s.fake.integrations
+func (s *apiServer) ListUsers(_ context.Context, req gen.ListUsersRequestObject) (gen.ListUsersResponseObject, error) {
+	store := s.fake.notifications
 	store.mu.Lock()
 	defer store.mu.Unlock()
-	stored, ok := store.byID[EmailIntegrationID]
-	if !ok {
-		return gen.GetEmailIntegration404JSONResponse(envelope(gen.ErrorEnvelopeErrorCodeNotFound, "Not found")), nil
+	items := []gen.ActUser{}
+	for _, user := range store.users {
+		if strings.EqualFold(user.Email, string(req.Params.Email)) {
+			items = append(items, user)
+		}
 	}
-	return gen.GetEmailIntegration200JSONResponse{Body: stored.item, Headers: gen.GetEmailIntegration200ResponseHeaders{ETag: stored.etag()}}, nil
+	return gen.ListUsers200JSONResponse{Items: items}, nil
 }
 
 func (s *apiServer) ListSlackChannels(_ context.Context, req gen.ListSlackChannelsRequestObject) (gen.ListSlackChannelsResponseObject, error) {
-	if !s.notificationsEnabled() {
-		return gen.ListSlackChannels403JSONResponse{Body: notificationsDisabled()}, nil
-	}
 	id, ok := s.fake.slackIntegrationID()
 	if !ok || (req.Params.IntegrationID != nil && *req.Params.IntegrationID != id) {
 		e := envelope(gen.ErrorEnvelopeErrorCodeIntegrationNotConnected, "Slack is not connected")
 		details := map[string]any{"type": "slack"}
+		if req.Params.IntegrationID != nil {
+			details["attribute"] = "integrationId"
+		}
 		e.Error.Details = &details
 		return gen.ListSlackChannels422JSONResponse(e), nil
 	}
@@ -413,7 +469,7 @@ func (s *apiServer) ListNotificationRules(context.Context, gen.ListNotificationR
 	return gen.ListNotificationRules200JSONResponse{Items: items}, nil
 }
 
-func (s *apiServer) CreateNotificationRule(_ context.Context, req gen.CreateNotificationRuleRequestObject) (gen.CreateNotificationRuleResponseObject, error) {
+func (s *apiServer) CreateNotificationRule(ctx context.Context, req gen.CreateNotificationRuleRequestObject) (gen.CreateNotificationRuleResponseObject, error) {
 	if !s.notificationsEnabled() {
 		return gen.CreateNotificationRule403JSONResponse{Body: notificationsDisabled()}, nil
 	}
@@ -439,7 +495,7 @@ func (s *apiServer) CreateNotificationRule(_ context.Context, req gen.CreateNoti
 		}
 		return gen.CreateNotificationRule400JSONResponse(failure.body), nil
 	}
-	stored := s.fake.commitRule(rule, nil)
+	stored := s.fake.commitRule(rule, nil, changeSourceOf(ctx))
 	if key := req.Params.IdempotencyKey; key != nil {
 		store.ruleKeys[*key] = idempotentNotification{body: fingerprint, id: stored.ID}
 	}
@@ -499,7 +555,7 @@ func (s *apiServer) GetNotificationRule(_ context.Context, req gen.GetNotificati
 	return gen.GetNotificationRule200JSONResponse{Body: *rule, Headers: gen.GetNotificationRule200ResponseHeaders{ETag: revisionTag(rule.Revision)}}, nil
 }
 
-func (s *apiServer) ReplaceNotificationRule(_ context.Context, req gen.ReplaceNotificationRuleRequestObject) (gen.ReplaceNotificationRuleResponseObject, error) {
+func (s *apiServer) ReplaceNotificationRule(ctx context.Context, req gen.ReplaceNotificationRuleRequestObject) (gen.ReplaceNotificationRuleResponseObject, error) {
 	if !s.notificationsEnabled() {
 		return gen.ReplaceNotificationRule403JSONResponse{Body: notificationsDisabled()}, nil
 	}
@@ -528,7 +584,7 @@ func (s *apiServer) ReplaceNotificationRule(_ context.Context, req gen.ReplaceNo
 		}
 		return gen.ReplaceNotificationRule400JSONResponse(failure.body), nil
 	}
-	stored := s.fake.commitRule(rule, previous)
+	stored := s.fake.commitRule(rule, previous, changeSourceOf(ctx))
 	return gen.ReplaceNotificationRule200JSONResponse{Body: *stored, Headers: gen.ReplaceNotificationRule200ResponseHeaders{ETag: revisionTag(stored.Revision)}}, nil
 }
 
@@ -574,12 +630,16 @@ func (s *apiServer) ListNotificationRuleActivity(_ context.Context, req gen.List
 	return gen.ListNotificationRuleActivity200JSONResponse{Items: []gen.NotificationRuleActivity{}}, nil
 }
 
-func (f *Fake) normalizeRecipient(body gen.NotificationRecipientWrite, selfID string) (gen.NotificationRecipient, *writeError) {
+func (f *Fake) normalizeRecipient(body gen.NotificationRecipientWrite, previous *gen.NotificationRecipient) (gen.NotificationRecipient, *writeError) {
 	if strings.TrimSpace(body.Name) == "" {
 		return gen.NotificationRecipient{}, &writeError{http.StatusBadRequest, invalid("name", "too_small")}
 	}
-	if len(body.Methods) == 0 {
-		return gen.NotificationRecipient{}, &writeError{http.StatusBadRequest, invalid("methods", "too_small")}
+	if len(body.Members) == 0 || len(body.Members) > maxRecipientMembers {
+		return gen.NotificationRecipient{}, &writeError{http.StatusBadRequest, invalid("members", "too_small")}
+	}
+	selfID := ""
+	if previous != nil {
+		selfID = previous.ID
 	}
 	for id, other := range f.notifications.recipients {
 		if id != selfID && strings.EqualFold(other.Name, body.Name) {
@@ -589,27 +649,104 @@ func (f *Fake) normalizeRecipient(body gen.NotificationRecipientWrite, selfID st
 			return gen.NotificationRecipient{}, &writeError{http.StatusConflict, e}
 		}
 	}
-	methods, failure := f.normalizeActions(body.Methods, "methods")
-	if failure != nil {
-		return gen.NotificationRecipient{}, failure
+	stored := map[string]bool{}
+	if previous != nil {
+		for _, member := range previous.Members {
+			stored[memberKeyOf(member)] = true
+		}
 	}
-	return gen.NotificationRecipient{Name: body.Name, Methods: methods}, nil
+	members := make([]gen.NotificationRecipientMember, 0, len(body.Members))
+	seen := map[string]bool{}
+	for i, write := range body.Members {
+		member, failure := f.memberOf(write, fmt.Sprintf("/members/%d", i), stored)
+		if failure != nil {
+			return gen.NotificationRecipient{}, failure
+		}
+		key := memberKeyOf(member)
+		if seen[key] {
+			return gen.NotificationRecipient{}, &writeError{http.StatusBadRequest, domainInvalid("duplicate_member", fmt.Sprintf("/members/%d", i))}
+		}
+		seen[key] = true
+		members = append(members, member)
+	}
+	sort.Slice(members, func(i, j int) bool { return memberKeyOf(members[i]) < memberKeyOf(members[j]) })
+	return gen.NotificationRecipient{Name: body.Name, Members: members}, nil
 }
 
-func (f *Fake) commitRecipient(recipient gen.NotificationRecipient, previous *gen.NotificationRecipient) *gen.NotificationRecipient {
+func (f *Fake) memberOf(write gen.NotificationRecipientMemberWrite, at string, stored map[string]bool) (gen.NotificationRecipientMember, *writeError) {
+	switch write.Type {
+	case gen.NotificationRecipientMemberTypeUser:
+		if write.User == nil {
+			return gen.NotificationRecipientMember{}, &writeError{http.StatusBadRequest, invalid(strings.ReplaceAll(strings.TrimPrefix(at, "/"), "/", ".")+".user", "invalid_type")}
+		}
+		member := gen.NotificationRecipientMember{Type: write.Type, User: &gen.NotificationRecipientUserMember{UserID: write.User.UserID}}
+		if _, inTenant := f.notifications.users[write.User.UserID]; !inTenant && !stored[memberKeyOf(member)] {
+			return gen.NotificationRecipientMember{}, &writeError{http.StatusBadRequest, domainInvalid("unknown_user", at+"/user/userId")}
+		}
+		return member, nil
+	case gen.NotificationRecipientMemberTypeEmail:
+		if write.Email == nil {
+			return gen.NotificationRecipientMember{}, &writeError{http.StatusBadRequest, invalid(strings.ReplaceAll(strings.TrimPrefix(at, "/"), "/", ".")+".email", "invalid_type")}
+		}
+		if hasASCIIUppercase(string(write.Email.Address)) {
+			return gen.NotificationRecipientMember{}, &writeError{http.StatusBadRequest, domainInvalid("email_not_lowercase", at+"/email/address")}
+		}
+		return gen.NotificationRecipientMember{Type: write.Type, Email: &gen.NotificationRecipientEmailMember{Address: write.Email.Address}}, nil
+	case gen.NotificationRecipientMemberTypeSlackChannel:
+		if write.SlackChannel == nil {
+			return gen.NotificationRecipientMember{}, &writeError{http.StatusBadRequest, invalid(strings.ReplaceAll(strings.TrimPrefix(at, "/"), "/", ".")+".slackChannel", "invalid_type")}
+		}
+		if err := f.checkIntegration(write.SlackChannel.IntegrationID, gen.IntegrationTypeSlack, at+"/slackChannel/integrationId"); err != nil {
+			return gen.NotificationRecipientMember{}, err
+		}
+		return gen.NotificationRecipientMember{Type: write.Type, SlackChannel: &gen.NotificationRecipientSlackChannelMember{
+			IntegrationID: write.SlackChannel.IntegrationID,
+			ChannelID:     write.SlackChannel.ChannelID,
+			ChannelName:   slackChannelName(write.SlackChannel.ChannelID),
+		}}, nil
+	default:
+		return gen.NotificationRecipientMember{}, &writeError{http.StatusBadRequest, invalid(strings.ReplaceAll(strings.TrimPrefix(at, "/"), "/", ".")+".type", "invalid_enum_value")}
+	}
+}
+
+func memberKeyOf(member gen.NotificationRecipientMember) string {
+	switch {
+	case member.Email != nil:
+		return string(member.Type) + "\x00" + string(member.Email.Address)
+	case member.SlackChannel != nil:
+		return string(member.Type) + "\x00" + member.SlackChannel.IntegrationID + "\x00" + member.SlackChannel.ChannelID
+	case member.User != nil:
+		return string(member.Type) + "\x00" + member.User.UserID
+	default:
+		return string(member.Type)
+	}
+}
+
+func slackChannelName(id string) *string {
+	for _, channel := range slackChannels {
+		if channel.ID == id {
+			return ptr(channel.Name)
+		}
+	}
+	return nil
+}
+
+func (f *Fake) commitRecipient(recipient gen.NotificationRecipient, previous *gen.NotificationRecipient, via gen.NotificationChangeSource) *gen.NotificationRecipient {
 	now := f.now().UTC()
-	recipient.LastModifiedVia = gen.NotificationChangeSourceAPI
+	recipient.LastModifiedVia = via
 	recipient.UpdatedAt = now
+	recipient.MinClientRevision = currentClientRevision
 	if previous == nil {
 		recipient.ID = randomUUID()
 		recipient.Revision = 1
-		recipient.CreatedVia = gen.NotificationChangeSourceAPI
+		recipient.CreatedVia = via
 		recipient.CreatedAt = now
 	} else {
 		recipient.ID = previous.ID
 		recipient.Revision = previous.Revision + 1
 		recipient.CreatedVia = previous.CreatedVia
 		recipient.CreatedAt = previous.CreatedAt
+		recipient.MinClientRevision = max(recipient.MinClientRevision, previous.MinClientRevision)
 	}
 	stored := recipient
 	f.notifications.recipients[recipient.ID] = &stored
@@ -631,7 +768,7 @@ func (s *apiServer) ListNotificationRecipients(context.Context, gen.ListNotifica
 	return gen.ListNotificationRecipients200JSONResponse{Items: items}, nil
 }
 
-func (s *apiServer) CreateNotificationRecipient(_ context.Context, req gen.CreateNotificationRecipientRequestObject) (gen.CreateNotificationRecipientResponseObject, error) {
+func (s *apiServer) CreateNotificationRecipient(ctx context.Context, req gen.CreateNotificationRecipientRequestObject) (gen.CreateNotificationRecipientResponseObject, error) {
 	if !s.notificationsEnabled() {
 		return gen.CreateNotificationRecipient403JSONResponse{Body: notificationsDisabled()}, nil
 	}
@@ -649,7 +786,7 @@ func (s *apiServer) CreateNotificationRecipient(_ context.Context, req gen.Creat
 			return gen.CreateNotificationRecipient201JSONResponse{Body: view, Headers: gen.CreateNotificationRecipient201ResponseHeaders{ETag: revisionTag(view.Revision)}}, nil
 		}
 	}
-	recipient, failure := s.fake.normalizeRecipient(body, "")
+	recipient, failure := s.fake.normalizeRecipient(body, nil)
 	if failure != nil {
 		switch failure.status {
 		case http.StatusConflict:
@@ -660,7 +797,7 @@ func (s *apiServer) CreateNotificationRecipient(_ context.Context, req gen.Creat
 			return gen.CreateNotificationRecipient400JSONResponse(failure.body), nil
 		}
 	}
-	stored := s.fake.commitRecipient(recipient, nil)
+	stored := s.fake.commitRecipient(recipient, nil, changeSourceOf(ctx))
 	if key := req.Params.IdempotencyKey; key != nil {
 		store.recipientKeys[*key] = idempotentNotification{body: fingerprint, id: stored.ID}
 	}
@@ -683,7 +820,7 @@ func (s *apiServer) GetNotificationRecipient(_ context.Context, req gen.GetNotif
 	return gen.GetNotificationRecipient200JSONResponse{Body: view, Headers: gen.GetNotificationRecipient200ResponseHeaders{ETag: revisionTag(view.Revision)}}, nil
 }
 
-func (s *apiServer) ReplaceNotificationRecipient(_ context.Context, req gen.ReplaceNotificationRecipientRequestObject) (gen.ReplaceNotificationRecipientResponseObject, error) {
+func (s *apiServer) ReplaceNotificationRecipient(ctx context.Context, req gen.ReplaceNotificationRecipientRequestObject) (gen.ReplaceNotificationRecipientResponseObject, error) {
 	if !s.notificationsEnabled() {
 		return gen.ReplaceNotificationRecipient403JSONResponse{Body: notificationsDisabled()}, nil
 	}
@@ -697,7 +834,7 @@ func (s *apiServer) ReplaceNotificationRecipient(_ context.Context, req gen.Repl
 	if !matchesRevision(req.Params.IfMatch, previous.Revision) {
 		return gen.ReplaceNotificationRecipient412JSONResponse(preconditionFailed(previous.Revision)), nil
 	}
-	recipient, failure := s.fake.normalizeRecipient(*req.Body, req.ID)
+	recipient, failure := s.fake.normalizeRecipient(*req.Body, previous)
 	if failure != nil {
 		switch failure.status {
 		case http.StatusConflict:
@@ -708,7 +845,7 @@ func (s *apiServer) ReplaceNotificationRecipient(_ context.Context, req gen.Repl
 			return gen.ReplaceNotificationRecipient400JSONResponse(failure.body), nil
 		}
 	}
-	view := s.fake.recipientView(s.fake.commitRecipient(recipient, previous))
+	view := s.fake.recipientView(s.fake.commitRecipient(recipient, previous, changeSourceOf(ctx)))
 	return gen.ReplaceNotificationRecipient200JSONResponse{Body: view, Headers: gen.ReplaceNotificationRecipient200ResponseHeaders{ETag: revisionTag(view.Revision)}}, nil
 }
 
@@ -817,10 +954,37 @@ func (f *Fake) SeedNotificationRule(name string, recipientIDs ...string) string 
 		Actions:      []gen.NotificationAction{},
 		RecipientIds: sortedUnique(recipientIDs),
 	}
-	stored := f.commitRule(rule, nil)
+	stored := f.commitRule(rule, nil, gen.NotificationChangeSourceUI)
 	stored.CreatedVia = gen.NotificationChangeSourceUI
 	stored.LastModifiedVia = gen.NotificationChangeSourceUI
 	return stored.ID
+}
+
+func (f *Fake) RemoveUserFromTenant(id string) {
+	f.notifications.mu.Lock()
+	defer f.notifications.mu.Unlock()
+	delete(f.notifications.users, id)
+}
+
+func (f *Fake) SetNotificationRecipientMinClientRevision(id string, revision int) bool {
+	f.notifications.mu.Lock()
+	defer f.notifications.mu.Unlock()
+	recipient, ok := f.notifications.recipients[id]
+	if !ok {
+		return false
+	}
+	recipient.MinClientRevision = revision
+	return true
+}
+
+func (f *Fake) NotificationRecipient(id string) (gen.NotificationRecipient, bool) {
+	f.notifications.mu.Lock()
+	defer f.notifications.mu.Unlock()
+	recipient, ok := f.notifications.recipients[id]
+	if !ok {
+		return gen.NotificationRecipient{}, false
+	}
+	return f.recipientView(recipient), true
 }
 
 func fingerprintOf(body any) string {
@@ -829,4 +993,8 @@ func fingerprintOf(body any) string {
 		return fmt.Sprintf("%v", body)
 	}
 	return string(raw)
+}
+
+func ptr[T any](value T) *T {
+	return &value
 }

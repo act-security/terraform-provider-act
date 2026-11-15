@@ -17,7 +17,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
@@ -38,18 +37,26 @@ const (
 	maxEmailRecipients        = 100
 	maxSlackChannels          = 50
 	maxSlackChannelNameLength = 200
+	maxRecipientMembers       = 100
+	maxUserIDLength           = 200
+	maxEmailLength            = 320
 )
 
-var slackChannelIDPattern = regexp.MustCompile(`^[A-Z0-9]+$`)
+var (
+	slackChannelIDPattern = regexp.MustCompile(`^[A-Z0-9]+$`)
+	lowercaseEmailPattern = regexp.MustCompile(`^[^A-Z\s](?:[^A-Z]*[^A-Z\s])?$`)
+)
+
+const lowercaseEmailMessage = "must be lowercase, with no surrounding spaces"
 
 type notificationKind struct {
-	noun          string
-	actionsMember string
+	noun   string
+	pathOf func(pointer string, body any) (path.Path, bool)
 }
 
 var (
-	notificationRuleKind      = notificationKind{noun: "notification rule", actionsMember: "actions"}
-	notificationRecipientKind = notificationKind{noun: "notification recipient", actionsMember: "methods"}
+	notificationRuleKind      = notificationKind{noun: "notification rule", pathOf: ruleAttributePath}
+	notificationRecipientKind = notificationKind{noun: "notification recipient", pathOf: recipientAttributePath}
 )
 
 type notificationWriteFailure struct {
@@ -73,23 +80,25 @@ type slackActionModel struct {
 	ChannelIDs    types.Set    `tfsdk:"channel_ids"`
 }
 
-func actionBlocks(owner string) map[string]schema.Block {
+func actionBlocks() map[string]schema.Block {
 	return map[string]schema.Block{
 		"email": schema.ListNestedBlock{
-			MarkdownDescription: "Send email. At most one block. Act stores addresses in lowercase; a plan never shows a change for a difference in case or order.",
+			MarkdownDescription: "Send email. At most one block.",
 			Validators:          []validator.List{listvalidator.SizeAtMost(1)},
 			NestedObject: schema.NestedBlockObject{Attributes: map[string]schema.Attribute{
 				"integration_id": schema.StringAttribute{
-					MarkdownDescription: "The ID of the Act-managed email integration, from the `act_email_integration` data source.",
+					MarkdownDescription: "The ID of the Act-managed email integration, from the `act_integration` data source with `type = \"email\"`.",
 					Required:            true,
 					Validators:          []validator.String{stringvalidator.RegexMatches(uuidPattern, "must be a lowercase UUID")},
 				},
 				"recipients": schema.SetAttribute{
-					MarkdownDescription: fmt.Sprintf("The email addresses %s, up to %d.", owner, maxEmailRecipients),
+					MarkdownDescription: fmt.Sprintf("The email addresses to notify, up to %d, in lowercase.", maxEmailRecipients),
 					ElementType:         types.StringType,
 					Required:            true,
-					Validators:          []validator.Set{setvalidator.SizeBetween(1, maxEmailRecipients)},
-					PlanModifiers:       []planmodifier.Set{caseInsensitiveSet{}},
+					Validators: []validator.Set{
+						setvalidator.SizeBetween(1, maxEmailRecipients),
+						setvalidator.ValueStringsAre(stringvalidator.RegexMatches(lowercaseEmailPattern, lowercaseEmailMessage)),
+					},
 				},
 			}},
 		},
@@ -103,7 +112,7 @@ func actionBlocks(owner string) map[string]schema.Block {
 					Validators:          []validator.String{stringvalidator.RegexMatches(uuidPattern, "must be a lowercase UUID")},
 				},
 				"channel_ids": schema.SetAttribute{
-					MarkdownDescription: fmt.Sprintf("The Slack channel IDs %s, up to %d, such as `C05PLATGRD2`. Act does not take channel names; look an ID up with the `act_slack_channel` data source.", owner, maxSlackChannels),
+					MarkdownDescription: fmt.Sprintf("The Slack channel IDs to post to, up to %d, such as `C05PLATGRD2`. Act does not take channel names; look an ID up with the `act_slack_channel` data source.", maxSlackChannels),
 					ElementType:         types.StringType,
 					Required:            true,
 					Validators: []validator.Set{
@@ -137,7 +146,7 @@ func actionsOf(ctx context.Context, email []emailActionModel, slack []slackActio
 	return actions
 }
 
-func actionModelsOf(ctx context.Context, actions []apigen.NotificationAction, priorEmail []emailActionModel, diags *diag.Diagnostics) ([]emailActionModel, []slackActionModel) {
+func actionModelsOf(ctx context.Context, actions []apigen.NotificationAction, diags *diag.Diagnostics) ([]emailActionModel, []slackActionModel) {
 	email, slack := []emailActionModel{}, []slackActionModel{}
 	for _, action := range actions {
 		switch action.Type {
@@ -145,17 +154,13 @@ func actionModelsOf(ctx context.Context, actions []apigen.NotificationAction, pr
 			if action.Email == nil {
 				continue
 			}
-			got := make([]string, 0, len(action.Email.Recipients))
+			recipients := make([]string, 0, len(action.Email.Recipients))
 			for _, value := range action.Email.Recipients {
-				got = append(got, string(value))
-			}
-			var prior []string
-			if len(priorEmail) > 0 {
-				prior = stringsOf(ctx, priorEmail[0].Recipients, diags)
+				recipients = append(recipients, string(value))
 			}
 			email = append(email, emailActionModel{
 				IntegrationID: types.StringValue(action.Email.IntegrationID),
-				Recipients:    stringSet(ctx, keepSpelling(prior, got), diags),
+				Recipients:    stringSet(ctx, recipients, diags),
 			})
 		case apigen.NotificationActionTypeSlack:
 			if action.Slack == nil {
@@ -168,22 +173,6 @@ func actionModelsOf(ctx context.Context, actions []apigen.NotificationAction, pr
 		}
 	}
 	return email, slack
-}
-
-func keepSpelling(prior, got []string) []string {
-	spelled := map[string]string{}
-	for _, value := range prior {
-		spelled[strings.ToLower(strings.TrimSpace(value))] = value
-	}
-	out := make([]string, 0, len(got))
-	for _, value := range got {
-		if original, ok := spelled[strings.ToLower(value)]; ok {
-			out = append(out, original)
-			continue
-		}
-		out = append(out, value)
-	}
-	return out
 }
 
 func stringsOf(ctx context.Context, set types.Set, diags *diag.Diagnostics) []string {
@@ -206,43 +195,6 @@ func optionalStringSet(ctx context.Context, values []string, prior types.Set, di
 		return types.SetNull(types.StringType)
 	}
 	return stringSet(ctx, values, diags)
-}
-
-type caseInsensitiveSet struct{}
-
-func (caseInsensitiveSet) Description(context.Context) string {
-	return "Keeps the state value when the configuration differs from it only in letter case."
-}
-
-func (m caseInsensitiveSet) MarkdownDescription(ctx context.Context) string {
-	return m.Description(ctx)
-}
-
-func (caseInsensitiveSet) PlanModifySet(ctx context.Context, req planmodifier.SetRequest, resp *planmodifier.SetResponse) {
-	if req.StateValue.IsNull() || req.StateValue.IsUnknown() || req.ConfigValue.IsNull() || req.ConfigValue.IsUnknown() {
-		return
-	}
-	lowered := func(set types.Set) map[string]bool {
-		out := map[string]bool{}
-		for _, element := range set.Elements() {
-			value, ok := element.(types.String)
-			if !ok || value.IsUnknown() {
-				return nil
-			}
-			out[strings.ToLower(strings.TrimSpace(value.ValueString()))] = true
-		}
-		return out
-	}
-	planned, stored := lowered(req.ConfigValue), lowered(req.StateValue)
-	if planned == nil || stored == nil || len(planned) != len(stored) {
-		return
-	}
-	for value := range planned {
-		if !stored[value] {
-			return
-		}
-	}
-	resp.PlanValue = req.StateValue
 }
 
 func pointerValue(body any, pointer string) (string, bool) {
@@ -286,9 +238,9 @@ var wireNames = map[string]string{
 	"channelIds":    "channel_ids",
 }
 
-func attributePath(pointer, member string, body any) (path.Path, bool) {
-	segments := strings.Split(strings.TrimPrefix(pointer, "/"), "/")
-	if pointer == "" || segments[0] == "" {
+func ruleAttributePath(pointer string, body any) (path.Path, bool) {
+	segments := pointerSegments(pointer)
+	if len(segments) == 0 {
 		return path.Empty(), false
 	}
 	setValue := func(p path.Path, at int) path.Path {
@@ -321,7 +273,7 @@ func attributePath(pointer, member string, body any) (path.Path, bool) {
 			p = setValue(p, 3)
 		}
 		return p, true
-	case member:
+	case "actions":
 		if len(segments) < 2 {
 			return path.Empty(), false
 		}
@@ -347,6 +299,44 @@ func attributePath(pointer, member string, body any) (path.Path, bool) {
 	return path.Empty(), false
 }
 
+func recipientAttributePath(pointer string, body any) (path.Path, bool) {
+	segments := pointerSegments(pointer)
+	if len(segments) == 0 {
+		return path.Empty(), false
+	}
+	switch {
+	case segments[0] == "name":
+		return path.Root("name"), true
+	case segments[0] == "members" && len(segments) >= 2:
+		member := "/members/" + segments[1]
+		kind, _ := pointerValue(body, member+"/type")
+		switch kind {
+		case string(apigen.NotificationRecipientMemberTypeUser):
+			return memberSetPath("user_ids", body, member+"/user/userId"), true
+		case string(apigen.NotificationRecipientMemberTypeEmail):
+			return memberSetPath("emails", body, member+"/email/address"), true
+		case string(apigen.NotificationRecipientMemberTypeSlackChannel):
+			return path.Root("slack_channel"), true
+		}
+	}
+	return path.Empty(), false
+}
+
+func memberSetPath(attribute string, body any, valuePointer string) path.Path {
+	if value, ok := pointerValue(body, valuePointer); ok {
+		return path.Root(attribute).AtSetValue(types.StringValue(value))
+	}
+	return path.Root(attribute)
+}
+
+func pointerSegments(pointer string) []string {
+	trimmed := strings.TrimPrefix(pointer, "/")
+	if trimmed == "" {
+		return nil
+	}
+	return strings.Split(trimmed, "/")
+}
+
 func addNotificationWriteError(diags *diag.Diagnostics, failure notificationWriteFailure) {
 	summary, noun, body, err := failure.summary(), failure.kind.noun, failure.body, failure.err
 	var apiErr *client.APIError
@@ -358,7 +348,7 @@ func addNotificationWriteError(diags *diag.Diagnostics, failure notificationWrit
 	if pointer == "" && apiErr.Detail("attribute") != "" {
 		pointer = "/" + strings.ReplaceAll(apiErr.Detail("attribute"), ".", "/")
 	}
-	at, mapped := attributePath(pointer, failure.kind.actionsMember, body)
+	at, mapped := failure.kind.pathOf(pointer, body)
 	addAt := func(detail string) {
 		if mapped {
 			diags.AddAttributeError(at, summary, detail)
@@ -410,7 +400,7 @@ func invalidReason(apiErr *client.APIError, pointer string, body any) string {
 		reason = apiErr.Message
 	}
 	if value, ok := pointerValue(body, pointer); ok {
-		reason += fmt.Sprintf(" (%q)", value)
+		return reason + fmt.Sprintf(" (%q)", value)
 	}
 	if eventType := apiErr.Detail("eventType"); eventType != "" {
 		reason += fmt.Sprintf(" (%q)", eventType)

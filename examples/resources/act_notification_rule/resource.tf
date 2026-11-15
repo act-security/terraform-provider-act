@@ -1,4 +1,6 @@
-data "act_email_integration" "this" {}
+data "act_integration" "email" {
+  type = "email"
+}
 
 data "act_slack_channel" "security" {
   name = "#security-alerts"
@@ -15,7 +17,7 @@ resource "act_notification_rule" "simulations" {
   }
 
   email {
-    integration_id = data.act_email_integration.this.id
+    integration_id = data.act_integration.email.id
     recipients     = ["secops@example.com"]
   }
 

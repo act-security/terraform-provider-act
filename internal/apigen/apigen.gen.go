@@ -374,14 +374,17 @@ func (e NotificationActionType) Valid() bool {
 
 // Defines values for NotificationChangeSource.
 const (
-	NotificationChangeSourceAPI NotificationChangeSource = "api"
-	NotificationChangeSourceUI  NotificationChangeSource = "ui"
+	NotificationChangeSourceAPI       NotificationChangeSource = "api"
+	NotificationChangeSourceTerraform NotificationChangeSource = "terraform"
+	NotificationChangeSourceUI        NotificationChangeSource = "ui"
 )
 
 // Valid indicates whether the value is a known member of the NotificationChangeSource enum.
 func (e NotificationChangeSource) Valid() bool {
 	switch e {
 	case NotificationChangeSourceAPI:
+		return true
+	case NotificationChangeSourceTerraform:
 		return true
 	case NotificationChangeSourceUI:
 		return true
@@ -438,6 +441,27 @@ func (e NotificationMatchResult) Valid() bool {
 	case NotificationMatchResultPartiallySent:
 		return true
 	case NotificationMatchResultSent:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for NotificationRecipientMemberType.
+const (
+	NotificationRecipientMemberTypeEmail        NotificationRecipientMemberType = "email"
+	NotificationRecipientMemberTypeSlackChannel NotificationRecipientMemberType = "slack_channel"
+	NotificationRecipientMemberTypeUser         NotificationRecipientMemberType = "user"
+)
+
+// Valid indicates whether the value is a known member of the NotificationRecipientMemberType enum.
+func (e NotificationRecipientMemberType) Valid() bool {
+	switch e {
+	case NotificationRecipientMemberTypeEmail:
+		return true
+	case NotificationRecipientMemberTypeSlackChannel:
+		return true
+	case NotificationRecipientMemberTypeUser:
 		return true
 	default:
 		return false
@@ -514,6 +538,18 @@ func (e ListNotificationRulesParamsEnabled) Valid() bool {
 	default:
 		return false
 	}
+}
+
+// ActUser defines model for ActUser.
+type ActUser struct {
+	Email string  `json:"email"`
+	ID    string  `json:"id"`
+	Name  *string `json:"name"`
+}
+
+// ActUserList defines model for ActUserList.
+type ActUserList struct {
+	Items []ActUser `json:"items"`
 }
 
 // AuthMethod defines model for AuthMethod.
@@ -823,11 +859,12 @@ type NotificationAction struct {
 // NotificationActionType defines model for NotificationActionType.
 type NotificationActionType string
 
-// NotificationChangeSource defines model for NotificationChangeSource.
+// NotificationChangeSource Where a change came from: `ui` is the Act app, `terraform` is the Act Terraform provider, and `api` is any other public API client.
 type NotificationChangeSource string
 
-// NotificationCondition defines model for NotificationCondition.
+// NotificationCondition Narrows one event type of the rule: an event of that type matches only when `field` holds one of `values`. `GET /notification-event-types` lists the fields and values each event type takes.
 type NotificationCondition struct {
+	// EventType The event type of the rule this condition narrows.
 	EventType string                        `json:"eventType"`
 	Field     NotificationConditionField    `json:"field"`
 	Operator  NotificationConditionOperator `json:"operator"`
@@ -849,8 +886,11 @@ type NotificationConditionOperator string
 
 // NotificationEmailAction defines model for NotificationEmailAction.
 type NotificationEmailAction struct {
-	IntegrationID string                `json:"integrationId"`
-	Recipients    []openapi_types.Email `json:"recipients"`
+	// IntegrationID The Act-managed email integration, from `GET /integrations?type=email`.
+	IntegrationID string `json:"integrationId"`
+
+	// Recipients Email addresses, each listed once, with no ASCII uppercase letter (A-Z) and no surrounding whitespace. Responses list them as sent, sorted.
+	Recipients []openapi_types.Email `json:"recipients"`
 }
 
 // NotificationEventTypeInfo defines model for NotificationEventTypeInfo.
@@ -880,15 +920,53 @@ type NotificationMatchResult string
 
 // NotificationRecipient defines model for NotificationRecipient.
 type NotificationRecipient struct {
-	CreatedAt       time.Time                `json:"createdAt"`
-	CreatedVia      NotificationChangeSource `json:"createdVia"`
-	ID              string                   `json:"id"`
+	CreatedAt time.Time `json:"createdAt"`
+
+	// CreatedVia Where a change came from: `ui` is the Act app, `terraform` is the Act Terraform provider, and `api` is any other public API client.
+	CreatedVia NotificationChangeSource `json:"createdVia"`
+	ID         string                   `json:"id"`
+
+	// LastModifiedVia Where a change came from: `ui` is the Act app, `terraform` is the Act Terraform provider, and `api` is any other public API client.
 	LastModifiedVia NotificationChangeSource `json:"lastModifiedVia"`
-	Methods         []NotificationAction     `json:"methods"`
-	Name            string                   `json:"name"`
-	Revision        int                      `json:"revision"`
-	RuleIds         []string                 `json:"ruleIds"`
-	UpdatedAt       time.Time                `json:"updatedAt"`
+
+	// Members Sorted by type (`email`, `slack_channel`, `user`), then by address, by `integrationId` and `channelId`, or by `userId`, by code unit.
+	Members []NotificationRecipientMember `json:"members"`
+
+	// MinClientRevision The oldest client revision that can show and edit this recipient. A recipient with a member type an older client does not know has a higher value; such a client should not replace it.
+	MinClientRevision int    `json:"minClientRevision"`
+	Name              string `json:"name"`
+
+	// Revision Increases on every change. The `ETag` header carries it in quotes.
+	Revision int `json:"revision"`
+
+	// RuleIds The rules that name this recipient. It cannot be deleted while any do.
+	RuleIds   []string  `json:"ruleIds"`
+	UpdatedAt time.Time `json:"updatedAt"`
+}
+
+// NotificationRecipientEmailMember defines model for NotificationRecipientEmailMember.
+type NotificationRecipientEmailMember struct {
+	// Address An email address with no ASCII uppercase letter (A-Z) and no surrounding whitespace.
+	Address openapi_types.Email `json:"address"`
+}
+
+// NotificationRecipientMember defines model for NotificationRecipientMember.
+type NotificationRecipientMember struct {
+	Email        *NotificationRecipientEmailMember        `json:"email,omitempty"`
+	SlackChannel *NotificationRecipientSlackChannelMember `json:"slackChannel,omitempty"`
+	Type         NotificationRecipientMemberType          `json:"type"`
+	User         *NotificationRecipientUserMember         `json:"user,omitempty"`
+}
+
+// NotificationRecipientMemberType defines model for NotificationRecipientMemberType.
+type NotificationRecipientMemberType string
+
+// NotificationRecipientMemberWrite One member of a recipient group. `type` names the object that carries it: `user` for an Act user, who is reached through the receiver they chose in their profile; `email` for an address; `slackChannel` for a channel.
+type NotificationRecipientMemberWrite struct {
+	Email        *NotificationRecipientEmailMember             `json:"email,omitempty"`
+	SlackChannel *NotificationRecipientSlackChannelMemberWrite `json:"slackChannel,omitempty"`
+	Type         NotificationRecipientMemberType               `json:"type"`
+	User         *NotificationRecipientUserMemberWrite         `json:"user,omitempty"`
 }
 
 // NotificationRecipientPage defines model for NotificationRecipientPage.
@@ -897,29 +975,79 @@ type NotificationRecipientPage struct {
 	NextPageToken *string                 `json:"nextPageToken"`
 }
 
-// NotificationRecipientWrite A tenant-wide address-book entry: a name and the addresses it stands for, at most one method per type.
+// NotificationRecipientSlackChannelMember defines model for NotificationRecipientSlackChannelMember.
+type NotificationRecipientSlackChannelMember struct {
+	// ChannelID A Slack channel ID; `GET /integrations/slack/channels` finds a public channel by name.
+	ChannelID   string  `json:"channelId"`
+	ChannelName *string `json:"channelName"`
+
+	// IntegrationID A connected Slack integration, from `GET /integrations?type=slack`.
+	IntegrationID string `json:"integrationId"`
+}
+
+// NotificationRecipientSlackChannelMemberWrite defines model for NotificationRecipientSlackChannelMemberWrite.
+type NotificationRecipientSlackChannelMemberWrite struct {
+	// ChannelID A Slack channel ID; `GET /integrations/slack/channels` finds a public channel by name.
+	ChannelID string `json:"channelId"`
+
+	// IntegrationID A connected Slack integration, from `GET /integrations?type=slack`.
+	IntegrationID string `json:"integrationId"`
+}
+
+// NotificationRecipientUserMember defines model for NotificationRecipientUserMember.
+type NotificationRecipientUserMember struct {
+	Email *string `json:"email"`
+
+	// InTenant False once the user has left the tenant. Such a member stays stored, receives nothing, and may be sent back unchanged.
+	InTenant bool    `json:"inTenant"`
+	Name     *string `json:"name"`
+
+	// UserID An Act user of this tenant, from `GET /users?email=`.
+	UserID string `json:"userId"`
+}
+
+// NotificationRecipientUserMemberWrite defines model for NotificationRecipientUserMemberWrite.
+type NotificationRecipientUserMemberWrite struct {
+	// UserID An Act user of this tenant, from `GET /users?email=`.
+	UserID string `json:"userId"`
+}
+
+// NotificationRecipientWrite A tenant-wide recipient group that rules can name: a name and its members.
 type NotificationRecipientWrite struct {
-	Methods []NotificationAction `json:"methods"`
-	Name    string               `json:"name"`
+	// Members Each member is listed once: a user by `userId`, an email by `address`, a Slack channel by `integrationId` and `channelId`. A user member and an email member with the same address are two members. A new user must be in this tenant; a stored user who has left it may be sent back unchanged.
+	Members []NotificationRecipientMemberWrite `json:"members"`
+	Name    string                             `json:"name"`
 }
 
 // NotificationRule defines model for NotificationRule.
 type NotificationRule struct {
-	Actions           []NotificationAction      `json:"actions"`
-	Conditions        []NotificationCondition   `json:"conditions"`
-	CreatedAt         time.Time                 `json:"createdAt"`
-	CreatedVia        NotificationChangeSource  `json:"createdVia"`
-	Enabled           bool                      `json:"enabled"`
-	EventTypes        []string                  `json:"eventTypes"`
-	ID                string                    `json:"id"`
-	LastDelivery      *NotificationLastDelivery `json:"lastDelivery"`
-	LastModifiedVia   NotificationChangeSource  `json:"lastModifiedVia"`
-	MinClientRevision int                       `json:"minClientRevision"`
-	Name              string                    `json:"name"`
-	RecipientIds      []string                  `json:"recipientIds"`
-	Revision          int                       `json:"revision"`
-	UpdatedAt         time.Time                 `json:"updatedAt"`
-	WebURL            *string                   `json:"webUrl"`
+	Actions    []NotificationAction    `json:"actions"`
+	Conditions []NotificationCondition `json:"conditions"`
+	CreatedAt  time.Time               `json:"createdAt"`
+
+	// CreatedVia Where a change came from: `ui` is the Act app, `terraform` is the Act Terraform provider, and `api` is any other public API client.
+	CreatedVia NotificationChangeSource `json:"createdVia"`
+	Enabled    bool                     `json:"enabled"`
+	EventTypes []string                 `json:"eventTypes"`
+	ID         string                   `json:"id"`
+
+	// LastDelivery The latest event this rule matched, if any.
+	LastDelivery *NotificationLastDelivery `json:"lastDelivery"`
+
+	// LastModifiedVia Where a change came from: `ui` is the Act app, `terraform` is the Act Terraform provider, and `api` is any other public API client.
+	LastModifiedVia NotificationChangeSource `json:"lastModifiedVia"`
+
+	// MinClientRevision The oldest Act app revision that can show and edit this rule. A rule that uses features an older app lacks has a higher value.
+	MinClientRevision int      `json:"minClientRevision"`
+	Name              string   `json:"name"`
+	RecipientIds      []string `json:"recipientIds"`
+
+	// Revision Increases on every change. The `ETag` header carries it in quotes.
+	Revision  int       `json:"revision"`
+	UpdatedAt time.Time `json:"updatedAt"`
+
+	// WebURL The rule in the Act app, or null where the app address is not configured.
+	WebURL *string `json:"webUrl"`
 }
 
 // NotificationRuleActivity defines model for NotificationRuleActivity.
@@ -946,6 +1074,7 @@ type NotificationRuleLimits struct {
 	MaxEnabledRulesPerEventType int `json:"maxEnabledRulesPerEventType"`
 	MaxEventTypesPerRule        int `json:"maxEventTypesPerRule"`
 	MaxNameLength               int `json:"maxNameLength"`
+	MaxRecipientMembers         int `json:"maxRecipientMembers"`
 	MaxRecipientNameLength      int `json:"maxRecipientNameLength"`
 	MaxRecipientsPerRule        int `json:"maxRecipientsPerRule"`
 	MaxSlackChannels            int `json:"maxSlackChannels"`
@@ -959,13 +1088,15 @@ type NotificationRulePage struct {
 
 // NotificationRuleValidate A rule to check without saving it. With `id`, it is checked as a replace of that rule.
 type NotificationRuleValidate struct {
-	Actions      *[]NotificationAction    `json:"actions,omitempty"`
-	Conditions   *[]NotificationCondition `json:"conditions,omitempty"`
-	Enabled      *bool                    `json:"enabled,omitempty"`
-	EventTypes   []string                 `json:"eventTypes"`
-	ID           *string                  `json:"id,omitempty"`
-	Name         string                   `json:"name"`
-	RecipientIds *[]string                `json:"recipientIds,omitempty"`
+	Actions    *[]NotificationAction    `json:"actions,omitempty"`
+	Conditions *[]NotificationCondition `json:"conditions,omitempty"`
+	Enabled    *bool                    `json:"enabled,omitempty"`
+	EventTypes []string                 `json:"eventTypes"`
+	ID         *string                  `json:"id,omitempty"`
+	Name       string                   `json:"name"`
+
+	// RecipientIds Address-book recipients the rule also sends to, each listed once.
+	RecipientIds *[]string `json:"recipientIds,omitempty"`
 }
 
 // NotificationRuleValidation defines model for NotificationRuleValidation.
@@ -983,18 +1114,23 @@ type NotificationRuleValidationError struct {
 
 // NotificationRuleWrite A notification rule. Event types are joined by OR. On create, a member left out takes its empty value (enabled defaults to true). On replace, a member left out keeps its stored value, so a client that does not know a member never clears it; send an empty array to clear a list.
 type NotificationRuleWrite struct {
-	Actions      *[]NotificationAction    `json:"actions,omitempty"`
-	Conditions   *[]NotificationCondition `json:"conditions,omitempty"`
-	Enabled      *bool                    `json:"enabled,omitempty"`
-	EventTypes   []string                 `json:"eventTypes"`
-	Name         string                   `json:"name"`
-	RecipientIds *[]string                `json:"recipientIds,omitempty"`
+	Actions    *[]NotificationAction    `json:"actions,omitempty"`
+	Conditions *[]NotificationCondition `json:"conditions,omitempty"`
+	Enabled    *bool                    `json:"enabled,omitempty"`
+	EventTypes []string                 `json:"eventTypes"`
+	Name       string                   `json:"name"`
+
+	// RecipientIds Address-book recipients the rule also sends to, each listed once.
+	RecipientIds *[]string `json:"recipientIds,omitempty"`
 }
 
 // NotificationSlackAction defines model for NotificationSlackAction.
 type NotificationSlackAction struct {
-	ChannelIds    []string `json:"channelIds"`
-	IntegrationID string   `json:"integrationId"`
+	// ChannelIds Slack channel IDs, each listed once; `GET /integrations/slack/channels` finds a public channel by name. Responses list them sorted.
+	ChannelIds []string `json:"channelIds"`
+
+	// IntegrationID A connected Slack integration, from `GET /integrations?type=slack`.
+	IntegrationID string `json:"integrationId"`
 }
 
 // Principal defines model for Principal.
@@ -1136,6 +1272,11 @@ type GetAwsOnboardingParams struct {
 	DeploymentID string `form:"deploymentId" json:"deploymentId"`
 }
 
+// ListUsersParams defines parameters for ListUsers.
+type ListUsersParams struct {
+	Email openapi_types.Email `form:"email" json:"email"`
+}
+
 // CreateIntegrationJSONRequestBody defines body for CreateIntegration for application/json ContentType.
 type CreateIntegrationJSONRequestBody = IntegrationCreate
 
@@ -1275,12 +1416,9 @@ type ClientInterface interface {
 	// Corresponds with POST /v1/integrations (the `CreateIntegration` operationId).
 	CreateIntegration(ctx context.Context, params *CreateIntegrationParams, body CreateIntegrationJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	// GetEmailIntegration Return the Act-managed email integration that email actions name
-	//
-	// Corresponds with GET /v1/integrations/email (the `GetEmailIntegration` operationId).
-	GetEmailIntegration(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
-
 	// ListSlackChannels Look up public Slack channels by exact name or ID, for actions that take channel IDs
+	//
+	// Matches a channel name exactly, with or without the leading `#`, or a channel ID. Private channels are not listed. Answers `integration_not_connected` when no Slack integration is connected.
 	//
 	// Corresponds with GET /v1/integrations/slack/channels (the `ListSlackChannels` operationId).
 	ListSlackChannels(ctx context.Context, params *ListSlackChannelsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -1311,46 +1449,62 @@ type ClientInterface interface {
 
 	// ListNotificationEventTypes List the event types a rule can match, the actions and conditions each takes, and the rule limits
 	//
+	// Only event types this tenant can subscribe to with an email or Slack action are listed. `limits` are the caps every rule write enforces.
+	//
 	// Corresponds with GET /v1/notification-event-types (the `ListNotificationEventTypes` operationId).
 	ListNotificationEventTypes(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	// ListNotificationRecipients List the address-book recipients rules can name, one page at a time
+	// ListNotificationRecipients List the recipient groups rules can name, one page at a time
+	//
+	// Pass `nextPageToken` back as `pageToken` for the next page.
 	//
 	// Corresponds with GET /v1/notification-recipients (the `ListNotificationRecipients` operationId).
 	ListNotificationRecipients(ctx context.Context, params *ListNotificationRecipientsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	// CreateNotificationRecipientWithBody Create an address-book recipient
+	// CreateNotificationRecipientWithBody Create a recipient group
+	//
+	// Recipient names are unique per tenant. A retry with the same `Idempotency-Key` and body within 24 hours answers with the recipient the first request created.
 	//
 	// Takes any type of body and a specified content type.
 	//
 	// Corresponds with POST /v1/notification-recipients (the `CreateNotificationRecipient` operationId).
 	CreateNotificationRecipientWithBody(ctx context.Context, params *CreateNotificationRecipientParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	// CreateNotificationRecipient Create an address-book recipient
+	// CreateNotificationRecipient Create a recipient group
+	//
+	// Recipient names are unique per tenant. A retry with the same `Idempotency-Key` and body within 24 hours answers with the recipient the first request created.
 	//
 	// Takes a body of the `application/json` content type.
 	//
 	// Corresponds with POST /v1/notification-recipients (the `CreateNotificationRecipient` operationId).
 	CreateNotificationRecipient(ctx context.Context, params *CreateNotificationRecipientParams, body CreateNotificationRecipientJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	// DeleteNotificationRecipient Delete an address-book recipient. Refused with 409 while a rule names it
+	// DeleteNotificationRecipient Delete a recipient group. Refused with 409 while a rule names it
+	//
+	// The 409 `conflict` carries `reason: notification_recipient_in_use` and the `ruleIds` that name it. With `If-Match`, the recipient is deleted only while it is at that revision; otherwise the answer is 412.
 	//
 	// Corresponds with DELETE /v1/notification-recipients/{id} (the `DeleteNotificationRecipient` operationId).
 	DeleteNotificationRecipient(ctx context.Context, id string, params *DeleteNotificationRecipientParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	// GetNotificationRecipient Return one address-book recipient
+	// GetNotificationRecipient Return one recipient group
+	//
+	// The `ETag` header carries the revision. Send it as `If-Match` to replace or delete this revision.
 	//
 	// Corresponds with GET /v1/notification-recipients/{id} (the `GetNotificationRecipient` operationId).
 	GetNotificationRecipient(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	// ReplaceNotificationRecipientWithBody Replace an address-book recipient; the rules that name it send to its new addresses
+	// ReplaceNotificationRecipientWithBody Replace a recipient group; the rules that name it send to its new members
+	//
+	// `If-Match` must name the current `ETag` (strong comparison) or be `*`; otherwise the answer is 412 with the current `etag`.
 	//
 	// Takes any type of body and a specified content type.
 	//
 	// Corresponds with PUT /v1/notification-recipients/{id} (the `ReplaceNotificationRecipient` operationId).
 	ReplaceNotificationRecipientWithBody(ctx context.Context, id string, params *ReplaceNotificationRecipientParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	// ReplaceNotificationRecipient Replace an address-book recipient; the rules that name it send to its new addresses
+	// ReplaceNotificationRecipient Replace a recipient group; the rules that name it send to its new members
+	//
+	// `If-Match` must name the current `ETag` (strong comparison) or be `*`; otherwise the answer is 412 with the current `etag`.
 	//
 	// Takes a body of the `application/json` content type.
 	//
@@ -1359,10 +1513,14 @@ type ClientInterface interface {
 
 	// ListNotificationRules List the notification rules of the calling tenant, one page at a time
 	//
+	// Rules are listed oldest first. Pass `nextPageToken` back as `pageToken` for the next page.
+	//
 	// Corresponds with GET /v1/notification-rules (the `ListNotificationRules` operationId).
 	ListNotificationRules(ctx context.Context, params *ListNotificationRulesParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// CreateNotificationRuleWithBody Create a notification rule
+	//
+	// Answers 201 with the rule and its `ETag`. A retry with the same `Idempotency-Key` and body within 24 hours answers with the rule the first request created. Domain errors are `invalid_request` with a `reason` and a JSON `pointer` into the request body.
 	//
 	// Takes any type of body and a specified content type.
 	//
@@ -1371,12 +1529,16 @@ type ClientInterface interface {
 
 	// CreateNotificationRule Create a notification rule
 	//
+	// Answers 201 with the rule and its `ETag`. A retry with the same `Idempotency-Key` and body within 24 hours answers with the rule the first request created. Domain errors are `invalid_request` with a `reason` and a JSON `pointer` into the request body.
+	//
 	// Takes a body of the `application/json` content type.
 	//
 	// Corresponds with POST /v1/notification-rules (the `CreateNotificationRule` operationId).
 	CreateNotificationRule(ctx context.Context, params *CreateNotificationRuleParams, body CreateNotificationRuleJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ValidateNotificationRuleWithBody Check a rule as a create or a replace would, without saving it or sending anything
+	//
+	// Runs every check a write runs, the enabled-rules limit included, and answers `valid: false` with the error a write would answer. Requires the write scope because it can check a destination with its provider.
 	//
 	// Takes any type of body and a specified content type.
 	//
@@ -1385,6 +1547,8 @@ type ClientInterface interface {
 
 	// ValidateNotificationRule Check a rule as a create or a replace would, without saving it or sending anything
 	//
+	// Runs every check a write runs, the enabled-rules limit included, and answers `valid: false` with the error a write would answer. Requires the write scope because it can check a destination with its provider.
+	//
 	// Takes a body of the `application/json` content type.
 	//
 	// Corresponds with POST /v1/notification-rules/validate (the `ValidateNotificationRule` operationId).
@@ -1392,15 +1556,21 @@ type ClientInterface interface {
 
 	// DeleteNotificationRule Delete a notification rule. Its activity stays readable for six months
 	//
+	// With `If-Match`, the rule is deleted only while it is at that revision; otherwise the answer is 412.
+	//
 	// Corresponds with DELETE /v1/notification-rules/{id} (the `DeleteNotificationRule` operationId).
 	DeleteNotificationRule(ctx context.Context, id string, params *DeleteNotificationRuleParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetNotificationRule Return one notification rule
 	//
+	// The `ETag` header carries the revision. Send it as `If-Match` to replace or delete this revision.
+	//
 	// Corresponds with GET /v1/notification-rules/{id} (the `GetNotificationRule` operationId).
 	GetNotificationRule(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ReplaceNotificationRuleWithBody Replace a notification rule. A member left out keeps its stored value
+	//
+	// `If-Match` must name the current `ETag` (strong comparison) or be `*`; otherwise the answer is 412 with the current `etag`. Send an empty array to clear a list. Destinations on integrations the API does not represent are kept.
 	//
 	// Takes any type of body and a specified content type.
 	//
@@ -1409,12 +1579,16 @@ type ClientInterface interface {
 
 	// ReplaceNotificationRule Replace a notification rule. A member left out keeps its stored value
 	//
+	// `If-Match` must name the current `ETag` (strong comparison) or be `*`; otherwise the answer is 412 with the current `etag`. Send an empty array to clear a list. Destinations on integrations the API does not represent are kept.
+	//
 	// Takes a body of the `application/json` content type.
 	//
 	// Corresponds with PUT /v1/notification-rules/{id} (the `ReplaceNotificationRule` operationId).
 	ReplaceNotificationRule(ctx context.Context, id string, params *ReplaceNotificationRuleParams, body ReplaceNotificationRuleJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ListNotificationRuleActivity List the events a rule matched in the last six months and what was sent, newest first
+	//
+	// Works for a deleted rule too. Pass `nextPageToken` back as `pageToken` for the next page.
 	//
 	// Corresponds with GET /v1/notification-rules/{id}/activity (the `ListNotificationRuleActivity` operationId).
 	ListNotificationRuleActivity(ctx context.Context, id string, params *ListNotificationRuleActivityParams, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -1433,6 +1607,13 @@ type ClientInterface interface {
 	//
 	// Corresponds with GET /v1/onboarding/gcp (the `GetGcpOnboarding` operationId).
 	GetGcpOnboarding(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ListUsers Find the Act user of the calling tenant with an exact email address
+	//
+	// Matches the whole address, ignoring case, and never lists or searches, so it answers at most one user. A recipient group names users by `id`.
+	//
+	// Corresponds with GET /v1/users (the `ListUsers` operationId).
+	ListUsers(ctx context.Context, params *ListUsersParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetWhoami Return the tenant, region and principal of the calling token
 	//
@@ -1564,22 +1745,9 @@ func (c *Client) CreateIntegration(ctx context.Context, params *CreateIntegratio
 	return c.Client.Do(req)
 }
 
-// GetEmailIntegration Return the Act-managed email integration that email actions name
-//
-// Corresponds with GET /v1/integrations/email (the `GetEmailIntegration` operationId).
-func (c *Client) GetEmailIntegration(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewGetEmailIntegrationRequest(c.Server)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
 // ListSlackChannels Look up public Slack channels by exact name or ID, for actions that take channel IDs
+//
+// Matches a channel name exactly, with or without the leading `#`, or a channel ID. Private channels are not listed. Answers `integration_not_connected` when no Slack integration is connected.
 //
 // Corresponds with GET /v1/integrations/slack/channels (the `ListSlackChannels` operationId).
 func (c *Client) ListSlackChannels(ctx context.Context, params *ListSlackChannelsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
@@ -1660,6 +1828,8 @@ func (c *Client) UpdateIntegration(ctx context.Context, id string, params *Updat
 
 // ListNotificationEventTypes List the event types a rule can match, the actions and conditions each takes, and the rule limits
 //
+// Only event types this tenant can subscribe to with an email or Slack action are listed. `limits` are the caps every rule write enforces.
+//
 // Corresponds with GET /v1/notification-event-types (the `ListNotificationEventTypes` operationId).
 func (c *Client) ListNotificationEventTypes(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewListNotificationEventTypesRequest(c.Server)
@@ -1673,7 +1843,9 @@ func (c *Client) ListNotificationEventTypes(ctx context.Context, reqEditors ...R
 	return c.Client.Do(req)
 }
 
-// ListNotificationRecipients List the address-book recipients rules can name, one page at a time
+// ListNotificationRecipients List the recipient groups rules can name, one page at a time
+//
+// Pass `nextPageToken` back as `pageToken` for the next page.
 //
 // Corresponds with GET /v1/notification-recipients (the `ListNotificationRecipients` operationId).
 func (c *Client) ListNotificationRecipients(ctx context.Context, params *ListNotificationRecipientsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
@@ -1688,7 +1860,9 @@ func (c *Client) ListNotificationRecipients(ctx context.Context, params *ListNot
 	return c.Client.Do(req)
 }
 
-// CreateNotificationRecipientWithBody Create an address-book recipient
+// CreateNotificationRecipientWithBody Create a recipient group
+//
+// Recipient names are unique per tenant. A retry with the same `Idempotency-Key` and body within 24 hours answers with the recipient the first request created.
 //
 // Takes any type of body and a specified content type.
 //
@@ -1705,7 +1879,9 @@ func (c *Client) CreateNotificationRecipientWithBody(ctx context.Context, params
 	return c.Client.Do(req)
 }
 
-// CreateNotificationRecipient Create an address-book recipient
+// CreateNotificationRecipient Create a recipient group
+//
+// Recipient names are unique per tenant. A retry with the same `Idempotency-Key` and body within 24 hours answers with the recipient the first request created.
 //
 // Takes a body of the `application/json` content type.
 //
@@ -1722,7 +1898,9 @@ func (c *Client) CreateNotificationRecipient(ctx context.Context, params *Create
 	return c.Client.Do(req)
 }
 
-// DeleteNotificationRecipient Delete an address-book recipient. Refused with 409 while a rule names it
+// DeleteNotificationRecipient Delete a recipient group. Refused with 409 while a rule names it
+//
+// The 409 `conflict` carries `reason: notification_recipient_in_use` and the `ruleIds` that name it. With `If-Match`, the recipient is deleted only while it is at that revision; otherwise the answer is 412.
 //
 // Corresponds with DELETE /v1/notification-recipients/{id} (the `DeleteNotificationRecipient` operationId).
 func (c *Client) DeleteNotificationRecipient(ctx context.Context, id string, params *DeleteNotificationRecipientParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
@@ -1737,7 +1915,9 @@ func (c *Client) DeleteNotificationRecipient(ctx context.Context, id string, par
 	return c.Client.Do(req)
 }
 
-// GetNotificationRecipient Return one address-book recipient
+// GetNotificationRecipient Return one recipient group
+//
+// The `ETag` header carries the revision. Send it as `If-Match` to replace or delete this revision.
 //
 // Corresponds with GET /v1/notification-recipients/{id} (the `GetNotificationRecipient` operationId).
 func (c *Client) GetNotificationRecipient(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*http.Response, error) {
@@ -1752,7 +1932,9 @@ func (c *Client) GetNotificationRecipient(ctx context.Context, id string, reqEdi
 	return c.Client.Do(req)
 }
 
-// ReplaceNotificationRecipientWithBody Replace an address-book recipient; the rules that name it send to its new addresses
+// ReplaceNotificationRecipientWithBody Replace a recipient group; the rules that name it send to its new members
+//
+// `If-Match` must name the current `ETag` (strong comparison) or be `*`; otherwise the answer is 412 with the current `etag`.
 //
 // Takes any type of body and a specified content type.
 //
@@ -1769,7 +1951,9 @@ func (c *Client) ReplaceNotificationRecipientWithBody(ctx context.Context, id st
 	return c.Client.Do(req)
 }
 
-// ReplaceNotificationRecipient Replace an address-book recipient; the rules that name it send to its new addresses
+// ReplaceNotificationRecipient Replace a recipient group; the rules that name it send to its new members
+//
+// `If-Match` must name the current `ETag` (strong comparison) or be `*`; otherwise the answer is 412 with the current `etag`.
 //
 // Takes a body of the `application/json` content type.
 //
@@ -1788,6 +1972,8 @@ func (c *Client) ReplaceNotificationRecipient(ctx context.Context, id string, pa
 
 // ListNotificationRules List the notification rules of the calling tenant, one page at a time
 //
+// Rules are listed oldest first. Pass `nextPageToken` back as `pageToken` for the next page.
+//
 // Corresponds with GET /v1/notification-rules (the `ListNotificationRules` operationId).
 func (c *Client) ListNotificationRules(ctx context.Context, params *ListNotificationRulesParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewListNotificationRulesRequest(c.Server, params)
@@ -1802,6 +1988,8 @@ func (c *Client) ListNotificationRules(ctx context.Context, params *ListNotifica
 }
 
 // CreateNotificationRuleWithBody Create a notification rule
+//
+// Answers 201 with the rule and its `ETag`. A retry with the same `Idempotency-Key` and body within 24 hours answers with the rule the first request created. Domain errors are `invalid_request` with a `reason` and a JSON `pointer` into the request body.
 //
 // Takes any type of body and a specified content type.
 //
@@ -1820,6 +2008,8 @@ func (c *Client) CreateNotificationRuleWithBody(ctx context.Context, params *Cre
 
 // CreateNotificationRule Create a notification rule
 //
+// Answers 201 with the rule and its `ETag`. A retry with the same `Idempotency-Key` and body within 24 hours answers with the rule the first request created. Domain errors are `invalid_request` with a `reason` and a JSON `pointer` into the request body.
+//
 // Takes a body of the `application/json` content type.
 //
 // Corresponds with POST /v1/notification-rules (the `CreateNotificationRule` operationId).
@@ -1836,6 +2026,8 @@ func (c *Client) CreateNotificationRule(ctx context.Context, params *CreateNotif
 }
 
 // ValidateNotificationRuleWithBody Check a rule as a create or a replace would, without saving it or sending anything
+//
+// Runs every check a write runs, the enabled-rules limit included, and answers `valid: false` with the error a write would answer. Requires the write scope because it can check a destination with its provider.
 //
 // Takes any type of body and a specified content type.
 //
@@ -1854,6 +2046,8 @@ func (c *Client) ValidateNotificationRuleWithBody(ctx context.Context, contentTy
 
 // ValidateNotificationRule Check a rule as a create or a replace would, without saving it or sending anything
 //
+// Runs every check a write runs, the enabled-rules limit included, and answers `valid: false` with the error a write would answer. Requires the write scope because it can check a destination with its provider.
+//
 // Takes a body of the `application/json` content type.
 //
 // Corresponds with POST /v1/notification-rules/validate (the `ValidateNotificationRule` operationId).
@@ -1871,6 +2065,8 @@ func (c *Client) ValidateNotificationRule(ctx context.Context, body ValidateNoti
 
 // DeleteNotificationRule Delete a notification rule. Its activity stays readable for six months
 //
+// With `If-Match`, the rule is deleted only while it is at that revision; otherwise the answer is 412.
+//
 // Corresponds with DELETE /v1/notification-rules/{id} (the `DeleteNotificationRule` operationId).
 func (c *Client) DeleteNotificationRule(ctx context.Context, id string, params *DeleteNotificationRuleParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewDeleteNotificationRuleRequest(c.Server, id, params)
@@ -1886,6 +2082,8 @@ func (c *Client) DeleteNotificationRule(ctx context.Context, id string, params *
 
 // GetNotificationRule Return one notification rule
 //
+// The `ETag` header carries the revision. Send it as `If-Match` to replace or delete this revision.
+//
 // Corresponds with GET /v1/notification-rules/{id} (the `GetNotificationRule` operationId).
 func (c *Client) GetNotificationRule(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetNotificationRuleRequest(c.Server, id)
@@ -1900,6 +2098,8 @@ func (c *Client) GetNotificationRule(ctx context.Context, id string, reqEditors 
 }
 
 // ReplaceNotificationRuleWithBody Replace a notification rule. A member left out keeps its stored value
+//
+// `If-Match` must name the current `ETag` (strong comparison) or be `*`; otherwise the answer is 412 with the current `etag`. Send an empty array to clear a list. Destinations on integrations the API does not represent are kept.
 //
 // Takes any type of body and a specified content type.
 //
@@ -1918,6 +2118,8 @@ func (c *Client) ReplaceNotificationRuleWithBody(ctx context.Context, id string,
 
 // ReplaceNotificationRule Replace a notification rule. A member left out keeps its stored value
 //
+// `If-Match` must name the current `ETag` (strong comparison) or be `*`; otherwise the answer is 412 with the current `etag`. Send an empty array to clear a list. Destinations on integrations the API does not represent are kept.
+//
 // Takes a body of the `application/json` content type.
 //
 // Corresponds with PUT /v1/notification-rules/{id} (the `ReplaceNotificationRule` operationId).
@@ -1934,6 +2136,8 @@ func (c *Client) ReplaceNotificationRule(ctx context.Context, id string, params 
 }
 
 // ListNotificationRuleActivity List the events a rule matched in the last six months and what was sent, newest first
+//
+// Works for a deleted rule too. Pass `nextPageToken` back as `pageToken` for the next page.
 //
 // Corresponds with GET /v1/notification-rules/{id}/activity (the `ListNotificationRuleActivity` operationId).
 func (c *Client) ListNotificationRuleActivity(ctx context.Context, id string, params *ListNotificationRuleActivityParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
@@ -1983,6 +2187,23 @@ func (c *Client) GetAzureOnboarding(ctx context.Context, reqEditors ...RequestEd
 // Corresponds with GET /v1/onboarding/gcp (the `GetGcpOnboarding` operationId).
 func (c *Client) GetGcpOnboarding(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetGcpOnboardingRequest(c.Server)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// ListUsers Find the Act user of the calling tenant with an exact email address
+//
+// Matches the whole address, ignoring case, and never lists or searches, so it answers at most one user. A recipient group names users by `id`.
+//
+// Corresponds with GET /v1/users (the `ListUsers` operationId).
+func (c *Client) ListUsers(ctx context.Context, params *ListUsersParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewListUsersRequest(c.Server, params)
 	if err != nil {
 		return nil, err
 	}
@@ -2379,33 +2600,6 @@ func NewCreateIntegrationRequestWithBody(server string, params *CreateIntegratio
 			req.Header.Set("idempotency-key", headerParam0)
 		}
 
-	}
-
-	return req, nil
-}
-
-// NewGetEmailIntegrationRequest constructs an http.Request for the GetEmailIntegration method
-func NewGetEmailIntegrationRequest(server string) (*http.Request, error) {
-	var err error
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/v1/integrations/email")
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
-	if err != nil {
-		return nil, err
 	}
 
 	return req, nil
@@ -3424,6 +3618,56 @@ func NewGetGcpOnboardingRequest(server string) (*http.Request, error) {
 	return req, nil
 }
 
+// NewListUsersRequest constructs an http.Request for the ListUsers method
+func NewListUsersRequest(server string, params *ListUsersParams) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/users")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		// queryValues collects non-styled parameters (passthrough, JSON)
+		// that are safe to round-trip through url.Values.Encode().
+		queryValues := queryURL.Query()
+		// rawQueryFragments collects pre-encoded query fragments from
+		// styled parameters, preserving literal commas as delimiters
+		// per the OpenAPI spec (e.g. "color=blue,black,brown").
+		var rawQueryFragments []string
+
+		if queryFrag, err := runtime.StyleParamWithOptions("form", true, "email", params.Email, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: "email"}); err != nil {
+			return nil, err
+		} else {
+			for _, qp := range strings.Split(queryFrag, "&") {
+				rawQueryFragments = append(rawQueryFragments, qp)
+			}
+		}
+
+		if encoded := queryValues.Encode(); encoded != "" {
+			rawQueryFragments = append(rawQueryFragments, encoded)
+		}
+		queryURL.RawQuery = strings.Join(rawQueryFragments, "&")
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
 // NewGetWhoamiRequest constructs an http.Request for the GetWhoami method
 func NewGetWhoamiRequest(server string) (*http.Request, error) {
 	var err error
@@ -3551,14 +3795,9 @@ type ClientWithResponsesInterface interface {
 	// Corresponds with POST /v1/integrations (the `CreateIntegration` operationId).
 	CreateIntegrationWithResponse(ctx context.Context, params *CreateIntegrationParams, body CreateIntegrationJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateIntegrationResponse, error)
 
-	// GetEmailIntegrationWithResponse Return the Act-managed email integration that email actions name
-	//
-	// Returns a wrapper object for the known response body format(s).
-	//
-	// Corresponds with GET /v1/integrations/email (the `GetEmailIntegration` operationId).
-	GetEmailIntegrationWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetEmailIntegrationResponse, error)
-
 	// ListSlackChannelsWithResponse Look up public Slack channels by exact name or ID, for actions that take channel IDs
+	//
+	// Matches a channel name exactly, with or without the leading `#`, or a channel ID. Private channels are not listed. Answers `integration_not_connected` when no Slack integration is connected.
 	//
 	// Returns a wrapper object for the known response body format(s).
 	//
@@ -3595,54 +3834,70 @@ type ClientWithResponsesInterface interface {
 
 	// ListNotificationEventTypesWithResponse List the event types a rule can match, the actions and conditions each takes, and the rule limits
 	//
+	// Only event types this tenant can subscribe to with an email or Slack action are listed. `limits` are the caps every rule write enforces.
+	//
 	// Returns a wrapper object for the known response body format(s).
 	//
 	// Corresponds with GET /v1/notification-event-types (the `ListNotificationEventTypes` operationId).
 	ListNotificationEventTypesWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*ListNotificationEventTypesResponse, error)
 
-	// ListNotificationRecipientsWithResponse List the address-book recipients rules can name, one page at a time
+	// ListNotificationRecipientsWithResponse List the recipient groups rules can name, one page at a time
+	//
+	// Pass `nextPageToken` back as `pageToken` for the next page.
 	//
 	// Returns a wrapper object for the known response body format(s).
 	//
 	// Corresponds with GET /v1/notification-recipients (the `ListNotificationRecipients` operationId).
 	ListNotificationRecipientsWithResponse(ctx context.Context, params *ListNotificationRecipientsParams, reqEditors ...RequestEditorFn) (*ListNotificationRecipientsResponse, error)
 
-	// CreateNotificationRecipientWithBodyWithResponse Create an address-book recipient
+	// CreateNotificationRecipientWithBodyWithResponse Create a recipient group
+	//
+	// Recipient names are unique per tenant. A retry with the same `Idempotency-Key` and body within 24 hours answers with the recipient the first request created.
 	//
 	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 	//
 	// Corresponds with POST /v1/notification-recipients (the `CreateNotificationRecipient` operationId).
 	CreateNotificationRecipientWithBodyWithResponse(ctx context.Context, params *CreateNotificationRecipientParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateNotificationRecipientResponse, error)
 
-	// CreateNotificationRecipientWithResponse Create an address-book recipient
+	// CreateNotificationRecipientWithResponse Create a recipient group
+	//
+	// Recipient names are unique per tenant. A retry with the same `Idempotency-Key` and body within 24 hours answers with the recipient the first request created.
 	//
 	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 	//
 	// Corresponds with POST /v1/notification-recipients (the `CreateNotificationRecipient` operationId).
 	CreateNotificationRecipientWithResponse(ctx context.Context, params *CreateNotificationRecipientParams, body CreateNotificationRecipientJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateNotificationRecipientResponse, error)
 
-	// DeleteNotificationRecipientWithResponse Delete an address-book recipient. Refused with 409 while a rule names it
+	// DeleteNotificationRecipientWithResponse Delete a recipient group. Refused with 409 while a rule names it
+	//
+	// The 409 `conflict` carries `reason: notification_recipient_in_use` and the `ruleIds` that name it. With `If-Match`, the recipient is deleted only while it is at that revision; otherwise the answer is 412.
 	//
 	// Returns a wrapper object for the known response body format(s).
 	//
 	// Corresponds with DELETE /v1/notification-recipients/{id} (the `DeleteNotificationRecipient` operationId).
 	DeleteNotificationRecipientWithResponse(ctx context.Context, id string, params *DeleteNotificationRecipientParams, reqEditors ...RequestEditorFn) (*DeleteNotificationRecipientResponse, error)
 
-	// GetNotificationRecipientWithResponse Return one address-book recipient
+	// GetNotificationRecipientWithResponse Return one recipient group
+	//
+	// The `ETag` header carries the revision. Send it as `If-Match` to replace or delete this revision.
 	//
 	// Returns a wrapper object for the known response body format(s).
 	//
 	// Corresponds with GET /v1/notification-recipients/{id} (the `GetNotificationRecipient` operationId).
 	GetNotificationRecipientWithResponse(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*GetNotificationRecipientResponse, error)
 
-	// ReplaceNotificationRecipientWithBodyWithResponse Replace an address-book recipient; the rules that name it send to its new addresses
+	// ReplaceNotificationRecipientWithBodyWithResponse Replace a recipient group; the rules that name it send to its new members
+	//
+	// `If-Match` must name the current `ETag` (strong comparison) or be `*`; otherwise the answer is 412 with the current `etag`.
 	//
 	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 	//
 	// Corresponds with PUT /v1/notification-recipients/{id} (the `ReplaceNotificationRecipient` operationId).
 	ReplaceNotificationRecipientWithBodyWithResponse(ctx context.Context, id string, params *ReplaceNotificationRecipientParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*ReplaceNotificationRecipientResponse, error)
 
-	// ReplaceNotificationRecipientWithResponse Replace an address-book recipient; the rules that name it send to its new addresses
+	// ReplaceNotificationRecipientWithResponse Replace a recipient group; the rules that name it send to its new members
+	//
+	// `If-Match` must name the current `ETag` (strong comparison) or be `*`; otherwise the answer is 412 with the current `etag`.
 	//
 	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 	//
@@ -3651,12 +3906,16 @@ type ClientWithResponsesInterface interface {
 
 	// ListNotificationRulesWithResponse List the notification rules of the calling tenant, one page at a time
 	//
+	// Rules are listed oldest first. Pass `nextPageToken` back as `pageToken` for the next page.
+	//
 	// Returns a wrapper object for the known response body format(s).
 	//
 	// Corresponds with GET /v1/notification-rules (the `ListNotificationRules` operationId).
 	ListNotificationRulesWithResponse(ctx context.Context, params *ListNotificationRulesParams, reqEditors ...RequestEditorFn) (*ListNotificationRulesResponse, error)
 
 	// CreateNotificationRuleWithBodyWithResponse Create a notification rule
+	//
+	// Answers 201 with the rule and its `ETag`. A retry with the same `Idempotency-Key` and body within 24 hours answers with the rule the first request created. Domain errors are `invalid_request` with a `reason` and a JSON `pointer` into the request body.
 	//
 	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 	//
@@ -3665,12 +3924,16 @@ type ClientWithResponsesInterface interface {
 
 	// CreateNotificationRuleWithResponse Create a notification rule
 	//
+	// Answers 201 with the rule and its `ETag`. A retry with the same `Idempotency-Key` and body within 24 hours answers with the rule the first request created. Domain errors are `invalid_request` with a `reason` and a JSON `pointer` into the request body.
+	//
 	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 	//
 	// Corresponds with POST /v1/notification-rules (the `CreateNotificationRule` operationId).
 	CreateNotificationRuleWithResponse(ctx context.Context, params *CreateNotificationRuleParams, body CreateNotificationRuleJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateNotificationRuleResponse, error)
 
 	// ValidateNotificationRuleWithBodyWithResponse Check a rule as a create or a replace would, without saving it or sending anything
+	//
+	// Runs every check a write runs, the enabled-rules limit included, and answers `valid: false` with the error a write would answer. Requires the write scope because it can check a destination with its provider.
 	//
 	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 	//
@@ -3679,12 +3942,16 @@ type ClientWithResponsesInterface interface {
 
 	// ValidateNotificationRuleWithResponse Check a rule as a create or a replace would, without saving it or sending anything
 	//
+	// Runs every check a write runs, the enabled-rules limit included, and answers `valid: false` with the error a write would answer. Requires the write scope because it can check a destination with its provider.
+	//
 	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 	//
 	// Corresponds with POST /v1/notification-rules/validate (the `ValidateNotificationRule` operationId).
 	ValidateNotificationRuleWithResponse(ctx context.Context, body ValidateNotificationRuleJSONRequestBody, reqEditors ...RequestEditorFn) (*ValidateNotificationRuleResponse, error)
 
 	// DeleteNotificationRuleWithResponse Delete a notification rule. Its activity stays readable for six months
+	//
+	// With `If-Match`, the rule is deleted only while it is at that revision; otherwise the answer is 412.
 	//
 	// Returns a wrapper object for the known response body format(s).
 	//
@@ -3693,12 +3960,16 @@ type ClientWithResponsesInterface interface {
 
 	// GetNotificationRuleWithResponse Return one notification rule
 	//
+	// The `ETag` header carries the revision. Send it as `If-Match` to replace or delete this revision.
+	//
 	// Returns a wrapper object for the known response body format(s).
 	//
 	// Corresponds with GET /v1/notification-rules/{id} (the `GetNotificationRule` operationId).
 	GetNotificationRuleWithResponse(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*GetNotificationRuleResponse, error)
 
 	// ReplaceNotificationRuleWithBodyWithResponse Replace a notification rule. A member left out keeps its stored value
+	//
+	// `If-Match` must name the current `ETag` (strong comparison) or be `*`; otherwise the answer is 412 with the current `etag`. Send an empty array to clear a list. Destinations on integrations the API does not represent are kept.
 	//
 	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 	//
@@ -3707,12 +3978,16 @@ type ClientWithResponsesInterface interface {
 
 	// ReplaceNotificationRuleWithResponse Replace a notification rule. A member left out keeps its stored value
 	//
+	// `If-Match` must name the current `ETag` (strong comparison) or be `*`; otherwise the answer is 412 with the current `etag`. Send an empty array to clear a list. Destinations on integrations the API does not represent are kept.
+	//
 	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 	//
 	// Corresponds with PUT /v1/notification-rules/{id} (the `ReplaceNotificationRule` operationId).
 	ReplaceNotificationRuleWithResponse(ctx context.Context, id string, params *ReplaceNotificationRuleParams, body ReplaceNotificationRuleJSONRequestBody, reqEditors ...RequestEditorFn) (*ReplaceNotificationRuleResponse, error)
 
 	// ListNotificationRuleActivityWithResponse List the events a rule matched in the last six months and what was sent, newest first
+	//
+	// Works for a deleted rule too. Pass `nextPageToken` back as `pageToken` for the next page.
 	//
 	// Returns a wrapper object for the known response body format(s).
 	//
@@ -3739,6 +4014,15 @@ type ClientWithResponsesInterface interface {
 	//
 	// Corresponds with GET /v1/onboarding/gcp (the `GetGcpOnboarding` operationId).
 	GetGcpOnboardingWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetGcpOnboardingResponse, error)
+
+	// ListUsersWithResponse Find the Act user of the calling tenant with an exact email address
+	//
+	// Matches the whole address, ignoring case, and never lists or searches, so it answers at most one user. A recipient group names users by `id`.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with GET /v1/users (the `ListUsers` operationId).
+	ListUsersWithResponse(ctx context.Context, params *ListUsersParams, reqEditors ...RequestEditorFn) (*ListUsersResponse, error)
 
 	// GetWhoamiWithResponse Return the tenant, region and principal of the calling token
 	//
@@ -4589,131 +4873,6 @@ func (r CreateIntegrationResponse) StatusCode() int {
 
 // ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
 func (r CreateIntegrationResponse) ContentType() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Header.Get("Content-Type")
-	}
-	return ""
-}
-
-// GetEmailIntegrationResponse200Headers the declared response headers of an HTTP 200 response for GetEmailIntegration
-type GetEmailIntegrationResponse200Headers struct {
-	ETag string
-}
-
-// GetEmailIntegrationResponse401Headers the declared response headers of an HTTP 401 response for GetEmailIntegration
-type GetEmailIntegrationResponse401Headers struct {
-	WWWAuthenticate *string
-}
-
-// GetEmailIntegrationResponse403Headers the declared response headers of an HTTP 403 response for GetEmailIntegration
-type GetEmailIntegrationResponse403Headers struct {
-	WWWAuthenticate *string
-}
-
-// GetEmailIntegrationResponse429Headers the declared response headers of an HTTP 429 response for GetEmailIntegration
-type GetEmailIntegrationResponse429Headers struct {
-	RetryAfter *int
-}
-
-// GetEmailIntegrationResponse503Headers the declared response headers of an HTTP 503 response for GetEmailIntegration
-type GetEmailIntegrationResponse503Headers struct {
-	RetryAfter *int
-}
-
-type GetEmailIntegrationResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	// JSON200 the response for an HTTP 200 `application/json` response
-	JSON200 *Integration
-	// JSON400 the response for an HTTP 400 `application/json` response
-	JSON400 *ErrorEnvelope
-	// JSON401 the response for an HTTP 401 `application/json` response
-	JSON401 *ErrorEnvelope
-	// JSON403 the response for an HTTP 403 `application/json` response
-	JSON403 *ErrorEnvelope
-	// JSON404 the response for an HTTP 404 `application/json` response
-	JSON404 *ErrorEnvelope
-	// JSON429 the response for an HTTP 429 `application/json` response
-	JSON429 *ErrorEnvelope
-	// JSON500 the response for an HTTP 500 `application/json` response
-	JSON500 *ErrorEnvelope
-	// JSON503 the response for an HTTP 503 `application/json` response
-	JSON503 *ErrorEnvelope
-	// Headers200 the parsed response headers for an HTTP 200 response
-	Headers200 *GetEmailIntegrationResponse200Headers
-	// Headers401 the parsed response headers for an HTTP 401 response
-	Headers401 *GetEmailIntegrationResponse401Headers
-	// Headers403 the parsed response headers for an HTTP 403 response
-	Headers403 *GetEmailIntegrationResponse403Headers
-	// Headers429 the parsed response headers for an HTTP 429 response
-	Headers429 *GetEmailIntegrationResponse429Headers
-	// Headers503 the parsed response headers for an HTTP 503 response
-	Headers503 *GetEmailIntegrationResponse503Headers
-}
-
-// GetJSON200 returns the response for an HTTP 200 `application/json` response
-func (r GetEmailIntegrationResponse) GetJSON200() *Integration {
-	return r.JSON200
-}
-
-// GetJSON400 returns the response for an HTTP 400 `application/json` response
-func (r GetEmailIntegrationResponse) GetJSON400() *ErrorEnvelope {
-	return r.JSON400
-}
-
-// GetJSON401 returns the response for an HTTP 401 `application/json` response
-func (r GetEmailIntegrationResponse) GetJSON401() *ErrorEnvelope {
-	return r.JSON401
-}
-
-// GetJSON403 returns the response for an HTTP 403 `application/json` response
-func (r GetEmailIntegrationResponse) GetJSON403() *ErrorEnvelope {
-	return r.JSON403
-}
-
-// GetJSON404 returns the response for an HTTP 404 `application/json` response
-func (r GetEmailIntegrationResponse) GetJSON404() *ErrorEnvelope {
-	return r.JSON404
-}
-
-// GetJSON429 returns the response for an HTTP 429 `application/json` response
-func (r GetEmailIntegrationResponse) GetJSON429() *ErrorEnvelope {
-	return r.JSON429
-}
-
-// GetJSON500 returns the response for an HTTP 500 `application/json` response
-func (r GetEmailIntegrationResponse) GetJSON500() *ErrorEnvelope {
-	return r.JSON500
-}
-
-// GetJSON503 returns the response for an HTTP 503 `application/json` response
-func (r GetEmailIntegrationResponse) GetJSON503() *ErrorEnvelope {
-	return r.JSON503
-}
-
-// GetBody returns the raw response body bytes
-func (r GetEmailIntegrationResponse) GetBody() []byte {
-	return r.Body
-}
-
-// Status returns HTTPResponse.Status
-func (r GetEmailIntegrationResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r GetEmailIntegrationResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
-func (r GetEmailIntegrationResponse) ContentType() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Header.Get("Content-Type")
 	}
@@ -7164,6 +7323,117 @@ func (r GetGcpOnboardingResponse) ContentType() string {
 	return ""
 }
 
+// ListUsersResponse401Headers the declared response headers of an HTTP 401 response for ListUsers
+type ListUsersResponse401Headers struct {
+	WWWAuthenticate *string
+}
+
+// ListUsersResponse403Headers the declared response headers of an HTTP 403 response for ListUsers
+type ListUsersResponse403Headers struct {
+	WWWAuthenticate *string
+}
+
+// ListUsersResponse429Headers the declared response headers of an HTTP 429 response for ListUsers
+type ListUsersResponse429Headers struct {
+	RetryAfter *int
+}
+
+// ListUsersResponse503Headers the declared response headers of an HTTP 503 response for ListUsers
+type ListUsersResponse503Headers struct {
+	RetryAfter *int
+}
+
+type ListUsersResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *ActUserList
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *ErrorEnvelope
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *ErrorEnvelope
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *ErrorEnvelope
+	// JSON429 the response for an HTTP 429 `application/json` response
+	JSON429 *ErrorEnvelope
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *ErrorEnvelope
+	// JSON503 the response for an HTTP 503 `application/json` response
+	JSON503 *ErrorEnvelope
+	// Headers401 the parsed response headers for an HTTP 401 response
+	Headers401 *ListUsersResponse401Headers
+	// Headers403 the parsed response headers for an HTTP 403 response
+	Headers403 *ListUsersResponse403Headers
+	// Headers429 the parsed response headers for an HTTP 429 response
+	Headers429 *ListUsersResponse429Headers
+	// Headers503 the parsed response headers for an HTTP 503 response
+	Headers503 *ListUsersResponse503Headers
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r ListUsersResponse) GetJSON200() *ActUserList {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r ListUsersResponse) GetJSON400() *ErrorEnvelope {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r ListUsersResponse) GetJSON401() *ErrorEnvelope {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r ListUsersResponse) GetJSON403() *ErrorEnvelope {
+	return r.JSON403
+}
+
+// GetJSON429 returns the response for an HTTP 429 `application/json` response
+func (r ListUsersResponse) GetJSON429() *ErrorEnvelope {
+	return r.JSON429
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r ListUsersResponse) GetJSON500() *ErrorEnvelope {
+	return r.JSON500
+}
+
+// GetJSON503 returns the response for an HTTP 503 `application/json` response
+func (r ListUsersResponse) GetJSON503() *ErrorEnvelope {
+	return r.JSON503
+}
+
+// GetBody returns the raw response body bytes
+func (r ListUsersResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r ListUsersResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ListUsersResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r ListUsersResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
 // GetWhoamiResponse401Headers the declared response headers of an HTTP 401 response for GetWhoami
 type GetWhoamiResponse401Headers struct {
 	WWWAuthenticate *string
@@ -7379,20 +7649,9 @@ func (c *ClientWithResponses) CreateIntegrationWithResponse(ctx context.Context,
 	return ParseCreateIntegrationResponse(rsp)
 }
 
-// GetEmailIntegrationWithResponse Return the Act-managed email integration that email actions name
-//
-// Returns a wrapper object for the known response body format(s).
-//
-// Corresponds with GET /v1/integrations/email (the `GetEmailIntegration` operationId).
-func (c *ClientWithResponses) GetEmailIntegrationWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetEmailIntegrationResponse, error) {
-	rsp, err := c.GetEmailIntegration(ctx, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseGetEmailIntegrationResponse(rsp)
-}
-
 // ListSlackChannelsWithResponse Look up public Slack channels by exact name or ID, for actions that take channel IDs
+//
+// Matches a channel name exactly, with or without the leading `#`, or a channel ID. Private channels are not listed. Answers `integration_not_connected` when no Slack integration is connected.
 //
 // Returns a wrapper object for the known response body format(s).
 //
@@ -7459,6 +7718,8 @@ func (c *ClientWithResponses) UpdateIntegrationWithResponse(ctx context.Context,
 
 // ListNotificationEventTypesWithResponse List the event types a rule can match, the actions and conditions each takes, and the rule limits
 //
+// Only event types this tenant can subscribe to with an email or Slack action are listed. `limits` are the caps every rule write enforces.
+//
 // Returns a wrapper object for the known response body format(s).
 //
 // Corresponds with GET /v1/notification-event-types (the `ListNotificationEventTypes` operationId).
@@ -7470,7 +7731,9 @@ func (c *ClientWithResponses) ListNotificationEventTypesWithResponse(ctx context
 	return ParseListNotificationEventTypesResponse(rsp)
 }
 
-// ListNotificationRecipientsWithResponse List the address-book recipients rules can name, one page at a time
+// ListNotificationRecipientsWithResponse List the recipient groups rules can name, one page at a time
+//
+// Pass `nextPageToken` back as `pageToken` for the next page.
 //
 // Returns a wrapper object for the known response body format(s).
 //
@@ -7483,7 +7746,9 @@ func (c *ClientWithResponses) ListNotificationRecipientsWithResponse(ctx context
 	return ParseListNotificationRecipientsResponse(rsp)
 }
 
-// CreateNotificationRecipientWithBodyWithResponse Create an address-book recipient
+// CreateNotificationRecipientWithBodyWithResponse Create a recipient group
+//
+// Recipient names are unique per tenant. A retry with the same `Idempotency-Key` and body within 24 hours answers with the recipient the first request created.
 //
 // Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 //
@@ -7496,7 +7761,9 @@ func (c *ClientWithResponses) CreateNotificationRecipientWithBodyWithResponse(ct
 	return ParseCreateNotificationRecipientResponse(rsp)
 }
 
-// CreateNotificationRecipientWithResponse Create an address-book recipient
+// CreateNotificationRecipientWithResponse Create a recipient group
+//
+// Recipient names are unique per tenant. A retry with the same `Idempotency-Key` and body within 24 hours answers with the recipient the first request created.
 //
 // Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 //
@@ -7509,7 +7776,9 @@ func (c *ClientWithResponses) CreateNotificationRecipientWithResponse(ctx contex
 	return ParseCreateNotificationRecipientResponse(rsp)
 }
 
-// DeleteNotificationRecipientWithResponse Delete an address-book recipient. Refused with 409 while a rule names it
+// DeleteNotificationRecipientWithResponse Delete a recipient group. Refused with 409 while a rule names it
+//
+// The 409 `conflict` carries `reason: notification_recipient_in_use` and the `ruleIds` that name it. With `If-Match`, the recipient is deleted only while it is at that revision; otherwise the answer is 412.
 //
 // Returns a wrapper object for the known response body format(s).
 //
@@ -7522,7 +7791,9 @@ func (c *ClientWithResponses) DeleteNotificationRecipientWithResponse(ctx contex
 	return ParseDeleteNotificationRecipientResponse(rsp)
 }
 
-// GetNotificationRecipientWithResponse Return one address-book recipient
+// GetNotificationRecipientWithResponse Return one recipient group
+//
+// The `ETag` header carries the revision. Send it as `If-Match` to replace or delete this revision.
 //
 // Returns a wrapper object for the known response body format(s).
 //
@@ -7535,7 +7806,9 @@ func (c *ClientWithResponses) GetNotificationRecipientWithResponse(ctx context.C
 	return ParseGetNotificationRecipientResponse(rsp)
 }
 
-// ReplaceNotificationRecipientWithBodyWithResponse Replace an address-book recipient; the rules that name it send to its new addresses
+// ReplaceNotificationRecipientWithBodyWithResponse Replace a recipient group; the rules that name it send to its new members
+//
+// `If-Match` must name the current `ETag` (strong comparison) or be `*`; otherwise the answer is 412 with the current `etag`.
 //
 // Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 //
@@ -7548,7 +7821,9 @@ func (c *ClientWithResponses) ReplaceNotificationRecipientWithBodyWithResponse(c
 	return ParseReplaceNotificationRecipientResponse(rsp)
 }
 
-// ReplaceNotificationRecipientWithResponse Replace an address-book recipient; the rules that name it send to its new addresses
+// ReplaceNotificationRecipientWithResponse Replace a recipient group; the rules that name it send to its new members
+//
+// `If-Match` must name the current `ETag` (strong comparison) or be `*`; otherwise the answer is 412 with the current `etag`.
 //
 // Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 //
@@ -7563,6 +7838,8 @@ func (c *ClientWithResponses) ReplaceNotificationRecipientWithResponse(ctx conte
 
 // ListNotificationRulesWithResponse List the notification rules of the calling tenant, one page at a time
 //
+// Rules are listed oldest first. Pass `nextPageToken` back as `pageToken` for the next page.
+//
 // Returns a wrapper object for the known response body format(s).
 //
 // Corresponds with GET /v1/notification-rules (the `ListNotificationRules` operationId).
@@ -7575,6 +7852,8 @@ func (c *ClientWithResponses) ListNotificationRulesWithResponse(ctx context.Cont
 }
 
 // CreateNotificationRuleWithBodyWithResponse Create a notification rule
+//
+// Answers 201 with the rule and its `ETag`. A retry with the same `Idempotency-Key` and body within 24 hours answers with the rule the first request created. Domain errors are `invalid_request` with a `reason` and a JSON `pointer` into the request body.
 //
 // Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 //
@@ -7589,6 +7868,8 @@ func (c *ClientWithResponses) CreateNotificationRuleWithBodyWithResponse(ctx con
 
 // CreateNotificationRuleWithResponse Create a notification rule
 //
+// Answers 201 with the rule and its `ETag`. A retry with the same `Idempotency-Key` and body within 24 hours answers with the rule the first request created. Domain errors are `invalid_request` with a `reason` and a JSON `pointer` into the request body.
+//
 // Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 //
 // Corresponds with POST /v1/notification-rules (the `CreateNotificationRule` operationId).
@@ -7601,6 +7882,8 @@ func (c *ClientWithResponses) CreateNotificationRuleWithResponse(ctx context.Con
 }
 
 // ValidateNotificationRuleWithBodyWithResponse Check a rule as a create or a replace would, without saving it or sending anything
+//
+// Runs every check a write runs, the enabled-rules limit included, and answers `valid: false` with the error a write would answer. Requires the write scope because it can check a destination with its provider.
 //
 // Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 //
@@ -7615,6 +7898,8 @@ func (c *ClientWithResponses) ValidateNotificationRuleWithBodyWithResponse(ctx c
 
 // ValidateNotificationRuleWithResponse Check a rule as a create or a replace would, without saving it or sending anything
 //
+// Runs every check a write runs, the enabled-rules limit included, and answers `valid: false` with the error a write would answer. Requires the write scope because it can check a destination with its provider.
+//
 // Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 //
 // Corresponds with POST /v1/notification-rules/validate (the `ValidateNotificationRule` operationId).
@@ -7627,6 +7912,8 @@ func (c *ClientWithResponses) ValidateNotificationRuleWithResponse(ctx context.C
 }
 
 // DeleteNotificationRuleWithResponse Delete a notification rule. Its activity stays readable for six months
+//
+// With `If-Match`, the rule is deleted only while it is at that revision; otherwise the answer is 412.
 //
 // Returns a wrapper object for the known response body format(s).
 //
@@ -7641,6 +7928,8 @@ func (c *ClientWithResponses) DeleteNotificationRuleWithResponse(ctx context.Con
 
 // GetNotificationRuleWithResponse Return one notification rule
 //
+// The `ETag` header carries the revision. Send it as `If-Match` to replace or delete this revision.
+//
 // Returns a wrapper object for the known response body format(s).
 //
 // Corresponds with GET /v1/notification-rules/{id} (the `GetNotificationRule` operationId).
@@ -7653,6 +7942,8 @@ func (c *ClientWithResponses) GetNotificationRuleWithResponse(ctx context.Contex
 }
 
 // ReplaceNotificationRuleWithBodyWithResponse Replace a notification rule. A member left out keeps its stored value
+//
+// `If-Match` must name the current `ETag` (strong comparison) or be `*`; otherwise the answer is 412 with the current `etag`. Send an empty array to clear a list. Destinations on integrations the API does not represent are kept.
 //
 // Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 //
@@ -7667,6 +7958,8 @@ func (c *ClientWithResponses) ReplaceNotificationRuleWithBodyWithResponse(ctx co
 
 // ReplaceNotificationRuleWithResponse Replace a notification rule. A member left out keeps its stored value
 //
+// `If-Match` must name the current `ETag` (strong comparison) or be `*`; otherwise the answer is 412 with the current `etag`. Send an empty array to clear a list. Destinations on integrations the API does not represent are kept.
+//
 // Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 //
 // Corresponds with PUT /v1/notification-rules/{id} (the `ReplaceNotificationRule` operationId).
@@ -7679,6 +7972,8 @@ func (c *ClientWithResponses) ReplaceNotificationRuleWithResponse(ctx context.Co
 }
 
 // ListNotificationRuleActivityWithResponse List the events a rule matched in the last six months and what was sent, newest first
+//
+// Works for a deleted rule too. Pass `nextPageToken` back as `pageToken` for the next page.
 //
 // Returns a wrapper object for the known response body format(s).
 //
@@ -7728,6 +8023,21 @@ func (c *ClientWithResponses) GetGcpOnboardingWithResponse(ctx context.Context, 
 		return nil, err
 	}
 	return ParseGetGcpOnboardingResponse(rsp)
+}
+
+// ListUsersWithResponse Find the Act user of the calling tenant with an exact email address
+//
+// Matches the whole address, ignoring case, and never lists or searches, so it answers at most one user. A recipient group names users by `id`.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with GET /v1/users (the `ListUsers` operationId).
+func (c *ClientWithResponses) ListUsersWithResponse(ctx context.Context, params *ListUsersParams, reqEditors ...RequestEditorFn) (*ListUsersResponse, error) {
+	rsp, err := c.ListUsers(ctx, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseListUsersResponse(rsp)
 }
 
 // GetWhoamiWithResponse Return the tenant, region and principal of the calling token
@@ -8589,134 +8899,6 @@ func ParseCreateIntegrationResponse(rsp *http.Response) (*CreateIntegrationRespo
 		response.Headers429 = &headers
 	case rsp.StatusCode == 503:
 		var headers CreateIntegrationResponse503Headers
-		if values := rsp.Header.Values("Retry-After"); len(values) > 0 {
-			var value int
-			if err := runtime.BindStyledParameterWithOptions("simple", "Retry-After", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {
-				return nil, err
-			}
-			headers.RetryAfter = &value
-		}
-		response.Headers503 = &headers
-	}
-
-	return response, nil
-}
-
-// ParseGetEmailIntegrationResponse parses an HTTP response from a GetEmailIntegrationWithResponse call
-func ParseGetEmailIntegrationResponse(rsp *http.Response) (*GetEmailIntegrationResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &GetEmailIntegrationResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest Integration
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON200 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
-		var dest ErrorEnvelope
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON400 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
-		var dest ErrorEnvelope
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON401 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
-		var dest ErrorEnvelope
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON403 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
-		var dest ErrorEnvelope
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON404 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
-		var dest ErrorEnvelope
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON429 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
-		var dest ErrorEnvelope
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON500 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
-		var dest ErrorEnvelope
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON503 = &dest
-
-	}
-
-	switch {
-	case rsp.StatusCode == 200:
-		var headers GetEmailIntegrationResponse200Headers
-		if values := rsp.Header.Values("ETag"); len(values) > 0 {
-			var value string
-			if err := runtime.BindStyledParameterWithOptions("simple", "ETag", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""}); err != nil {
-				return nil, err
-			}
-			headers.ETag = value
-		}
-		response.Headers200 = &headers
-	case rsp.StatusCode == 401:
-		var headers GetEmailIntegrationResponse401Headers
-		if values := rsp.Header.Values("WWW-Authenticate"); len(values) > 0 {
-			var value string
-			if err := runtime.BindStyledParameterWithOptions("simple", "WWW-Authenticate", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""}); err != nil {
-				return nil, err
-			}
-			headers.WWWAuthenticate = &value
-		}
-		response.Headers401 = &headers
-	case rsp.StatusCode == 403:
-		var headers GetEmailIntegrationResponse403Headers
-		if values := rsp.Header.Values("WWW-Authenticate"); len(values) > 0 {
-			var value string
-			if err := runtime.BindStyledParameterWithOptions("simple", "WWW-Authenticate", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""}); err != nil {
-				return nil, err
-			}
-			headers.WWWAuthenticate = &value
-		}
-		response.Headers403 = &headers
-	case rsp.StatusCode == 429:
-		var headers GetEmailIntegrationResponse429Headers
-		if values := rsp.Header.Values("Retry-After"); len(values) > 0 {
-			var value int
-			if err := runtime.BindStyledParameterWithOptions("simple", "Retry-After", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {
-				return nil, err
-			}
-			headers.RetryAfter = &value
-		}
-		response.Headers429 = &headers
-	case rsp.StatusCode == 503:
-		var headers GetEmailIntegrationResponse503Headers
 		if values := rsp.Header.Values("Retry-After"); len(values) > 0 {
 			var value int
 			if err := runtime.BindStyledParameterWithOptions("simple", "Retry-After", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {
@@ -11194,6 +11376,117 @@ func ParseGetGcpOnboardingResponse(rsp *http.Response) (*GetGcpOnboardingRespons
 		response.Headers429 = &headers
 	case rsp.StatusCode == 503:
 		var headers GetGcpOnboardingResponse503Headers
+		if values := rsp.Header.Values("Retry-After"); len(values) > 0 {
+			var value int
+			if err := runtime.BindStyledParameterWithOptions("simple", "Retry-After", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.RetryAfter = &value
+		}
+		response.Headers503 = &headers
+	}
+
+	return response, nil
+}
+
+// ParseListUsersResponse parses an HTTP response from a ListUsersWithResponse call
+func ParseListUsersResponse(rsp *http.Response) (*ListUsersResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ListUsersResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest ActUserList
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON429 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON503 = &dest
+
+	}
+
+	switch {
+	case rsp.StatusCode == 401:
+		var headers ListUsersResponse401Headers
+		if values := rsp.Header.Values("WWW-Authenticate"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "WWW-Authenticate", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.WWWAuthenticate = &value
+		}
+		response.Headers401 = &headers
+	case rsp.StatusCode == 403:
+		var headers ListUsersResponse403Headers
+		if values := rsp.Header.Values("WWW-Authenticate"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "WWW-Authenticate", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.WWWAuthenticate = &value
+		}
+		response.Headers403 = &headers
+	case rsp.StatusCode == 429:
+		var headers ListUsersResponse429Headers
+		if values := rsp.Header.Values("Retry-After"); len(values) > 0 {
+			var value int
+			if err := runtime.BindStyledParameterWithOptions("simple", "Retry-After", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.RetryAfter = &value
+		}
+		response.Headers429 = &headers
+	case rsp.StatusCode == 503:
+		var headers ListUsersResponse503Headers
 		if values := rsp.Header.Values("Retry-After"); len(values) > 0 {
 			var value int
 			if err := runtime.BindStyledParameterWithOptions("simple", "Retry-After", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {

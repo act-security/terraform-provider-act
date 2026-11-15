@@ -13,4 +13,6 @@ description: |-
 
 {{ tffile .ExampleFile }}
 
+The lookup matches the whole address and never lists or searches, so it finds at most one user. A user who has left the tenant is not found.
+
 {{ .SchemaMarkdown | trimspace }}

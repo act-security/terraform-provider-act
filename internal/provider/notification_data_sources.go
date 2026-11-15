@@ -34,48 +34,55 @@ func (d *providerDataSource) Configure(_ context.Context, req datasource.Configu
 	d.data = data
 }
 
-type emailIntegrationDataSource struct{ providerDataSource }
+type userDataSource struct{ providerDataSource }
 
-var _ datasource.DataSourceWithConfigure = (*emailIntegrationDataSource)(nil)
+var _ datasource.DataSourceWithConfigure = (*userDataSource)(nil)
 
-type emailIntegrationModel struct {
-	ID          types.String `tfsdk:"id"`
-	DisplayName types.String `tfsdk:"display_name"`
-	Status      types.String `tfsdk:"status"`
+type userModel struct {
+	Email types.String `tfsdk:"email"`
+	ID    types.String `tfsdk:"id"`
+	Name  types.String `tfsdk:"name"`
 }
 
-func NewEmailIntegrationDataSource() datasource.DataSource { return &emailIntegrationDataSource{} }
+func NewUserDataSource() datasource.DataSource { return &userDataSource{} }
 
-func (d *emailIntegrationDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_email_integration"
+func (d *userDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
+	resp.TypeName = req.ProviderTypeName + "_user"
 }
 
-func (d *emailIntegrationDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
+func (d *userDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "The Act-managed email integration. Every tenant has one; its `id` goes in the `email` block of notification rules and recipients.",
+		MarkdownDescription: "An Act user of this tenant, found by their exact email address. Its `id` goes in the `user_ids` of a notification recipient.",
 		Attributes: map[string]schema.Attribute{
-			"id":           schema.StringAttribute{MarkdownDescription: "The integration ID.", Computed: true},
-			"display_name": schema.StringAttribute{MarkdownDescription: "The name Act shows for the integration.", Computed: true},
-			"status":       schema.StringAttribute{MarkdownDescription: "The connection status, normally `connected`.", Computed: true},
+			"email": schema.StringAttribute{
+				MarkdownDescription: "The user's email address. Matched exactly, ignoring case.",
+				Required:            true,
+				Validators:          []validator.String{stringvalidator.LengthBetween(1, maxEmailLength)},
+			},
+			"id":   schema.StringAttribute{MarkdownDescription: "The user ID.", Computed: true},
+			"name": schema.StringAttribute{MarkdownDescription: "The user's name, when Act knows it.", Computed: true},
 		},
 	}
 }
 
-func (d *emailIntegrationDataSource) Read(ctx context.Context, _ datasource.ReadRequest, resp *datasource.ReadResponse) {
-	item, err := d.data.Client.GetEmailIntegration(ctx)
+func (d *userDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
+	var model userModel
+	resp.Diagnostics.Append(req.Config.Get(ctx, &model)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	user, err := d.data.Client.FindUserByEmail(ctx, model.Email.ValueString())
 	if err != nil {
-		notificationReadError(&resp.Diagnostics, "Reading the email integration failed", err)
+		resp.Diagnostics.AddError("Looking up the Act user failed", err.Error())
 		return
 	}
-	if item == nil {
-		resp.Diagnostics.AddError("Email integration not found", "This tenant has no Act-managed email integration installed. Contact Act support.")
+	if user == nil {
+		resp.Diagnostics.AddError("Act user not found", fmt.Sprintf("No user of this tenant has the email address %q.", model.Email.ValueString()))
 		return
 	}
-	resp.Diagnostics.Append(resp.State.Set(ctx, &emailIntegrationModel{
-		ID:          types.StringValue(item.ID),
-		DisplayName: types.StringValue(item.DisplayName),
-		Status:      types.StringValue(string(item.Status)),
-	})...)
+	model.ID = types.StringValue(user.ID)
+	model.Name = types.StringPointerValue(user.Name)
+	resp.Diagnostics.Append(resp.State.Set(ctx, &model)...)
 }
 
 type slackChannelDataSource struct{ providerDataSource }

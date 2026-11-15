@@ -39,6 +39,10 @@
     {
       "name": "notifications",
       "description": "Notification rules, the events they match and the recipients they send to"
+    },
+    {
+      "name": "users",
+      "description": "Act users of the calling tenant, found by exact email address"
     }
   ],
   "security": [
@@ -2085,149 +2089,11 @@
         "x-act-scope": "integrations:write"
       }
     },
-    "/v1/integrations/email": {
-      "get": {
-        "operationId": "getEmailIntegration",
-        "summary": "Return the Act-managed email integration that email actions name",
-        "tags": [
-          "integrations"
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "headers": {
-              "ETag": {
-                "schema": {
-                  "type": "string"
-                },
-                "required": true
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Integration"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Error envelope. Codes: invalid_request",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Error envelope. Codes: unauthenticated",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            },
-            "headers": {
-              "WWW-Authenticate": {
-                "description": "Bearer challenge",
-                "schema": {
-                  "type": "string"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Error envelope. Codes: insufficient_scope, feature_disabled",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            },
-            "headers": {
-              "WWW-Authenticate": {
-                "description": "Bearer challenge naming the missing scope",
-                "schema": {
-                  "type": "string"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Error envelope. Codes: not_found",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "Error envelope. Codes: rate_limited",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            },
-            "headers": {
-              "Retry-After": {
-                "description": "Seconds to wait before retrying",
-                "schema": {
-                  "type": "integer"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Error envelope. Codes: internal",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "Error envelope. Codes: unavailable",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            },
-            "headers": {
-              "Retry-After": {
-                "description": "Seconds to wait before retrying",
-                "schema": {
-                  "type": "integer"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "serviceAccount": [
-              "integrations:read"
-            ]
-          }
-        ],
-        "x-act-scope": "integrations:read"
-      }
-    },
     "/v1/integrations/slack/channels": {
       "get": {
         "operationId": "listSlackChannels",
         "summary": "Look up public Slack channels by exact name or ID, for actions that take channel IDs",
+        "description": "Matches a channel name exactly, with or without the leading `#`, or a channel ID. Private channels are not listed. Answers `integration_not_connected` when no Slack integration is connected.",
         "tags": [
           "integrations"
         ],
@@ -2376,10 +2242,145 @@
         "x-act-scope": "integrations:read"
       }
     },
+    "/v1/users": {
+      "get": {
+        "operationId": "listUsers",
+        "summary": "Find the Act user of the calling tenant with an exact email address",
+        "description": "Matches the whole address, ignoring case, and never lists or searches, so it answers at most one user. A recipient group names users by `id`.",
+        "tags": [
+          "users"
+        ],
+        "parameters": [
+          {
+            "name": "email",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "maxLength": 320,
+              "format": "email"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActUserList"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error envelope. Codes: invalid_request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error envelope. Codes: unauthenticated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "WWW-Authenticate": {
+                "description": "Bearer challenge",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Error envelope. Codes: insufficient_scope, feature_disabled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "WWW-Authenticate": {
+                "description": "Bearer challenge naming the missing scope",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Error envelope. Codes: rate_limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error envelope. Codes: internal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Error envelope. Codes: unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "serviceAccount": [
+              "integrations:read"
+            ]
+          }
+        ],
+        "x-act-scope": "integrations:read"
+      }
+    },
     "/v1/notification-event-types": {
       "get": {
         "operationId": "listNotificationEventTypes",
         "summary": "List the event types a rule can match, the actions and conditions each takes, and the rule limits",
+        "description": "Only event types this tenant can subscribe to with an email or Slack action are listed. `limits` are the caps every rule write enforces.",
         "tags": [
           "notifications"
         ],
@@ -2501,6 +2502,7 @@
       "get": {
         "operationId": "listNotificationRules",
         "summary": "List the notification rules of the calling tenant, one page at a time",
+        "description": "Rules are listed oldest first. Pass `nextPageToken` back as `pageToken` for the next page.",
         "tags": [
           "notifications"
         ],
@@ -2666,6 +2668,7 @@
       "post": {
         "operationId": "createNotificationRule",
         "summary": "Create a notification rule",
+        "description": "Answers 201 with the rule and its `ETag`. A retry with the same `Idempotency-Key` and body within 24 hours answers with the rule the first request created. Domain errors are `invalid_request` with a `reason` and a JSON `pointer` into the request body.",
         "tags": [
           "notifications"
         ],
@@ -2837,6 +2840,7 @@
       "post": {
         "operationId": "validateNotificationRule",
         "summary": "Check a rule as a create or a replace would, without saving it or sending anything",
+        "description": "Runs every check a write runs, the enabled-rules limit included, and answers `valid: false` with the error a write would answer. Requires the write scope because it can check a destination with its provider.",
         "tags": [
           "notifications"
         ],
@@ -2979,6 +2983,7 @@
       "get": {
         "operationId": "getNotificationRule",
         "summary": "Return one notification rule",
+        "description": "The `ETag` header carries the revision. Send it as `If-Match` to replace or delete this revision.",
         "tags": [
           "notifications"
         ],
@@ -3127,6 +3132,7 @@
       "put": {
         "operationId": "replaceNotificationRule",
         "summary": "Replace a notification rule. A member left out keeps its stored value",
+        "description": "`If-Match` must name the current `ETag` (strong comparison) or be `*`; otherwise the answer is 412 with the current `etag`. Send an empty array to clear a list. Destinations on integrations the API does not represent are kept.",
         "tags": [
           "notifications"
         ],
@@ -3326,6 +3332,7 @@
       "delete": {
         "operationId": "deleteNotificationRule",
         "summary": "Delete a notification rule. Its activity stays readable for six months",
+        "description": "With `If-Match`, the rule is deleted only while it is at that revision; otherwise the answer is 412.",
         "tags": [
           "notifications"
         ],
@@ -3481,6 +3488,7 @@
       "get": {
         "operationId": "listNotificationRuleActivity",
         "summary": "List the events a rule matched in the last six months and what was sent, newest first",
+        "description": "Works for a deleted rule too. Pass `nextPageToken` back as `pageToken` for the next page.",
         "tags": [
           "notifications"
         ],
@@ -3629,7 +3637,8 @@
     "/v1/notification-recipients": {
       "get": {
         "operationId": "listNotificationRecipients",
-        "summary": "List the address-book recipients rules can name, one page at a time",
+        "summary": "List the recipient groups rules can name, one page at a time",
+        "description": "Pass `nextPageToken` back as `pageToken` for the next page.",
         "tags": [
           "notifications"
         ],
@@ -3767,7 +3776,8 @@
       },
       "post": {
         "operationId": "createNotificationRecipient",
-        "summary": "Create an address-book recipient",
+        "summary": "Create a recipient group",
+        "description": "Recipient names are unique per tenant. A retry with the same `Idempotency-Key` and body within 24 hours answers with the recipient the first request created.",
         "tags": [
           "notifications"
         ],
@@ -3938,7 +3948,8 @@
     "/v1/notification-recipients/{id}": {
       "get": {
         "operationId": "getNotificationRecipient",
-        "summary": "Return one address-book recipient",
+        "summary": "Return one recipient group",
+        "description": "The `ETag` header carries the revision. Send it as `If-Match` to replace or delete this revision.",
         "tags": [
           "notifications"
         ],
@@ -4086,7 +4097,8 @@
       },
       "put": {
         "operationId": "replaceNotificationRecipient",
-        "summary": "Replace an address-book recipient; the rules that name it send to its new addresses",
+        "summary": "Replace a recipient group; the rules that name it send to its new members",
+        "description": "`If-Match` must name the current `ETag` (strong comparison) or be `*`; otherwise the answer is 412 with the current `etag`.",
         "tags": [
           "notifications"
         ],
@@ -4285,7 +4297,8 @@
       },
       "delete": {
         "operationId": "deleteNotificationRecipient",
-        "summary": "Delete an address-book recipient. Refused with 409 while a rule names it",
+        "summary": "Delete a recipient group. Refused with 409 while a rule names it",
+        "description": "The 409 `conflict` carries `reason: notification_recipient_in_use` and the `ruleIds` that name it. With `If-Match`, the recipient is deleted only while it is at that revision; otherwise the answer is 412.",
         "tags": [
           "notifications"
         ],
@@ -5896,9 +5909,11 @@
       "NotificationChangeSource": {
         "enum": [
           "ui",
-          "api"
+          "api",
+          "terraform"
         ],
-        "type": "string"
+        "type": "string",
+        "description": "Where a change came from: `ui` is the Act app, `terraform` is the Act Terraform provider, and `api` is any other public API client."
       },
       "NotificationConditionField": {
         "enum": [
@@ -5926,7 +5941,8 @@
         "properties": {
           "integrationId": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "The Act-managed email integration, from `GET /integrations?type=email`."
           },
           "recipients": {
             "type": "array",
@@ -5936,7 +5952,8 @@
               "type": "string",
               "maxLength": 320,
               "format": "email"
-            }
+            },
+            "description": "Email addresses, each listed once, with no ASCII uppercase letter (A-Z) and no surrounding whitespace. Responses list them as sent, sorted."
           }
         },
         "required": [
@@ -5950,7 +5967,8 @@
         "properties": {
           "integrationId": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "A connected Slack integration, from `GET /integrations?type=slack`."
           },
           "channelIds": {
             "type": "array",
@@ -5960,7 +5978,8 @@
               "type": "string",
               "minLength": 1,
               "maxLength": 100
-            }
+            },
+            "description": "Slack channel IDs, each listed once; `GET /integrations/slack/channels` finds a public channel by name. Responses list them sorted."
           }
         },
         "required": [
@@ -5994,7 +6013,8 @@
           "eventType": {
             "type": "string",
             "minLength": 1,
-            "maxLength": 100
+            "maxLength": 100,
+            "description": "The event type of the rule this condition narrows."
           },
           "field": {
             "$ref": "#/components/schemas/NotificationConditionField"
@@ -6019,7 +6039,8 @@
           "operator",
           "values"
         ],
-        "additionalProperties": false
+        "additionalProperties": false,
+        "description": "Narrows one event type of the rule: an event of that type matches only when `field` holds one of `values`. `GET /notification-event-types` lists the fields and values each event type takes."
       },
       "NotificationRuleWrite": {
         "type": "object",
@@ -6062,7 +6083,8 @@
             "items": {
               "type": "string",
               "format": "uuid"
-            }
+            },
+            "description": "Address-book recipients the rule also sends to, each listed once."
           }
         },
         "required": [
@@ -6117,7 +6139,8 @@
             "items": {
               "type": "string",
               "format": "uuid"
-            }
+            },
+            "description": "Address-book recipients the rule also sends to, each listed once."
           }
         },
         "required": [
@@ -6184,12 +6207,14 @@
           "revision": {
             "type": "integer",
             "minimum": -9007199254740991,
-            "maximum": 9007199254740991
+            "maximum": 9007199254740991,
+            "description": "Increases on every change. The `ETag` header carries it in quotes."
           },
           "minClientRevision": {
             "type": "integer",
             "minimum": -9007199254740991,
-            "maximum": 9007199254740991
+            "maximum": 9007199254740991,
+            "description": "The oldest Act app revision that can show and edit this rule. A rule that uses features an older app lacks has a higher value."
           },
           "createdVia": {
             "$ref": "#/components/schemas/NotificationChangeSource"
@@ -6206,7 +6231,8 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "description": "The rule in the Act app, or null where the app address is not configured."
           },
           "lastDelivery": {
             "anyOf": [
@@ -6216,7 +6242,8 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "description": "The latest event this rule matched, if any."
           },
           "createdAt": {
             "type": "string",
@@ -6391,6 +6418,179 @@
           "nextPageToken"
         ]
       },
+      "NotificationRecipientMemberType": {
+        "enum": [
+          "user",
+          "email",
+          "slack_channel"
+        ],
+        "type": "string"
+      },
+      "NotificationRecipientEmailMember": {
+        "type": "object",
+        "properties": {
+          "address": {
+            "type": "string",
+            "maxLength": 320,
+            "format": "email",
+            "description": "An email address with no ASCII uppercase letter (A-Z) and no surrounding whitespace."
+          }
+        },
+        "required": [
+          "address"
+        ],
+        "additionalProperties": false
+      },
+      "NotificationRecipientUserMemberWrite": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "An Act user of this tenant, from `GET /users?email=`."
+          }
+        },
+        "required": [
+          "userId"
+        ],
+        "additionalProperties": false
+      },
+      "NotificationRecipientSlackChannelMemberWrite": {
+        "type": "object",
+        "properties": {
+          "integrationId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "A connected Slack integration, from `GET /integrations?type=slack`."
+          },
+          "channelId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100,
+            "description": "A Slack channel ID; `GET /integrations/slack/channels` finds a public channel by name."
+          }
+        },
+        "required": [
+          "integrationId",
+          "channelId"
+        ],
+        "additionalProperties": false
+      },
+      "NotificationRecipientMemberWrite": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "$ref": "#/components/schemas/NotificationRecipientMemberType"
+          },
+          "user": {
+            "$ref": "#/components/schemas/NotificationRecipientUserMemberWrite"
+          },
+          "email": {
+            "$ref": "#/components/schemas/NotificationRecipientEmailMember"
+          },
+          "slackChannel": {
+            "$ref": "#/components/schemas/NotificationRecipientSlackChannelMemberWrite"
+          }
+        },
+        "required": [
+          "type"
+        ],
+        "additionalProperties": false,
+        "description": "One member of a recipient group. `type` names the object that carries it: `user` for an Act user, who is reached through the receiver they chose in their profile; `email` for an address; `slackChannel` for a channel."
+      },
+      "NotificationRecipientUserMember": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "An Act user of this tenant, from `GET /users?email=`."
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "inTenant": {
+            "type": "boolean",
+            "description": "False once the user has left the tenant. Such a member stays stored, receives nothing, and may be sent back unchanged."
+          }
+        },
+        "required": [
+          "userId",
+          "name",
+          "email",
+          "inTenant"
+        ]
+      },
+      "NotificationRecipientSlackChannelMember": {
+        "type": "object",
+        "properties": {
+          "integrationId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "A connected Slack integration, from `GET /integrations?type=slack`."
+          },
+          "channelId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100,
+            "description": "A Slack channel ID; `GET /integrations/slack/channels` finds a public channel by name."
+          },
+          "channelName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "integrationId",
+          "channelId",
+          "channelName"
+        ]
+      },
+      "NotificationRecipientMember": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "$ref": "#/components/schemas/NotificationRecipientMemberType"
+          },
+          "user": {
+            "$ref": "#/components/schemas/NotificationRecipientUserMember"
+          },
+          "email": {
+            "$ref": "#/components/schemas/NotificationRecipientEmailMember"
+          },
+          "slackChannel": {
+            "$ref": "#/components/schemas/NotificationRecipientSlackChannelMember"
+          }
+        },
+        "required": [
+          "type"
+        ]
+      },
       "NotificationRecipientWrite": {
         "type": "object",
         "properties": {
@@ -6399,21 +6599,22 @@
             "minLength": 1,
             "maxLength": 100
           },
-          "methods": {
+          "members": {
             "type": "array",
             "minItems": 1,
-            "maxItems": 2,
+            "maxItems": 100,
             "items": {
-              "$ref": "#/components/schemas/NotificationAction"
-            }
+              "$ref": "#/components/schemas/NotificationRecipientMemberWrite"
+            },
+            "description": "Each member is listed once: a user by `userId`, an email by `address`, a Slack channel by `integrationId` and `channelId`. A user member and an email member with the same address are two members. A new user must be in this tenant; a stored user who has left it may be sent back unchanged."
           }
         },
         "required": [
           "name",
-          "methods"
+          "members"
         ],
         "additionalProperties": false,
-        "description": "A tenant-wide address-book entry: a name and the addresses it stands for, at most one method per type."
+        "description": "A tenant-wide recipient group that rules can name: a name and its members."
       },
       "NotificationRecipient": {
         "type": "object",
@@ -6425,23 +6626,32 @@
           "name": {
             "type": "string"
           },
-          "methods": {
+          "members": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/NotificationAction"
-            }
+              "$ref": "#/components/schemas/NotificationRecipientMember"
+            },
+            "description": "Sorted by type (`email`, `slack_channel`, `user`), then by address, by `integrationId` and `channelId`, or by `userId`, by code unit."
           },
           "ruleIds": {
             "type": "array",
             "items": {
               "type": "string",
               "format": "uuid"
-            }
+            },
+            "description": "The rules that name this recipient. It cannot be deleted while any do."
           },
           "revision": {
             "type": "integer",
             "minimum": -9007199254740991,
-            "maximum": 9007199254740991
+            "maximum": 9007199254740991,
+            "description": "Increases on every change. The `ETag` header carries it in quotes."
+          },
+          "minClientRevision": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "The oldest client revision that can show and edit this recipient. A recipient with a member type an older client does not know has a higher value; such a client should not replace it."
           },
           "createdVia": {
             "$ref": "#/components/schemas/NotificationChangeSource"
@@ -6461,9 +6671,10 @@
         "required": [
           "id",
           "name",
-          "methods",
+          "members",
           "ruleIds",
           "revision",
+          "minClientRevision",
           "createdVia",
           "lastModifiedVia",
           "createdAt",
@@ -6597,6 +6808,11 @@
             "minimum": -9007199254740991,
             "maximum": 9007199254740991
           },
+          "maxRecipientMembers": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
           "activityRetentionMonths": {
             "type": "integer",
             "minimum": -9007199254740991,
@@ -6612,6 +6828,7 @@
           "maxSlackChannels",
           "maxEnabledRulesPerEventType",
           "maxRecipientNameLength",
+          "maxRecipientMembers",
           "activityRetentionMonths"
         ]
       },
@@ -6655,6 +6872,48 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/SlackChannel"
+            }
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "ActUser": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "email": {
+            "type": "string"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "email",
+          "name"
+        ]
+      },
+      "ActUserList": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ActUser"
             }
           }
         },
