@@ -198,3 +198,34 @@ data "act_aws_onboarding_parameters" "this" {
 		}},
 	})
 }
+
+func TestAwsOnboardingParametersBeforeModulesArePublished(t *testing.T) {
+	s := fakeapi.Start(t)
+	s.Setenv(t)
+	s.UnpublishModules()
+	address := "data.act_aws_onboarding_parameters.this"
+
+	resource.UnitTest(t, resource.TestCase{
+		ProtoV6ProviderFactories: factories(),
+		Steps: []resource.TestStep{{
+			Config: requiredProviders + `
+provider "act" {}
+
+data "act_aws_onboarding_parameters" "this" {
+  account_id = "` + testAccount + `"
+}
+`,
+			ConfigStateChecks: []statecheck.StateCheck{
+				statecheck.ExpectKnownValue(address, tfjsonpath.New("deployment_id"), knownvalue.StringExact(s.AwsAccountDeploymentID(testAccount))),
+				statecheck.ExpectKnownValue(address, tfjsonpath.New("external_id_key_version"), knownvalue.Int64Exact(fakeapi.ExternalIDKeyVersion)),
+				statecheck.ExpectKnownValue(address, tfjsonpath.New("managed_policy_arns"), knownvalue.Null()),
+				statecheck.ExpectKnownValue(address, tfjsonpath.New("custom_policy_documents"), knownvalue.Null()),
+				statecheck.ExpectKnownValue(address, tfjsonpath.New("cloudformation_template_sha256"), knownvalue.Null()),
+				statecheck.ExpectKnownValue(address, tfjsonpath.New("module_source"), knownvalue.Null()),
+				statecheck.ExpectKnownValue(address, tfjsonpath.New("module_versions"), knownvalue.Null()),
+				statecheck.ExpectKnownValue(address, tfjsonpath.New("member_role_name"), knownvalue.Null()),
+				statecheck.ExpectKnownValue(address, tfjsonpath.New("member_role_path"), knownvalue.Null()),
+			},
+		}},
+	})
+}

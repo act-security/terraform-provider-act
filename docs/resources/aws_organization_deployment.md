@@ -24,13 +24,13 @@ resource "aws_iam_role" "act" {
 }
 
 resource "aws_iam_role_policy_attachment" "act" {
-  for_each   = toset(data.act_aws_onboarding_parameters.this.managed_policy_arns)
+  for_each   = toset(coalesce(data.act_aws_onboarding_parameters.this.managed_policy_arns, []))
   role       = aws_iam_role.act.name
   policy_arn = each.value
 }
 
 resource "aws_iam_role_policy" "act" {
-  for_each = data.act_aws_onboarding_parameters.this.custom_policy_documents
+  for_each = coalesce(data.act_aws_onboarding_parameters.this.custom_policy_documents, {})
   role     = aws_iam_role.act.name
   name     = each.key
   policy   = each.value
@@ -70,7 +70,7 @@ Act assumes the role, checks that its account belongs to the organization and is
 ### Required
 
 - `deployment_id` (String) The deployment ID Act issued for this target, from `data.act_aws_onboarding_parameters`. Act rejects any other value. Changing it replaces the deployment.
-- `organization_id` (String) The AWS organization ID, `o-` followed by 10 to 32 characters. Act checks that the role's account belongs to it. Changing it replaces the deployment.
+- `organization_id` (String) The AWS organization ID, `o-` followed by 10 to 32 characters. Act checks that the role's account belongs to it. Changing it replaces the deployment. A deployment created before Act keyed organizations on this ID takes the configured value in place.
 - `role_arn` (String) The ARN of the IAM role Act assumes. Reference the role resource so Terraform creates the role first. Changing it updates the deployment in place and Act verifies the new role.
 
 ### Optional
@@ -80,7 +80,7 @@ Act assumes the role, checks that its account belongs to the organization and is
 - `deployment_method` (String) How the role was deployed: `terraform` (default) or `cloudformation`.
 - `disabled_capabilities` (Set of String) Act capabilities to turn off for this deployment. The only one today is `eks_cluster_access`.
 - `excluded_account_ids` (Set of String) Member accounts Act leaves out, as 12-digit IDs.
-- `external_id_key_version` (Number) The key version of the external ID, from `data.act_aws_onboarding_parameters`. Passing it pins the external ID the role trusts, so a key rotation between plan and apply cannot change it. It only changes when `external_id_source` moves from `legacy` to `derived`.
+- `external_id_key_version` (Number) The key version of the external ID, from `data.act_aws_onboarding_parameters`. Passing it pins the external ID the role trusts, so a key rotation between plan and apply cannot change it. It only changes when `external_id_source` moves from `legacy` to `derived`. Null for a legacy external ID.
 - `external_id_source` (String) `derived` for an external ID Act derives from the deployment, or `legacy` for one stored by an older onboarding. Changing `legacy` to `derived` rotates it: Act checks that the role trusts the derived value first. `derived` cannot go back to `legacy`.
 - `member_role_name` (String) The name of the role in each member account. Defaults to `ActSecurityRole-<deployment_id>`. Set it when another system, such as Account Factory for Terraform or Control Tower, creates the member roles.
 - `member_role_path` (String) The IAM path of the member roles. Defaults to `/`.
@@ -93,7 +93,7 @@ Act assumes the role, checks that its account belongs to the organization and is
 
 ### Read-Only
 
-- `console_url` (String) The deployment's page in the Act console.
+- `console_url` (String) The deployment's page in the Act console. Null when Act does not report one.
 - `created_at` (String) When the deployment was created, in RFC 3339.
 - `deployed_version` (String) The role version Act detected.
 - `error_code` (String) Why the deployment failed. Null while active.

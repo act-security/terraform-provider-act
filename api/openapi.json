@@ -35,6 +35,10 @@
     {
       "name": "integrations",
       "description": "Integrations installed in the calling tenant; secrets are write-only"
+    },
+    {
+      "name": "notifications",
+      "description": "Notification rules, the events they match and the recipients they send to"
     }
   ],
   "security": [
@@ -304,10 +308,12 @@
         },
         "security": [
           {
-            "serviceAccount": []
+            "serviceAccount": [
+              "deployments:read"
+            ]
           }
         ],
-        "x-act-scope": "none"
+        "x-act-scope": "deployments:read"
       }
     },
     "/v1/onboarding/azure": {
@@ -465,10 +471,12 @@
         },
         "security": [
           {
-            "serviceAccount": []
+            "serviceAccount": [
+              "deployments:read"
+            ]
           }
         ],
-        "x-act-scope": "none"
+        "x-act-scope": "deployments:read"
       }
     },
     "/v1/onboarding/gcp": {
@@ -621,10 +629,12 @@
         },
         "security": [
           {
-            "serviceAccount": []
+            "serviceAccount": [
+              "deployments:read"
+            ]
           }
         ],
-        "x-act-scope": "none"
+        "x-act-scope": "deployments:read"
       }
     },
     "/v1/deployments": {
@@ -797,10 +807,12 @@
         },
         "security": [
           {
-            "serviceAccount": []
+            "serviceAccount": [
+              "deployments:read"
+            ]
           }
         ],
-        "x-act-scope": "none"
+        "x-act-scope": "deployments:read"
       }
     },
     "/v1/deployments/{id}/coverage": {
@@ -937,10 +949,12 @@
         },
         "security": [
           {
-            "serviceAccount": []
+            "serviceAccount": [
+              "deployments:read"
+            ]
           }
         ],
-        "x-act-scope": "none"
+        "x-act-scope": "deployments:read"
       }
     },
     "/v1/deployments/{id}/accounts": {
@@ -1101,10 +1115,12 @@
         },
         "security": [
           {
-            "serviceAccount": []
+            "serviceAccount": [
+              "deployments:read"
+            ]
           }
         ],
-        "x-act-scope": "none"
+        "x-act-scope": "deployments:read"
       }
     },
     "/v1/deployments/aws/{id}": {
@@ -1249,10 +1265,12 @@
         },
         "security": [
           {
-            "serviceAccount": []
+            "serviceAccount": [
+              "deployments:read"
+            ]
           }
         ],
-        "x-act-scope": "none"
+        "x-act-scope": "deployments:read"
       },
       "patch": {
         "operationId": "updateAwsDeployment",
@@ -2290,10 +2308,12 @@
         },
         "security": [
           {
-            "serviceAccount": []
+            "serviceAccount": [
+              "deployments:read"
+            ]
           }
         ],
-        "x-act-scope": "none"
+        "x-act-scope": "deployments:read"
       },
       "patch": {
         "operationId": "updateAzureDeployment",
@@ -3150,10 +3170,12 @@
         },
         "security": [
           {
-            "serviceAccount": []
+            "serviceAccount": [
+              "deployments:read"
+            ]
           }
         ],
-        "x-act-scope": "none"
+        "x-act-scope": "deployments:read"
       },
       "patch": {
         "operationId": "updateGcpDeployment",
@@ -4807,6 +4829,2243 @@
         ],
         "x-act-scope": "integrations:write"
       }
+    },
+    "/v1/integrations/slack/channels": {
+      "get": {
+        "operationId": "listSlackChannels",
+        "summary": "Look up public Slack channels by exact name or ID, for actions that take channel IDs",
+        "description": "Matches a channel name exactly, with or without the leading `#`, or a channel ID. Private channels are not listed. Answers `integration_not_connected` when no Slack integration is connected.",
+        "tags": [
+          "integrations"
+        ],
+        "parameters": [
+          {
+            "name": "name",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100
+            }
+          },
+          {
+            "name": "integrationId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SlackChannelList"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error envelope. Codes: invalid_request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error envelope. Codes: unauthenticated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "WWW-Authenticate": {
+                "description": "Bearer challenge",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Error envelope. Codes: insufficient_scope, feature_disabled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "WWW-Authenticate": {
+                "description": "Bearer challenge naming the missing scope",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Error envelope. Codes: verification_failed, connection_check_failed, integration_not_connected, limit_exceeded, target_not_allowed, idempotency_mismatch",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Error envelope. Codes: rate_limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error envelope. Codes: internal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Error envelope. Codes: unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "serviceAccount": [
+              "integrations:read"
+            ]
+          }
+        ],
+        "x-act-scope": "integrations:read"
+      }
+    },
+    "/v1/notification-event-types": {
+      "get": {
+        "operationId": "listNotificationEventTypes",
+        "summary": "List the event types a rule can match, the actions and conditions each takes, and the rule limits",
+        "description": "Only event types this tenant can subscribe to with an email or Slack action are listed. `limits` are the caps every rule write enforces.",
+        "tags": [
+          "notifications"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationEventTypeList"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error envelope. Codes: invalid_request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error envelope. Codes: unauthenticated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "WWW-Authenticate": {
+                "description": "Bearer challenge",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Error envelope. Codes: insufficient_scope, feature_disabled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "WWW-Authenticate": {
+                "description": "Bearer challenge naming the missing scope",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Error envelope. Codes: rate_limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error envelope. Codes: internal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Error envelope. Codes: unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "serviceAccount": [
+              "integrations:read"
+            ]
+          }
+        ],
+        "x-act-scope": "integrations:read"
+      }
+    },
+    "/v1/notification-rules": {
+      "get": {
+        "operationId": "listNotificationRules",
+        "summary": "List the notification rules of the calling tenant, one page at a time",
+        "description": "Rules are listed oldest first. Pass `nextPageToken` back as `pageToken` for the next page.",
+        "tags": [
+          "notifications"
+        ],
+        "parameters": [
+          {
+            "name": "eventType",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100
+            }
+          },
+          {
+            "name": "enabled",
+            "in": "query",
+            "schema": {
+              "enum": [
+                "true",
+                "false"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "createdVia",
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/NotificationChangeSource"
+            }
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          },
+          {
+            "name": "pageToken",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 2048
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationRulePage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error envelope. Codes: invalid_request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error envelope. Codes: unauthenticated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "WWW-Authenticate": {
+                "description": "Bearer challenge",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Error envelope. Codes: insufficient_scope, feature_disabled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "WWW-Authenticate": {
+                "description": "Bearer challenge naming the missing scope",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Error envelope. Codes: rate_limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error envelope. Codes: internal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Error envelope. Codes: unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "serviceAccount": [
+              "integrations:read"
+            ]
+          }
+        ],
+        "x-act-scope": "integrations:read"
+      },
+      "post": {
+        "operationId": "createNotificationRule",
+        "summary": "Create a notification rule",
+        "description": "Answers 201 with the rule and its `ETag`. A retry with the same `Idempotency-Key` and body within 24 hours answers with the rule the first request created. Domain errors are `invalid_request` with a `reason` and a JSON `pointer` into the request body.",
+        "tags": [
+          "notifications"
+        ],
+        "parameters": [
+          {
+            "name": "idempotency-key",
+            "in": "header",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 255
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NotificationRuleWrite"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "OK",
+            "headers": {
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                },
+                "required": true
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationRule"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error envelope. Codes: invalid_request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error envelope. Codes: unauthenticated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "WWW-Authenticate": {
+                "description": "Bearer challenge",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Error envelope. Codes: insufficient_scope, feature_disabled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "WWW-Authenticate": {
+                "description": "Bearer challenge naming the missing scope",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Error envelope. Codes: already_exists, conflict, deletion_protected",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Error envelope. Codes: verification_failed, connection_check_failed, integration_not_connected, limit_exceeded, target_not_allowed, idempotency_mismatch",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Error envelope. Codes: rate_limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error envelope. Codes: internal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Error envelope. Codes: unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "serviceAccount": [
+              "act:write",
+              "integrations:write"
+            ]
+          }
+        ],
+        "x-act-scope": "integrations:write"
+      }
+    },
+    "/v1/notification-rules/validate": {
+      "post": {
+        "operationId": "validateNotificationRule",
+        "summary": "Check a rule as a create or a replace would, without saving it or sending anything",
+        "description": "Runs every check a write runs, the enabled-rules limit included, and answers `valid: false` with the error a write would answer. Requires the write scope because it can check a destination with its provider.",
+        "tags": [
+          "notifications"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NotificationRuleValidate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationRuleValidation"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error envelope. Codes: invalid_request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error envelope. Codes: unauthenticated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "WWW-Authenticate": {
+                "description": "Bearer challenge",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Error envelope. Codes: insufficient_scope, feature_disabled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "WWW-Authenticate": {
+                "description": "Bearer challenge naming the missing scope",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error envelope. Codes: not_found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Error envelope. Codes: rate_limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error envelope. Codes: internal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Error envelope. Codes: unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "serviceAccount": [
+              "act:write",
+              "integrations:write"
+            ]
+          }
+        ],
+        "x-act-scope": "integrations:write"
+      }
+    },
+    "/v1/notification-rules/{id}": {
+      "get": {
+        "operationId": "getNotificationRule",
+        "summary": "Return one notification rule",
+        "description": "The `ETag` header carries the revision. Send it as `If-Match` to replace or delete this revision.",
+        "tags": [
+          "notifications"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "headers": {
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                },
+                "required": true
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationRule"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error envelope. Codes: invalid_request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error envelope. Codes: unauthenticated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "WWW-Authenticate": {
+                "description": "Bearer challenge",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Error envelope. Codes: insufficient_scope, feature_disabled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "WWW-Authenticate": {
+                "description": "Bearer challenge naming the missing scope",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error envelope. Codes: not_found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Error envelope. Codes: rate_limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error envelope. Codes: internal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Error envelope. Codes: unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "serviceAccount": [
+              "integrations:read"
+            ]
+          }
+        ],
+        "x-act-scope": "integrations:read"
+      },
+      "put": {
+        "operationId": "replaceNotificationRule",
+        "summary": "Replace a notification rule. A member left out keeps its stored value",
+        "description": "`If-Match` must name the current `ETag` (strong comparison) or be `*`; otherwise the answer is 412 with the current `etag`. Send an empty array to clear a list. Destinations on integrations the API does not represent are kept.",
+        "tags": [
+          "notifications"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "if-match",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NotificationRuleWrite"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "headers": {
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                },
+                "required": true
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationRule"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error envelope. Codes: invalid_request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error envelope. Codes: unauthenticated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "WWW-Authenticate": {
+                "description": "Bearer challenge",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Error envelope. Codes: insufficient_scope, feature_disabled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "WWW-Authenticate": {
+                "description": "Bearer challenge naming the missing scope",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error envelope. Codes: not_found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Error envelope. Codes: already_exists, conflict, deletion_protected",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Error envelope. Codes: precondition_failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Error envelope. Codes: verification_failed, connection_check_failed, integration_not_connected, limit_exceeded, target_not_allowed, idempotency_mismatch",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Error envelope. Codes: rate_limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error envelope. Codes: internal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Error envelope. Codes: unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "serviceAccount": [
+              "act:write",
+              "integrations:write"
+            ]
+          }
+        ],
+        "x-act-scope": "integrations:write"
+      },
+      "delete": {
+        "operationId": "deleteNotificationRule",
+        "summary": "Delete a notification rule. Its activity stays readable for six months",
+        "description": "With `If-Match`, the rule is deleted only while it is at that revision; otherwise the answer is 412.",
+        "tags": [
+          "notifications"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "if-match",
+            "in": "header",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Error envelope. Codes: invalid_request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error envelope. Codes: unauthenticated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "WWW-Authenticate": {
+                "description": "Bearer challenge",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Error envelope. Codes: insufficient_scope, feature_disabled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "WWW-Authenticate": {
+                "description": "Bearer challenge naming the missing scope",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error envelope. Codes: not_found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Error envelope. Codes: precondition_failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Error envelope. Codes: rate_limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error envelope. Codes: internal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Error envelope. Codes: unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "serviceAccount": [
+              "act:write",
+              "integrations:write"
+            ]
+          }
+        ],
+        "x-act-scope": "integrations:write"
+      }
+    },
+    "/v1/notification-rules/{id}/activity": {
+      "get": {
+        "operationId": "listNotificationRuleActivity",
+        "summary": "List the events a rule matched in the last six months and what was sent, newest first",
+        "description": "Works for a deleted rule too. Pass `nextPageToken` back as `pageToken` for the next page.",
+        "tags": [
+          "notifications"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          },
+          {
+            "name": "pageToken",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 2048
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationRuleActivityPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error envelope. Codes: invalid_request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error envelope. Codes: unauthenticated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "WWW-Authenticate": {
+                "description": "Bearer challenge",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Error envelope. Codes: insufficient_scope, feature_disabled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "WWW-Authenticate": {
+                "description": "Bearer challenge naming the missing scope",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Error envelope. Codes: rate_limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error envelope. Codes: internal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Error envelope. Codes: unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "serviceAccount": [
+              "integrations:read"
+            ]
+          }
+        ],
+        "x-act-scope": "integrations:read"
+      }
+    },
+    "/v1/notification-recipients": {
+      "get": {
+        "operationId": "listNotificationRecipients",
+        "summary": "List the address-book recipients rules can name, one page at a time",
+        "description": "Pass `nextPageToken` back as `pageToken` for the next page.",
+        "tags": [
+          "notifications"
+        ],
+        "parameters": [
+          {
+            "name": "pageSize",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          },
+          {
+            "name": "pageToken",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 2048
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationRecipientPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error envelope. Codes: invalid_request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error envelope. Codes: unauthenticated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "WWW-Authenticate": {
+                "description": "Bearer challenge",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Error envelope. Codes: insufficient_scope, feature_disabled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "WWW-Authenticate": {
+                "description": "Bearer challenge naming the missing scope",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Error envelope. Codes: rate_limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error envelope. Codes: internal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Error envelope. Codes: unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "serviceAccount": [
+              "integrations:read"
+            ]
+          }
+        ],
+        "x-act-scope": "integrations:read"
+      },
+      "post": {
+        "operationId": "createNotificationRecipient",
+        "summary": "Create an address-book recipient",
+        "description": "Recipient names are unique per tenant. A retry with the same `Idempotency-Key` and body within 24 hours answers with the recipient the first request created.",
+        "tags": [
+          "notifications"
+        ],
+        "parameters": [
+          {
+            "name": "idempotency-key",
+            "in": "header",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 255
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NotificationRecipientWrite"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "OK",
+            "headers": {
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                },
+                "required": true
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationRecipient"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error envelope. Codes: invalid_request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error envelope. Codes: unauthenticated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "WWW-Authenticate": {
+                "description": "Bearer challenge",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Error envelope. Codes: insufficient_scope, feature_disabled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "WWW-Authenticate": {
+                "description": "Bearer challenge naming the missing scope",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Error envelope. Codes: already_exists, conflict, deletion_protected",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Error envelope. Codes: verification_failed, connection_check_failed, integration_not_connected, limit_exceeded, target_not_allowed, idempotency_mismatch",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Error envelope. Codes: rate_limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error envelope. Codes: internal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Error envelope. Codes: unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "serviceAccount": [
+              "act:write",
+              "integrations:write"
+            ]
+          }
+        ],
+        "x-act-scope": "integrations:write"
+      }
+    },
+    "/v1/notification-recipients/{id}": {
+      "get": {
+        "operationId": "getNotificationRecipient",
+        "summary": "Return one address-book recipient",
+        "description": "The `ETag` header carries the revision. Send it as `If-Match` to replace or delete this revision.",
+        "tags": [
+          "notifications"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "headers": {
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                },
+                "required": true
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationRecipient"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error envelope. Codes: invalid_request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error envelope. Codes: unauthenticated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "WWW-Authenticate": {
+                "description": "Bearer challenge",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Error envelope. Codes: insufficient_scope, feature_disabled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "WWW-Authenticate": {
+                "description": "Bearer challenge naming the missing scope",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error envelope. Codes: not_found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Error envelope. Codes: rate_limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error envelope. Codes: internal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Error envelope. Codes: unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "serviceAccount": [
+              "integrations:read"
+            ]
+          }
+        ],
+        "x-act-scope": "integrations:read"
+      },
+      "put": {
+        "operationId": "replaceNotificationRecipient",
+        "summary": "Replace an address-book recipient; the rules that name it send to its new addresses",
+        "description": "`If-Match` must name the current `ETag` (strong comparison) or be `*`; otherwise the answer is 412 with the current `etag`.",
+        "tags": [
+          "notifications"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "if-match",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NotificationRecipientWrite"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "headers": {
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                },
+                "required": true
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationRecipient"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error envelope. Codes: invalid_request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error envelope. Codes: unauthenticated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "WWW-Authenticate": {
+                "description": "Bearer challenge",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Error envelope. Codes: insufficient_scope, feature_disabled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "WWW-Authenticate": {
+                "description": "Bearer challenge naming the missing scope",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error envelope. Codes: not_found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Error envelope. Codes: already_exists, conflict, deletion_protected",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Error envelope. Codes: precondition_failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Error envelope. Codes: verification_failed, connection_check_failed, integration_not_connected, limit_exceeded, target_not_allowed, idempotency_mismatch",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Error envelope. Codes: rate_limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error envelope. Codes: internal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Error envelope. Codes: unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "serviceAccount": [
+              "act:write",
+              "integrations:write"
+            ]
+          }
+        ],
+        "x-act-scope": "integrations:write"
+      },
+      "delete": {
+        "operationId": "deleteNotificationRecipient",
+        "summary": "Delete an address-book recipient. Refused with 409 while a rule names it",
+        "description": "The 409 `conflict` carries `reason: notification_recipient_in_use` and the `ruleIds` that name it. With `If-Match`, the recipient is deleted only while it is at that revision; otherwise the answer is 412.",
+        "tags": [
+          "notifications"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "if-match",
+            "in": "header",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Error envelope. Codes: invalid_request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error envelope. Codes: unauthenticated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "WWW-Authenticate": {
+                "description": "Bearer challenge",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Error envelope. Codes: insufficient_scope, feature_disabled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "WWW-Authenticate": {
+                "description": "Bearer challenge naming the missing scope",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error envelope. Codes: not_found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Error envelope. Codes: already_exists, conflict, deletion_protected",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Error envelope. Codes: precondition_failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Error envelope. Codes: rate_limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error envelope. Codes: internal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Error envelope. Codes: unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "serviceAccount": [
+              "act:write",
+              "integrations:write"
+            ]
+          }
+        ],
+        "x-act-scope": "integrations:write"
+      }
     }
   },
   "components": {
@@ -4820,8 +7079,10 @@
             "scopes": {
               "act:read": "Read access ceiling, set on the service account",
               "act:write": "Write access ceiling, set on the service account; every write needs it",
+              "deployments:read": "Read deployments and their onboarding values",
               "deployments:write": "Create, update and delete deployments",
-              "integrations:write": "Create, update and delete integrations"
+              "integrations:read": "Read integrations and notification rules; every token whose role may see integrations carries it",
+              "integrations:write": "Create, update and delete integrations and notification rules"
             }
           }
         }
@@ -5226,9 +7487,17 @@
             "format": "uuid"
           },
           "externalIdKeyVersion": {
-            "type": "integer",
-            "minimum": -9007199254740991,
-            "maximum": 9007199254740991
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Null for a legacy external ID"
           },
           "roleName": {
             "type": "string"
@@ -5245,53 +7514,133 @@
             "description": "Known before the role exists in account mode; null for organizations"
           },
           "memberRoleName": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Role the StackSet creates in each member account; null for an account"
           },
           "memberRolePath": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Null for an account"
           },
           "assumeRolePolicyJson": {
             "type": "string"
           },
           "managedPolicyArns": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
+            "anyOf": [
+              {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Null until Act publishes versioned modules and templates"
           },
           "customPolicyDocuments": {
-            "type": "object",
-            "propertyNames": {
-              "type": "string"
-            },
-            "additionalProperties": {
-              "type": "string"
-            }
+            "anyOf": [
+              {
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {
+                  "type": "string"
+                }
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Null until Act publishes versioned modules and templates"
           },
           "cloudformationTemplateUrl": {
             "type": "string",
             "format": "uri"
           },
           "cloudformationTemplateSha256": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Null until Act publishes versioned modules and templates"
           },
           "moduleSource": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Null until Act publishes versioned modules and templates"
           },
           "moduleVersion": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Null until Act publishes versioned modules and templates"
           },
           "moduleSha256": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Null until Act publishes versioned modules and templates"
           },
           "permissionsHash": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Null until Act publishes versioned modules and templates"
           },
           "moduleVersions": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/ModuleVersion"
-            }
+            "anyOf": [
+              {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/ModuleVersion"
+                }
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Null until Act publishes versioned modules and templates"
           },
           "deploymentVersion": {
             "type": "string"
@@ -5397,25 +7746,73 @@
             }
           },
           "moduleSource": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Null until Act publishes versioned modules and templates"
           },
           "moduleVersion": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Null until Act publishes versioned modules and templates"
           },
           "moduleSha256": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Null until Act publishes versioned modules and templates"
           },
           "permissionsHash": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Null until Act publishes versioned modules and templates"
           },
           "moduleVersions": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/ModuleVersion"
-            }
+            "anyOf": [
+              {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/ModuleVersion"
+                }
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Null until Act publishes versioned modules and templates"
           },
           "deploymentVersion": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Null until Act publishes versioned modules and templates"
           }
         },
         "required": [
@@ -5495,25 +7892,73 @@
             }
           },
           "moduleSource": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Null until Act publishes versioned modules and templates"
           },
           "moduleVersion": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Null until Act publishes versioned modules and templates"
           },
           "moduleSha256": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Null until Act publishes versioned modules and templates"
           },
           "permissionsHash": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Null until Act publishes versioned modules and templates"
           },
           "moduleVersions": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/ModuleVersion"
-            }
+            "anyOf": [
+              {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/ModuleVersion"
+                }
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Null until Act publishes versioned modules and templates"
           },
           "deploymentVersion": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Null until Act publishes versioned modules and templates"
           }
         },
         "required": [
@@ -5630,10 +8075,25 @@
         "type": "object",
         "properties": {
           "organizationId": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Null for a deployment created before it was keyed on the organization"
           },
           "managementAccountId": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "rootId": {
             "anyOf": [
@@ -5672,10 +8132,24 @@
             ]
           },
           "memberRoleName": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "memberRolePath": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "required": [
@@ -5728,7 +8202,14 @@
             ]
           },
           "roleArn": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "allowedRegions": {
             "anyOf": [
@@ -5766,9 +8247,17 @@
             "$ref": "#/components/schemas/ExternalIdSource"
           },
           "externalIdKeyVersion": {
-            "type": "integer",
-            "minimum": -9007199254740991,
-            "maximum": 9007199254740991
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Null for a legacy external ID"
           },
           "status": {
             "$ref": "#/components/schemas/DeploymentStatus"
@@ -5816,8 +8305,15 @@
             "type": "boolean"
           },
           "consoleUrl": {
-            "type": "string",
-            "format": "uri"
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uri"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "createdVia": {
             "anyOf": [
@@ -5982,8 +8478,15 @@
             "type": "boolean"
           },
           "consoleUrl": {
-            "type": "string",
-            "format": "uri"
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uri"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "createdVia": {
             "anyOf": [
@@ -6123,8 +8626,15 @@
             "type": "boolean"
           },
           "consoleUrl": {
-            "type": "string",
-            "format": "uri"
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uri"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "createdVia": {
             "anyOf": [
@@ -6223,7 +8733,7 @@
           },
           "roleArn": {
             "type": "string",
-            "pattern": "^arn:aws(?:-[a-z]+)*:iam::\\d{12}:role(?:\\/[A-Za-z0-9+=,.@_-]+)+$"
+            "pattern": "^arn:aws:iam::\\d{12}:role(?:\\/[A-Za-z0-9+=,.@_-]+)+$"
           },
           "allowedRegions": {
             "type": "array",
@@ -6324,7 +8834,7 @@
         "properties": {
           "roleArn": {
             "type": "string",
-            "pattern": "^arn:aws(?:-[a-z]+)*:iam::\\d{12}:role(?:\\/[A-Za-z0-9+=,.@_-]+)+$"
+            "pattern": "^arn:aws:iam::\\d{12}:role(?:\\/[A-Za-z0-9+=,.@_-]+)+$"
           },
           "organization": {
             "$ref": "#/components/schemas/AwsOrganizationPatch"
@@ -7100,6 +9610,798 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/IntegrationTypeInfo"
+            }
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "NotificationActionType": {
+        "enum": [
+          "email",
+          "slack"
+        ],
+        "type": "string"
+      },
+      "NotificationChangeSource": {
+        "enum": [
+          "ui",
+          "api",
+          "terraform"
+        ],
+        "type": "string",
+        "description": "Where a change came from: `ui` is the Act app, `terraform` is the Act Terraform provider, and `api` is any other public API client."
+      },
+      "NotificationConditionField": {
+        "enum": [
+          "source"
+        ],
+        "type": "string"
+      },
+      "NotificationConditionOperator": {
+        "enum": [
+          "in"
+        ],
+        "type": "string"
+      },
+      "NotificationMatchResult": {
+        "enum": [
+          "sent",
+          "partially_sent",
+          "failed",
+          "not_sent"
+        ],
+        "type": "string"
+      },
+      "NotificationEmailAction": {
+        "type": "object",
+        "properties": {
+          "integrationId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The Act-managed email integration, from `GET /integrations?type=email`."
+          },
+          "recipients": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 100,
+            "items": {
+              "type": "string",
+              "maxLength": 320,
+              "format": "email"
+            },
+            "description": "Email addresses, each listed once, with no ASCII uppercase letter (A-Z) and no surrounding whitespace. Responses list them as sent, sorted."
+          }
+        },
+        "required": [
+          "integrationId",
+          "recipients"
+        ],
+        "additionalProperties": false
+      },
+      "NotificationSlackAction": {
+        "type": "object",
+        "properties": {
+          "integrationId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "A connected Slack integration, from `GET /integrations?type=slack`."
+          },
+          "channelIds": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 50,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100
+            },
+            "description": "Slack channel IDs, each listed once; `GET /integrations/slack/channels` finds a public channel by name. Responses list them sorted."
+          }
+        },
+        "required": [
+          "integrationId",
+          "channelIds"
+        ],
+        "additionalProperties": false
+      },
+      "NotificationAction": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "$ref": "#/components/schemas/NotificationActionType"
+          },
+          "email": {
+            "$ref": "#/components/schemas/NotificationEmailAction"
+          },
+          "slack": {
+            "$ref": "#/components/schemas/NotificationSlackAction"
+          }
+        },
+        "required": [
+          "type"
+        ],
+        "additionalProperties": false,
+        "description": "One delivery action. `type` names the member that carries its settings; the other member is absent."
+      },
+      "NotificationCondition": {
+        "type": "object",
+        "properties": {
+          "eventType": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100,
+            "description": "The event type of the rule this condition narrows."
+          },
+          "field": {
+            "$ref": "#/components/schemas/NotificationConditionField"
+          },
+          "operator": {
+            "$ref": "#/components/schemas/NotificationConditionOperator"
+          },
+          "values": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 20,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100
+            }
+          }
+        },
+        "required": [
+          "eventType",
+          "field",
+          "operator",
+          "values"
+        ],
+        "additionalProperties": false,
+        "description": "Narrows one event type of the rule: an event of that type matches only when `field` holds one of `values`. `GET /notification-event-types` lists the fields and values each event type takes."
+      },
+      "NotificationRuleWrite": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "eventTypes": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 10,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100
+            }
+          },
+          "conditions": {
+            "type": "array",
+            "maxItems": 10,
+            "items": {
+              "$ref": "#/components/schemas/NotificationCondition"
+            }
+          },
+          "actions": {
+            "type": "array",
+            "maxItems": 2,
+            "items": {
+              "$ref": "#/components/schemas/NotificationAction"
+            }
+          },
+          "recipientIds": {
+            "type": "array",
+            "maxItems": 20,
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Address-book recipients the rule also sends to, each listed once."
+          }
+        },
+        "required": [
+          "name",
+          "eventTypes"
+        ],
+        "additionalProperties": false,
+        "description": "A notification rule. Event types are joined by OR. On create, a member left out takes its empty value (enabled defaults to true). On replace, a member left out keeps its stored value, so a client that does not know a member never clears it; send an empty array to clear a list."
+      },
+      "NotificationRuleValidate": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "eventTypes": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 10,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100
+            }
+          },
+          "conditions": {
+            "type": "array",
+            "maxItems": 10,
+            "items": {
+              "$ref": "#/components/schemas/NotificationCondition"
+            }
+          },
+          "actions": {
+            "type": "array",
+            "maxItems": 2,
+            "items": {
+              "$ref": "#/components/schemas/NotificationAction"
+            }
+          },
+          "recipientIds": {
+            "type": "array",
+            "maxItems": 20,
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Address-book recipients the rule also sends to, each listed once."
+          }
+        },
+        "required": [
+          "name",
+          "eventTypes"
+        ],
+        "additionalProperties": false,
+        "description": "A rule to check without saving it. With `id`, it is checked as a replace of that rule."
+      },
+      "NotificationLastDelivery": {
+        "type": "object",
+        "properties": {
+          "at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "result": {
+            "$ref": "#/components/schemas/NotificationMatchResult"
+          }
+        },
+        "required": [
+          "at",
+          "result"
+        ]
+      },
+      "NotificationRule": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "eventTypes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "conditions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NotificationCondition"
+            }
+          },
+          "actions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NotificationAction"
+            }
+          },
+          "recipientIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "revision": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "Increases on every change. The `ETag` header carries it in quotes."
+          },
+          "minClientRevision": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "The oldest Act app revision that can show and edit this rule. A rule that uses features an older app lacks has a higher value."
+          },
+          "createdVia": {
+            "$ref": "#/components/schemas/NotificationChangeSource"
+          },
+          "lastModifiedVia": {
+            "$ref": "#/components/schemas/NotificationChangeSource"
+          },
+          "webUrl": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uri"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The rule in the Act app, or null where the app address is not configured."
+          },
+          "lastDelivery": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/NotificationLastDelivery"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The latest event this rule matched, if any."
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "enabled",
+          "eventTypes",
+          "conditions",
+          "actions",
+          "recipientIds",
+          "revision",
+          "minClientRevision",
+          "createdVia",
+          "lastModifiedVia",
+          "webUrl",
+          "lastDelivery",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "NotificationRulePage": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NotificationRule"
+            }
+          },
+          "nextPageToken": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "items",
+          "nextPageToken"
+        ]
+      },
+      "NotificationRuleValidationError": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "pointer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "code",
+          "reason",
+          "pointer"
+        ]
+      },
+      "NotificationRuleValidation": {
+        "type": "object",
+        "properties": {
+          "valid": {
+            "type": "boolean"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/NotificationRuleValidationError"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "valid",
+          "error"
+        ]
+      },
+      "NotificationRuleActivity": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "eventId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "eventType": {
+            "type": "string"
+          },
+          "matchedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "result": {
+            "$ref": "#/components/schemas/NotificationMatchResult"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "eventId",
+          "eventType",
+          "matchedAt",
+          "result",
+          "reason"
+        ]
+      },
+      "NotificationRuleActivityPage": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NotificationRuleActivity"
+            }
+          },
+          "nextPageToken": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "items",
+          "nextPageToken"
+        ]
+      },
+      "NotificationRecipientWrite": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "methods": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 2,
+            "items": {
+              "$ref": "#/components/schemas/NotificationAction"
+            }
+          }
+        },
+        "required": [
+          "name",
+          "methods"
+        ],
+        "additionalProperties": false,
+        "description": "A tenant-wide address-book entry: a name and the addresses it stands for, at most one method per type."
+      },
+      "NotificationRecipient": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "methods": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NotificationAction"
+            }
+          },
+          "ruleIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "The rules that name this recipient. It cannot be deleted while any do."
+          },
+          "revision": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "Increases on every change. The `ETag` header carries it in quotes."
+          },
+          "createdVia": {
+            "$ref": "#/components/schemas/NotificationChangeSource"
+          },
+          "lastModifiedVia": {
+            "$ref": "#/components/schemas/NotificationChangeSource"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "methods",
+          "ruleIds",
+          "revision",
+          "createdVia",
+          "lastModifiedVia",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "NotificationRecipientPage": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NotificationRecipient"
+            }
+          },
+          "nextPageToken": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "items",
+          "nextPageToken"
+        ]
+      },
+      "NotificationConditionFieldInfo": {
+        "type": "object",
+        "properties": {
+          "field": {
+            "$ref": "#/components/schemas/NotificationConditionField"
+          },
+          "operator": {
+            "$ref": "#/components/schemas/NotificationConditionOperator"
+          },
+          "values": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "field",
+          "operator",
+          "values"
+        ]
+      },
+      "NotificationEventTypeInfo": {
+        "type": "object",
+        "properties": {
+          "eventType": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "actionTypes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NotificationActionType"
+            }
+          },
+          "conditionFields": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NotificationConditionFieldInfo"
+            }
+          }
+        },
+        "required": [
+          "eventType",
+          "category",
+          "title",
+          "description",
+          "actionTypes",
+          "conditionFields"
+        ]
+      },
+      "NotificationRuleLimits": {
+        "type": "object",
+        "properties": {
+          "maxNameLength": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "maxEventTypesPerRule": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "maxActionsPerRule": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "maxRecipientsPerRule": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "maxEmailRecipients": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "maxSlackChannels": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "maxEnabledRulesPerEventType": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "maxRecipientNameLength": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "activityRetentionMonths": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": [
+          "maxNameLength",
+          "maxEventTypesPerRule",
+          "maxActionsPerRule",
+          "maxRecipientsPerRule",
+          "maxEmailRecipients",
+          "maxSlackChannels",
+          "maxEnabledRulesPerEventType",
+          "maxRecipientNameLength",
+          "activityRetentionMonths"
+        ]
+      },
+      "NotificationEventTypeList": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NotificationEventTypeInfo"
+            }
+          },
+          "limits": {
+            "$ref": "#/components/schemas/NotificationRuleLimits"
+          }
+        },
+        "required": [
+          "items",
+          "limits"
+        ]
+      },
+      "SlackChannel": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ]
+      },
+      "SlackChannelList": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SlackChannel"
             }
           }
         },

@@ -317,6 +317,8 @@ resource "act_aws_account_deployment" "this" {
 					statecheck.ExpectKnownValue(accountAddress, tfjsonpath.New("external_id"), knownvalue.StringExact("legacy-external-id")),
 					statecheck.ExpectKnownValue("data.act_aws_onboarding_parameters.this", tfjsonpath.New("existing_deployment").AtMapKey("id"), knownvalue.StringExact(id)),
 					statecheck.ExpectKnownValue("data.act_aws_onboarding_parameters.this", tfjsonpath.New("existing_deployment").AtMapKey("created_via"), knownvalue.StringExact("ui")),
+					statecheck.ExpectKnownValue("data.act_aws_onboarding_parameters.this", tfjsonpath.New("external_id_key_version"), knownvalue.Null()),
+					statecheck.ExpectKnownValue(accountAddress, tfjsonpath.New("external_id_key_version"), knownvalue.Null()),
 				},
 			},
 			{
@@ -517,6 +519,56 @@ func TestAwsAccountDeploymentStopsWhenSomeoneChangedItDuringTheApply(t *testing.
 				},
 				Config:      accountConfig(`  name = "renamed"`),
 				ExpectError: regexp.MustCompile(`Someone changed deployment ` + id),
+			},
+		},
+	})
+}
+
+func TestAwsOrganizationDeploymentAdoptsARowWithoutAnOrganizationID(t *testing.T) {
+	s := fakeapi.Start(t)
+	s.Setenv(t)
+	provider.FastVerification(t)
+	id := s.SeedLegacyAwsOrganizationDeployment(fakeapi.LegacyAwsOrganization{RoleArn: roleArn(otherAccount), RootID: testRoot})
+	config := func(protection string) string {
+		return requiredProviders + fmt.Sprintf(`
+provider "act" {}
+
+import {
+  to = act_aws_organization_deployment.this
+  id = %q
+}
+
+resource "act_aws_organization_deployment" "this" {
+  deployment_id       = %q
+  organization_id     = %q
+  root_id             = %q
+  role_arn            = %q
+  deployment_method   = "cloudformation"
+  deletion_protection = %s
+}
+`, id, id, testOrg, testRoot, roleArn(otherAccount), protection)
+	}
+
+	resource.UnitTest(t, resource.TestCase{
+		ProtoV6ProviderFactories: factories(),
+		Steps: []resource.TestStep{
+			{
+				Config: config("true"),
+				ConfigPlanChecks: resource.ConfigPlanChecks{PreApply: []plancheck.PlanCheck{
+					plancheck.ExpectResourceAction(orgAddress, plancheck.ResourceActionUpdate),
+				}},
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownValue(orgAddress, tfjsonpath.New("id"), knownvalue.StringExact(id)),
+					statecheck.ExpectKnownValue(orgAddress, tfjsonpath.New("organization_id"), knownvalue.StringExact(testOrg)),
+					statecheck.ExpectKnownValue(orgAddress, tfjsonpath.New("management_account_id"), knownvalue.Null()),
+				},
+			},
+			{
+				Config:   config("true"),
+				PlanOnly: true,
+			},
+			{
+				Config: config("false"),
 			},
 		},
 	})

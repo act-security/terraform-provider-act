@@ -86,10 +86,14 @@ func NewAwsOrganizationDeploymentResource() resource.Resource {
 func organizationAttributes() map[string]schema.Attribute {
 	return map[string]schema.Attribute{
 		"organization_id": schema.StringAttribute{
-			MarkdownDescription: "The AWS organization ID, `o-` followed by 10 to 32 characters. Act checks that the role's account belongs to it. Changing it replaces the deployment.",
+			MarkdownDescription: "The AWS organization ID, `o-` followed by 10 to 32 characters. Act checks that the role's account belongs to it. Changing it replaces the deployment. A deployment created before Act keyed organizations on this ID takes the configured value in place.",
 			Required:            true,
 			Validators:          []validator.String{stringvalidator.RegexMatches(awsOrgIDPattern, "must be an AWS organization ID")},
-			PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
+			PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplaceIf(
+				replaceUnlessUnkeyed,
+				"Changing the organization ID replaces the deployment, unless Act never recorded one.",
+				"Changing the organization ID replaces the deployment, unless Act never recorded one.",
+			)},
 		},
 		"root_id": schema.StringAttribute{
 			MarkdownDescription: "The organization root ID, `r-...`, to cover every account. Set this or `organizational_unit_ids`. Changing the scope updates the deployment in place and Act verifies it again.",
@@ -226,13 +230,24 @@ func (m *awsOrganizationDeploymentModel) readTarget(ctx context.Context, item ap
 	if org == nil {
 		return
 	}
-	m.OrganizationID = types.StringValue(org.OrganizationID)
+	m.OrganizationID = remoteOrConfigured(org.OrganizationID, m.OrganizationID)
 	m.RootID = types.StringPointerValue(org.RootID)
 	m.OrganizationalUnitIDs = nullableStringSet(ctx, org.OrganizationalUnitIds, diags)
 	m.ExcludedAccountIDs = nullableStringSet(ctx, org.ExcludedAccountIds, diags)
-	m.MemberRoleName = types.StringValue(org.MemberRoleName)
-	m.MemberRolePath = types.StringValue(org.MemberRolePath)
-	m.ManagementAccountID = types.StringValue(org.ManagementAccountID)
+	m.MemberRoleName = remoteOrConfigured(org.MemberRoleName, m.MemberRoleName)
+	m.MemberRolePath = remoteOrConfigured(org.MemberRolePath, m.MemberRolePath)
+	m.ManagementAccountID = types.StringPointerValue(org.ManagementAccountID)
+}
+
+func remoteOrConfigured(remote *string, configured types.String) types.String {
+	switch {
+	case remote != nil:
+		return types.StringValue(*remote)
+	case configured.IsUnknown():
+		return types.StringNull()
+	default:
+		return configured
+	}
 }
 
 func (m *awsOrganizationDeploymentModel) sameTarget(other awsDeploymentModel) bool {
@@ -273,6 +288,17 @@ func (stackSetTargetValidator) ValidateSet(_ context.Context, req validator.SetR
 	if joined := strings.Join(ids, ","); len(joined) > stackSetTargetLimit {
 		resp.Diagnostics.AddAttributeError(req.Path, "Too many organizational units", fmt.Sprintf("The %d organizational unit IDs take %d characters, more than the %d a CloudFormation StackSet accepts as targets. Set root_id to cover the whole organization, and list the accounts to leave out in excluded_account_ids.", len(ids), len(joined), stackSetTargetLimit))
 	}
+}
+
+func replaceUnlessUnkeyed(_ context.Context, req planmodifier.StringRequest, resp *stringplanmodifier.RequiresReplaceIfFuncResponse) {
+	resp.RequiresReplace = !req.StateValue.IsNull()
+}
+
+func int64Pointer(value *int) types.Int64 {
+	if value == nil {
+		return types.Int64Null()
+	}
+	return types.Int64Value(int64(*value))
 }
 
 func knownString(value types.String) *string {

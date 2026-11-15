@@ -147,25 +147,25 @@ func (d *awsOnboardingDataSource) Schema(_ context.Context, _ datasource.SchemaR
 			"external_id_source":        computedString("`derived` or `legacy`."),
 			"target_external_id":        computedString("The derived external ID. It differs from `external_id` only for a deployment that still uses a legacy one."),
 			"external_id_key_version": schema.Int64Attribute{
-				MarkdownDescription: "The key version of the external ID. Pass it to `external_id_key_version` of the deployment resource.",
+				MarkdownDescription: "The key version of the external ID. Pass it to `external_id_key_version` of the deployment resource. Null for a legacy external ID.",
 				Computed:            true,
 			},
 			"role_name":                      computedString("The name to give the role."),
 			"role_arn":                       computedString("The role's ARN. Known at plan time for an account, null for an organization."),
 			"assume_role_policy_json":        computedString("The role's trust policy as JSON, for configurations that do not use the Act module."),
-			"custom_policy_documents":        schema.MapAttribute{MarkdownDescription: "Policy documents to attach to the role, by policy name, for configurations that do not use the Act module.", ElementType: types.StringType, Computed: true},
-			"managed_policy_arns":            computedStrings("AWS managed policies to attach to the role, for configurations that do not use the Act module."),
-			"member_role_name":               computedString("The role name for member accounts of an organization."),
-			"member_role_path":               computedString("The IAM path for member roles."),
+			"custom_policy_documents":        schema.MapAttribute{MarkdownDescription: "Policy documents to attach to the role, by policy name, for configurations that do not use the Act module. Null until Act publishes versioned modules and templates.", ElementType: types.StringType, Computed: true},
+			"managed_policy_arns":            computedStrings("AWS managed policies to attach to the role, for configurations that do not use the Act module. Null until Act publishes versioned modules and templates."),
+			"member_role_name":               computedString("The role name for member accounts of an organization. Null for an account."),
+			"member_role_path":               computedString("The IAM path for member roles. Null for an account."),
 			"cloudformation_template_url":    computedString("A versioned CloudFormation template for the member roles. It never changes after release."),
-			"cloudformation_template_sha256": computedString("The SHA-256 of the CloudFormation template."),
-			"module_source":                  computedString("The registry address of the Act module for AWS."),
-			"module_version":                 computedString("The module version Act recommends for this tenant."),
-			"module_sha256":                  computedString("The SHA-256 of the recommended module release."),
-			"permissions_hash":               computedString("A hash of the permissions the recommended module grants."),
+			"cloudformation_template_sha256": computedString("The SHA-256 of the CloudFormation template. Null until Act publishes versioned modules and templates."),
+			"module_source":                  computedString("The registry address of the Act module for AWS. Null until Act publishes versioned modules and templates."),
+			"module_version":                 computedString("The module version Act recommends for this tenant. Null until Act publishes versioned modules and templates."),
+			"module_sha256":                  computedString("The SHA-256 of the recommended module release. Null until Act publishes versioned modules and templates."),
+			"permissions_hash":               computedString("A hash of the permissions the recommended module grants. Null until Act publishes versioned modules and templates."),
 			"deployment_version":             computedString("The role version the recommended module deploys."),
 			"module_versions": schema.ListNestedAttribute{
-				MarkdownDescription: "Every module version Act accepts today.",
+				MarkdownDescription: "Every module version Act accepts today. Null until Act publishes versioned modules and templates.",
 				Computed:            true,
 				NestedObject: schema.NestedAttributeObject{Attributes: map[string]schema.Attribute{
 					"version":            computedString("The module version."),
@@ -223,33 +223,47 @@ func (m *awsOnboardingModel) fillFrom(values apigen.AwsOnboarding) {
 	m.ExternalID = types.StringValue(values.ExternalID)
 	m.ExternalIDSource = types.StringValue(string(values.ExternalIDSource))
 	m.TargetExternalID = types.StringValue(values.TargetExternalID)
-	m.ExternalIDKeyVersion = types.Int64Value(int64(values.ExternalIDKeyVersion))
+	m.ExternalIDKeyVersion = int64Pointer(values.ExternalIDKeyVersion)
 	m.RoleName = types.StringValue(values.RoleName)
 	m.RoleArn = types.StringPointerValue(values.RoleArn)
 	m.AssumeRolePolicyJSON = types.StringValue(values.AssumeRolePolicyJSON)
-	m.CustomPolicyDocuments = map[string]types.String{}
-	for name, document := range values.CustomPolicyDocuments {
-		m.CustomPolicyDocuments[name] = types.StringValue(document)
+	m.CustomPolicyDocuments = nil
+	if values.CustomPolicyDocuments != nil {
+		m.CustomPolicyDocuments = map[string]types.String{}
+		for name, document := range *values.CustomPolicyDocuments {
+			m.CustomPolicyDocuments[name] = types.StringValue(document)
+		}
 	}
-	m.ManagedPolicyArns = stringValues(values.ManagedPolicyArns)
-	m.MemberRoleName = types.StringValue(values.MemberRoleName)
-	m.MemberRolePath = types.StringValue(values.MemberRolePath)
+	m.ManagedPolicyArns = nil
+	if values.ManagedPolicyArns != nil {
+		m.ManagedPolicyArns = stringValues(*values.ManagedPolicyArns)
+	}
+	m.MemberRoleName = types.StringPointerValue(values.MemberRoleName)
+	m.MemberRolePath = types.StringPointerValue(values.MemberRolePath)
 	m.CloudformationTemplateURL = types.StringValue(values.CloudformationTemplateURL)
-	m.CloudformationTemplateSha256 = types.StringValue(values.CloudformationTemplateSha256)
-	m.ModuleSource = types.StringValue(values.ModuleSource)
-	m.ModuleVersion = types.StringValue(values.ModuleVersion)
-	m.ModuleSha256 = types.StringValue(values.ModuleSha256)
-	m.PermissionsHash = types.StringValue(values.PermissionsHash)
+	m.CloudformationTemplateSha256 = types.StringPointerValue(values.CloudformationTemplateSha256)
+	m.ModuleSource = types.StringPointerValue(values.ModuleSource)
+	m.ModuleVersion = types.StringPointerValue(values.ModuleVersion)
+	m.ModuleSha256 = types.StringPointerValue(values.ModuleSha256)
+	m.PermissionsHash = types.StringPointerValue(values.PermissionsHash)
 	m.DeploymentVersion = types.StringValue(values.DeploymentVersion)
-	m.ModuleVersions = []moduleVersionModel{}
-	for _, version := range values.ModuleVersions {
-		m.ModuleVersions = append(m.ModuleVersions, moduleVersionModel{
+	m.ModuleVersions = moduleVersions(values.ModuleVersions)
+}
+
+func moduleVersions(values *[]apigen.ModuleVersion) []moduleVersionModel {
+	if values == nil {
+		return nil
+	}
+	versions := []moduleVersionModel{}
+	for _, version := range *values {
+		versions = append(versions, moduleVersionModel{
 			Version:           types.StringValue(version.Version),
 			Sha256:            types.StringValue(version.Sha256),
 			PermissionsHash:   types.StringValue(version.PermissionsHash),
 			DeploymentVersion: types.StringValue(version.DeploymentVersion),
 		})
 	}
+	return versions
 }
 
 type deploymentSummaryModel struct {

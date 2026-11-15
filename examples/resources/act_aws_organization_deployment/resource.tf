@@ -8,13 +8,13 @@ resource "aws_iam_role" "act" {
 }
 
 resource "aws_iam_role_policy_attachment" "act" {
-  for_each   = toset(data.act_aws_onboarding_parameters.this.managed_policy_arns)
+  for_each   = toset(coalesce(data.act_aws_onboarding_parameters.this.managed_policy_arns, []))
   role       = aws_iam_role.act.name
   policy_arn = each.value
 }
 
 resource "aws_iam_role_policy" "act" {
-  for_each = data.act_aws_onboarding_parameters.this.custom_policy_documents
+  for_each = coalesce(data.act_aws_onboarding_parameters.this.custom_policy_documents, {})
   role     = aws_iam_role.act.name
   name     = each.key
   policy   = each.value

@@ -43,7 +43,7 @@ const (
 
 var (
 	awsAccountIDPattern = regexp.MustCompile(`^\d{12}$`)
-	awsRoleArnPattern   = regexp.MustCompile(`^arn:aws(?:-[a-z]+)*:iam::(\d{12}):role(?:/[A-Za-z0-9+=,.@_-]+)+$`)
+	awsRoleArnPattern   = regexp.MustCompile(`^arn:aws:iam::(\d{12}):role(?:/[A-Za-z0-9+=,.@_-]+)+$`)
 	awsRegionPattern    = regexp.MustCompile(`^[a-z]{2}(?:-[a-z]+)+-\d$`)
 	awsOrgIDPattern     = regexp.MustCompile(`^o-[a-z0-9]{10,32}$`)
 	awsRootIDPattern    = regexp.MustCompile(`^r-[0-9a-z]{4,32}$`)
@@ -181,7 +181,7 @@ func (r *awsDeploymentResource[M, P]) Schema(ctx context.Context, _ resource.Sch
 			Default:             booldefault.StaticBool(r.kind.protectByDefault),
 		},
 		"external_id_key_version": schema.Int64Attribute{
-			MarkdownDescription: "The key version of the external ID, from `data.act_aws_onboarding_parameters`. Passing it pins the external ID the role trusts, so a key rotation between plan and apply cannot change it. It only changes when `external_id_source` moves from `legacy` to `derived`.",
+			MarkdownDescription: "The key version of the external ID, from `data.act_aws_onboarding_parameters`. Passing it pins the external ID the role trusts, so a key rotation between plan and apply cannot change it. It only changes when `external_id_source` moves from `legacy` to `derived`. Null for a legacy external ID.",
 			Optional:            true,
 			Computed:            true,
 			Validators:          []validator.Int64{int64validator.AtLeast(1)},
@@ -222,7 +222,7 @@ func (r *awsDeploymentResource[M, P]) Schema(ctx context.Context, _ resource.Sch
 			PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 		},
 		"console_url": schema.StringAttribute{
-			MarkdownDescription: "The deployment's page in the Act console.",
+			MarkdownDescription: "The deployment's page in the Act console. Null when Act does not report one.",
 			Computed:            true,
 			PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 		},
@@ -413,7 +413,7 @@ func (c planChange) refuseProtectedReplacement() bool {
 	next, prior := c.next.common(), c.prior.common()
 	key := c.next.targetKey()
 	replaced := (!next.DeploymentID.IsUnknown() && !next.DeploymentID.Equal(prior.DeploymentID)) ||
-		(!key.IsUnknown() && !key.Equal(c.prior.targetKey()))
+		(!key.IsUnknown() && !c.prior.targetKey().IsNull() && !key.Equal(c.prior.targetKey()))
 	if !replaced || !prior.DeletionProtection.ValueBool() {
 		return false
 	}
@@ -782,7 +782,7 @@ func (r *awsDeploymentResource[M, P]) writeState(ctx context.Context, model P, i
 	c := model.common()
 	c.ID = types.StringValue(item.ID)
 	c.DeploymentID = types.StringValue(item.ID)
-	c.RoleArn = types.StringValue(item.RoleArn)
+	c.RoleArn = types.StringPointerValue(item.RoleArn)
 	c.Name = types.StringValue(item.Name)
 	c.Tags = nullableStringMap(ctx, mapWithPrior{values: item.Tags, prior: c.Tags}, diags)
 	c.AllowedRegions = nullableStringSet(ctx, item.AllowedRegions, diags)
@@ -792,7 +792,7 @@ func (r *awsDeploymentResource[M, P]) writeState(ctx context.Context, model P, i
 		c.DeploymentMethod = types.StringValue(string(*item.DeploymentMethod))
 	}
 	c.DeletionProtection = types.BoolValue(item.DeletionProtection)
-	c.ExternalIDKeyVersion = types.Int64Value(int64(item.ExternalIDKeyVersion))
+	c.ExternalIDKeyVersion = int64Pointer(item.ExternalIDKeyVersion)
 	c.ExternalID = types.StringValue(item.ExternalID)
 	c.ExternalIDSource = types.StringValue(string(item.ExternalIDSource))
 	c.Status = types.StringValue(string(item.Status))
@@ -801,7 +801,7 @@ func (r *awsDeploymentResource[M, P]) writeState(ctx context.Context, model P, i
 	c.UpdateAvailable = types.BoolValue(item.UpdateAvailable)
 	c.DeployedVersion = types.StringPointerValue(item.DeployedVersion)
 	c.CreatedAt = types.StringValue(item.CreatedAt.UTC().Format(time.RFC3339))
-	c.ConsoleURL = types.StringValue(item.ConsoleURL)
+	c.ConsoleURL = types.StringPointerValue(item.ConsoleURL)
 	model.readTarget(ctx, item, diags)
 }
 
@@ -929,7 +929,10 @@ type connectionReport struct {
 }
 
 func proofOfLife(report connectionReport) string {
-	message := fmt.Sprintf("Connected. Act started the first scan of %s; open %s", report.target, report.deployment.ConsoleURL)
+	message := "Connected. Act started the first scan of " + report.target + "."
+	if report.deployment.ConsoleURL != nil {
+		message += " Open " + *report.deployment.ConsoleURL
+	}
 	if report.outcome.attempts > 1 {
 		message += fmt.Sprintf("\n\nVerified after %s and %d attempts while AWS propagated the role.", report.outcome.elapsed.Round(time.Second), report.outcome.attempts)
 	}

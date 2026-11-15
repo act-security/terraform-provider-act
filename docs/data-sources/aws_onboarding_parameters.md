@@ -44,24 +44,24 @@ During an Act principal rotation, `deprecated_principal_arns` lists the principa
 
 - `act_principal_arn` (String) The Act principal the role's trust policy allows.
 - `assume_role_policy_json` (String) The role's trust policy as JSON, for configurations that do not use the Act module.
-- `cloudformation_template_sha256` (String) The SHA-256 of the CloudFormation template.
+- `cloudformation_template_sha256` (String) The SHA-256 of the CloudFormation template. Null until Act publishes versioned modules and templates.
 - `cloudformation_template_url` (String) A versioned CloudFormation template for the member roles. It never changes after release.
-- `custom_policy_documents` (Map of String) Policy documents to attach to the role, by policy name, for configurations that do not use the Act module.
+- `custom_policy_documents` (Map of String) Policy documents to attach to the role, by policy name, for configurations that do not use the Act module. Null until Act publishes versioned modules and templates.
 - `deployment_id` (String) The deployment ID Act issued for this target. Pass it to `deployment_id` of the deployment resource.
 - `deployment_version` (String) The role version the recommended module deploys.
 - `deprecated_principal_arns` (List of String) Act principals that are being retired. Trust them too until they expire, so a rotation never breaks the connection.
 - `existing_deployment` (Attributes) The deployment that already covers this target, for example one created in the Act console. Null when there is none. Import it rather than creating another. (see [below for nested schema](#nestedatt--existing_deployment))
 - `external_id` (String) The external ID the role's trust policy must require. Not a secret.
-- `external_id_key_version` (Number) The key version of the external ID. Pass it to `external_id_key_version` of the deployment resource.
+- `external_id_key_version` (Number) The key version of the external ID. Pass it to `external_id_key_version` of the deployment resource. Null for a legacy external ID.
 - `external_id_source` (String) `derived` or `legacy`.
-- `managed_policy_arns` (List of String) AWS managed policies to attach to the role, for configurations that do not use the Act module.
-- `member_role_name` (String) The role name for member accounts of an organization.
-- `member_role_path` (String) The IAM path for member roles.
-- `module_sha256` (String) The SHA-256 of the recommended module release.
-- `module_source` (String) The registry address of the Act module for AWS.
-- `module_version` (String) The module version Act recommends for this tenant.
-- `module_versions` (Attributes List) Every module version Act accepts today. (see [below for nested schema](#nestedatt--module_versions))
-- `permissions_hash` (String) A hash of the permissions the recommended module grants.
+- `managed_policy_arns` (List of String) AWS managed policies to attach to the role, for configurations that do not use the Act module. Null until Act publishes versioned modules and templates.
+- `member_role_name` (String) The role name for member accounts of an organization. Null for an account.
+- `member_role_path` (String) The IAM path for member roles. Null for an account.
+- `module_sha256` (String) The SHA-256 of the recommended module release. Null until Act publishes versioned modules and templates.
+- `module_source` (String) The registry address of the Act module for AWS. Null until Act publishes versioned modules and templates.
+- `module_version` (String) The module version Act recommends for this tenant. Null until Act publishes versioned modules and templates.
+- `module_versions` (Attributes List) Every module version Act accepts today. Null until Act publishes versioned modules and templates. (see [below for nested schema](#nestedatt--module_versions))
+- `permissions_hash` (String) A hash of the permissions the recommended module grants. Null until Act publishes versioned modules and templates.
 - `role_arn` (String) The role's ARN. Known at plan time for an account, null for an organization.
 - `role_name` (String) The name to give the role.
 - `target_external_id` (String) The derived external ID. It differs from `external_id` only for a deployment that still uses a legacy one.

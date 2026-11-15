@@ -36,7 +36,7 @@ const (
 )
 
 var (
-	roleArnAccount = regexp.MustCompile(`^arn:aws(?:-[a-z]+)*:iam::(\d{12}):role/`)
+	roleArnAccount = regexp.MustCompile(`^arn:aws:iam::(\d{12}):role/`)
 	cellKey        = []byte("fake-cell-key-not-a-real-secret")
 )
 
@@ -58,6 +58,7 @@ type deploymentStore struct {
 	failures    map[string][]VerificationFailure
 	members     map[string][]gen.MemberAccount
 	pending     map[string]func(*gen.AwsDeployment)
+	unpublished bool
 }
 
 type idempotentDeployment struct {
@@ -82,7 +83,7 @@ func (s *storedDeployment) etag() string {
 
 func (s *storedDeployment) naturalKey() string {
 	if s.item.Organization != nil {
-		return organizationTarget(s.item.Organization.OrganizationID).naturalKey
+		return organizationTarget(deref(s.item.Organization.OrganizationID)).naturalKey
 	}
 	return accountTarget(deref(s.item.AccountID)).naturalKey
 }
@@ -92,7 +93,10 @@ func (s *storedDeployment) targets() []string {
 		return []string{deref(s.item.AccountID)}
 	}
 	org := s.item.Organization
-	targets := []string{org.OrganizationID}
+	targets := []string{}
+	if org.OrganizationID != nil {
+		targets = append(targets, *org.OrganizationID)
+	}
 	if org.RootID != nil {
 		targets = append(targets, *org.RootID)
 	}
@@ -179,6 +183,12 @@ func (s *deploymentStore) applyPendingChange(stored *storedDeployment) {
 	stored.version++
 }
 
+func (f *Fake) UnpublishModules() {
+	f.deployments.mu.Lock()
+	defer f.deployments.mu.Unlock()
+	f.deployments.unpublished = true
+}
+
 func (f *Fake) DeleteDeploymentOutOfBand(id string) {
 	f.deployments.mu.Lock()
 	defer f.deployments.mu.Unlock()
@@ -219,12 +229,11 @@ func (f *Fake) SeedLegacyAwsAccountDeployment(legacy LegacyAwsAccount) string {
 		Name:                 "aws-" + accountID,
 		Tags:                 map[string]string{},
 		AccountID:            &accountID,
-		RoleArn:              legacy.RoleArn,
+		RoleArn:              &legacy.RoleArn,
 		DisabledCapabilities: []gen.AwsCapability{},
 		DeploymentMethod:     &method,
 		ExternalID:           legacy.ExternalID,
 		ExternalIDSource:     gen.ExternalIDSourceLegacy,
-		ExternalIDKeyVersion: ExternalIDKeyVersion,
 		Status:               gen.DeploymentStatusActive,
 		Warnings:             []gen.DeploymentWarning{},
 		ConsoleURL:           consoleURL(id),
@@ -232,6 +241,38 @@ func (f *Fake) SeedLegacyAwsAccountDeployment(legacy LegacyAwsAccount) string {
 		CreatedAt:            now,
 	}}
 	f.deployments.byID[id] = stored
+	return id
+}
+
+type LegacyAwsOrganization struct {
+	RoleArn string
+	RootID  string
+}
+
+func (f *Fake) SeedLegacyAwsOrganizationDeployment(legacy LegacyAwsOrganization) string {
+	f.deployments.mu.Lock()
+	defer f.deployments.mu.Unlock()
+	id := randomUUID()
+	method := gen.AwsDeploymentMethodCloudformation
+	version := ExternalIDKeyVersion
+	f.deployments.byID[id] = &storedDeployment{item: gen.AwsDeployment{
+		ID:                   id,
+		Name:                 "aws-organization",
+		Tags:                 map[string]string{},
+		RoleArn:              &legacy.RoleArn,
+		DisabledCapabilities: []gen.AwsCapability{},
+		DeploymentMethod:     &method,
+		ExternalID:           derivedExternalID(id),
+		ExternalIDSource:     gen.ExternalIDSourceDerived,
+		ExternalIDKeyVersion: &version,
+		Status:               gen.DeploymentStatusActive,
+		Warnings:             []gen.DeploymentWarning{},
+		ConsoleURL:           consoleURL(id),
+		CreatedVia:           deploymentSource(gen.DeploymentChangeSourceUI),
+		CreatedAt:            f.now().UTC(),
+		DeletionProtection:   true,
+		Organization:         &gen.AwsOrganization{RootID: &legacy.RootID},
+	}}
 	return id
 }
 
@@ -266,39 +307,71 @@ func (s *apiServer) GetAwsOnboarding(_ context.Context, req gen.GetAwsOnboarding
 		externalID, source = stored.item.ExternalID, stored.item.ExternalIDSource
 		existing = &gen.ExistingDeployment{ID: id, Status: stored.item.Status, CreatedVia: stored.item.CreatedVia}
 	}
-	roleName := "ActSecurityRole-" + id
-	var roleArn *string
-	if params.AccountID != nil {
-		arn := "arn:aws:iam::" + *params.AccountID + ":role/" + roleName
-		roleArn = &arn
+	return onboardingValues(onboardingInput{
+		id:           id,
+		existing:     existing,
+		externalID:   externalID,
+		source:       source,
+		accountID:    params.AccountID,
+		unpublished:  store.unpublished,
+		legacyStored: source == gen.ExternalIDSourceLegacy,
+	}), nil
+}
+
+type onboardingInput struct {
+	id           string
+	existing     *gen.ExistingDeployment
+	externalID   string
+	source       gen.ExternalIDSource
+	accountID    *string
+	unpublished  bool
+	legacyStored bool
+}
+
+func onboardingValues(in onboardingInput) gen.GetAwsOnboarding200JSONResponse {
+	roleName := "ActSecurityRole-" + in.id
+	values := gen.GetAwsOnboarding200JSONResponse{
+		DeploymentID:              in.id,
+		ExistingDeployment:        in.existing,
+		ActPrincipalArn:           ActPrincipalArn,
+		DeprecatedPrincipals:      []gen.DeprecatedPrincipal{{Arn: DeprecatedPrincipal, ExpiresAt: time.Date(2027, 1, 1, 0, 0, 0, 0, time.UTC)}},
+		ExternalID:                in.externalID,
+		ExternalIDSource:          in.source,
+		TargetExternalID:          derivedExternalID(in.id),
+		RoleName:                  roleName,
+		AssumeRolePolicyJSON:      assumeRolePolicy(in.externalID),
+		CloudformationTemplateURL: ConsoleOrigin + "/templates/aws/" + ModuleVersion + "/role.yaml",
+		DeploymentVersion:         "2026.11",
 	}
-	return gen.GetAwsOnboarding200JSONResponse{
-		DeploymentID:                 id,
-		ExistingDeployment:           existing,
-		ActPrincipalArn:              ActPrincipalArn,
-		DeprecatedPrincipals:         []gen.DeprecatedPrincipal{{Arn: DeprecatedPrincipal, ExpiresAt: time.Date(2027, 1, 1, 0, 0, 0, 0, time.UTC)}},
-		ExternalID:                   externalID,
-		ExternalIDSource:             source,
-		TargetExternalID:             derivedExternalID(id),
-		ExternalIDKeyVersion:         ExternalIDKeyVersion,
-		RoleName:                     roleName,
-		RoleArn:                      roleArn,
-		AssumeRolePolicyJSON:         assumeRolePolicy(externalID),
-		CustomPolicyDocuments:        map[string]string{"ActSecurityReadOnly": `{"Version":"2012-10-17","Statement":[]}`},
-		ManagedPolicyArns:            []string{"arn:aws:iam::aws:policy/SecurityAudit"},
-		MemberRoleName:               roleName,
-		MemberRolePath:               "/",
-		CloudformationTemplateURL:    ConsoleOrigin + "/templates/aws/" + ModuleVersion + "/role.yaml",
-		CloudformationTemplateSha256: fakeDigest("a"),
-		ModuleSource:                 ModuleSource,
-		ModuleVersion:                ModuleVersion,
-		ModuleSha256:                 fakeDigest("b"),
-		PermissionsHash:              fakeDigest("c"),
-		DeploymentVersion:            "2026.11",
-		ModuleVersions: []gen.ModuleVersion{{
-			Version: ModuleVersion, Sha256: fakeDigest("b"), PermissionsHash: fakeDigest("c"), DeploymentVersion: "2026.11",
-		}},
-	}, nil
+	if !in.legacyStored {
+		version := ExternalIDKeyVersion
+		values.ExternalIDKeyVersion = &version
+	}
+	if in.accountID != nil {
+		arn := "arn:aws:iam::" + *in.accountID + ":role/" + roleName
+		values.RoleArn = &arn
+	} else {
+		path := "/"
+		values.MemberRoleName, values.MemberRolePath = &roleName, &path
+	}
+	if !in.unpublished {
+		addPublishedModule(&values)
+	}
+	return values
+}
+
+func addPublishedModule(values *gen.GetAwsOnboarding200JSONResponse) {
+	documents := map[string]string{"ActSecurityReadOnly": `{"Version":"2012-10-17","Statement":[]}`}
+	managed := []string{"arn:aws:iam::aws:policy/SecurityAudit"}
+	source, version := ModuleSource, ModuleVersion
+	templateDigest, moduleDigest, permissions := fakeDigest("a"), fakeDigest("b"), fakeDigest("c")
+	versions := []gen.ModuleVersion{{Version: ModuleVersion, Sha256: moduleDigest, PermissionsHash: permissions, DeploymentVersion: values.DeploymentVersion}}
+	values.CustomPolicyDocuments = &documents
+	values.ManagedPolicyArns = &managed
+	values.CloudformationTemplateSha256 = &templateDigest
+	values.ModuleSource, values.ModuleVersion = &source, &version
+	values.ModuleSha256, values.PermissionsHash = &moduleDigest, &permissions
+	values.ModuleVersions = &versions
 }
 
 func assumeRolePolicy(externalID string) string {
@@ -361,12 +434,12 @@ func (f *Fake) newAwsDeployment(body gen.AwsDeploymentCreate, roleAccount string
 	item := gen.AwsDeployment{
 		ID:                   body.DeploymentID,
 		Tags:                 map[string]string{},
-		RoleArn:              body.RoleArn,
+		RoleArn:              &body.RoleArn,
 		AllowedRegions:       body.AllowedRegions,
 		DisabledCapabilities: []gen.AwsCapability{},
 		ExternalID:           derivedExternalID(body.DeploymentID),
 		ExternalIDSource:     gen.ExternalIDSourceDerived,
-		ExternalIDKeyVersion: ExternalIDKeyVersion,
+		ExternalIDKeyVersion: intPointer(ExternalIDKeyVersion),
 		Status:               gen.DeploymentStatusActive,
 		Warnings:             []gen.DeploymentWarning{},
 		ConsoleURL:           consoleURL(body.DeploymentID),
@@ -380,7 +453,7 @@ func (f *Fake) newAwsDeployment(body gen.AwsDeploymentCreate, roleAccount string
 	}
 	item.DeploymentMethod = &method
 	if body.ExternalIDKeyVersion != nil {
-		item.ExternalIDKeyVersion = *body.ExternalIDKeyVersion
+		item.ExternalIDKeyVersion = body.ExternalIDKeyVersion
 	}
 	if body.DisabledCapabilities != nil {
 		item.DisabledCapabilities = *body.DisabledCapabilities
@@ -397,20 +470,21 @@ func (f *Fake) newAwsDeployment(body gen.AwsDeploymentCreate, roleAccount string
 	} else {
 		org := body.Organization
 		item.Name = "aws-" + org.OrganizationID
+		roleName, rolePath := "ActSecurityRole-"+body.DeploymentID, "/"
 		item.Organization = &gen.AwsOrganization{
-			OrganizationID:        org.OrganizationID,
+			OrganizationID:        &org.OrganizationID,
 			RootID:                org.RootID,
 			OrganizationalUnitIds: org.OrganizationalUnitIds,
 			ExcludedAccountIds:    org.ExcludedAccountIds,
-			ManagementAccountID:   roleAccount,
-			MemberRoleName:        "ActSecurityRole-" + body.DeploymentID,
-			MemberRolePath:        "/",
+			ManagementAccountID:   &roleAccount,
+			MemberRoleName:        &roleName,
+			MemberRolePath:        &rolePath,
 		}
 		if org.MemberRoleName != nil {
-			item.Organization.MemberRoleName = *org.MemberRoleName
+			item.Organization.MemberRoleName = org.MemberRoleName
 		}
 		if org.MemberRolePath != nil {
-			item.Organization.MemberRolePath = *org.MemberRolePath
+			item.Organization.MemberRolePath = org.MemberRolePath
 		}
 	}
 	if body.Name != nil {
@@ -503,7 +577,7 @@ func (s *apiServer) UpdateAwsDeployment(ctx context.Context, req gen.UpdateAwsDe
 		return rejection, nil
 	}
 	if patched.reverify {
-		if failure, ok := store.nextFailure(patched.item.RoleArn); ok {
+		if failure, ok := store.nextFailure(deref(patched.item.RoleArn)); ok {
 			return gen.UpdateAwsDeployment422JSONResponse(verificationFailed(failure)), nil
 		}
 		patched.item.Status, patched.item.ErrorCode, patched.item.ErrorMessage = gen.DeploymentStatusActive, nil, nil
@@ -520,11 +594,11 @@ type patchedDeployment struct {
 
 func applyDeploymentPatch(ctx context.Context, current gen.AwsDeployment, body gen.AwsDeploymentPatch) (patchedDeployment, gen.UpdateAwsDeploymentResponseObject) {
 	patched := patchedDeployment{item: current}
-	if body.RoleArn != nil && *body.RoleArn != current.RoleArn {
+	if body.RoleArn != nil && *body.RoleArn != deref(current.RoleArn) {
 		if !roleInAccount(*body.RoleArn, current.AccountID) {
 			return patched, gen.UpdateAwsDeployment422JSONResponse(verificationFailed(accountMismatch))
 		}
-		patched.item.RoleArn, patched.reverify = *body.RoleArn, true
+		patched.item.RoleArn, patched.reverify = body.RoleArn, true
 	}
 	applySettingsPatch(ctx, &patched.item, body)
 	if body.Organization == nil {
@@ -581,10 +655,10 @@ func applyOrganizationPatch(ctx context.Context, org gen.AwsOrganization, patch 
 		org.ExcludedAccountIds = patch.ExcludedAccountIds
 	}
 	if patch.MemberRoleName != nil {
-		org.MemberRoleName = *patch.MemberRoleName
+		org.MemberRoleName = patch.MemberRoleName
 	}
 	if patch.MemberRolePath != nil {
-		org.MemberRolePath = *patch.MemberRolePath
+		org.MemberRolePath = patch.MemberRolePath
 	}
 	return org, retargeted
 }
@@ -600,7 +674,7 @@ func (s *apiServer) VerifyAwsDeployment(_ context.Context, req gen.VerifyAwsDepl
 	if req.Params.IfMatch != stored.etag() {
 		return gen.VerifyAwsDeployment412JSONResponse(envelope(gen.ErrorEnvelopeErrorCodePreconditionFailed, "The resource changed since it was read")), nil
 	}
-	if failure, ok := store.nextFailure(stored.item.RoleArn); ok {
+	if failure, ok := store.nextFailure(deref(stored.item.RoleArn)); ok {
 		return gen.VerifyAwsDeployment422JSONResponse(verificationFailed(failure)), nil
 	}
 	stored.item.Status, stored.item.ErrorCode, stored.item.ErrorMessage = gen.DeploymentStatusActive, nil, nil
@@ -619,12 +693,12 @@ func (s *apiServer) RotateAwsExternalID(_ context.Context, req gen.RotateAwsExte
 	if req.Params.IfMatch != stored.etag() {
 		return gen.RotateAwsExternalID412JSONResponse(envelope(gen.ErrorEnvelopeErrorCodePreconditionFailed, "The resource changed since it was read")), nil
 	}
-	if failure, ok := store.nextFailure(stored.item.RoleArn); ok {
+	if failure, ok := store.nextFailure(deref(stored.item.RoleArn)); ok {
 		return gen.RotateAwsExternalID422JSONResponse(verificationFailed(failure)), nil
 	}
 	stored.item.ExternalID = derivedExternalID(stored.item.ID)
 	stored.item.ExternalIDSource = gen.ExternalIDSourceDerived
-	stored.item.ExternalIDKeyVersion = ExternalIDKeyVersion
+	stored.item.ExternalIDKeyVersion = intPointer(ExternalIDKeyVersion)
 	stored.version++
 	return gen.RotateAwsExternalID200JSONResponse{Body: stored.item, Headers: gen.RotateAwsExternalID200ResponseHeaders{ETag: stored.etag()}}, nil
 }
@@ -645,7 +719,7 @@ func (s *apiServer) DeleteAwsDeployment(_ context.Context, req gen.DeleteAwsDepl
 	}
 	delete(store.byID, req.ID)
 	delete(store.members, req.ID)
-	cleanup := []gen.CleanupItem{{Resource: stored.item.RoleArn, Description: "The IAM role still trusts Act. Delete it, or keep it to connect again later."}}
+	cleanup := []gen.CleanupItem{{Resource: deref(stored.item.RoleArn), Description: "The IAM role still trusts Act. Delete it, or keep it to connect again later."}}
 	return gen.DeleteAwsDeployment200JSONResponse{ID: req.ID, CleanupRequired: cleanup}, nil
 }
 
@@ -782,8 +856,13 @@ func fakeDigest(fill string) string {
 	return strings.Repeat(fill, sha256HexLength)
 }
 
-func consoleURL(id string) string {
-	return ConsoleOrigin + "/settings/deployments/" + id
+func consoleURL(id string) *string {
+	url := ConsoleOrigin + "/settings/deployments/" + id
+	return &url
+}
+
+func intPointer(value int) *int {
+	return &value
 }
 
 func deploymentSource(source gen.DeploymentChangeSource) *gen.DeploymentChangeSource {

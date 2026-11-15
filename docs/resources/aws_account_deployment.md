@@ -24,13 +24,13 @@ resource "aws_iam_role" "act" {
 }
 
 resource "aws_iam_role_policy_attachment" "act" {
-  for_each   = toset(data.act_aws_onboarding_parameters.this.managed_policy_arns)
+  for_each   = toset(coalesce(data.act_aws_onboarding_parameters.this.managed_policy_arns, []))
   role       = aws_iam_role.act.name
   policy_arn = each.value
 }
 
 resource "aws_iam_role_policy" "act" {
-  for_each = data.act_aws_onboarding_parameters.this.custom_policy_documents
+  for_each = coalesce(data.act_aws_onboarding_parameters.this.custom_policy_documents, {})
   role     = aws_iam_role.act.name
   name     = each.key
   policy   = each.value
@@ -84,7 +84,7 @@ Destroying the resource disconnects the account: Act stops scanning and deletes 
 - `deletion_protection` (Boolean) When true, Act refuses to delete the deployment and a plan that destroys it fails. Defaults to `false`.
 - `deployment_method` (String) How the role was deployed: `terraform` (default) or `cloudformation`.
 - `disabled_capabilities` (Set of String) Act capabilities to turn off for this deployment. The only one today is `eks_cluster_access`.
-- `external_id_key_version` (Number) The key version of the external ID, from `data.act_aws_onboarding_parameters`. Passing it pins the external ID the role trusts, so a key rotation between plan and apply cannot change it. It only changes when `external_id_source` moves from `legacy` to `derived`.
+- `external_id_key_version` (Number) The key version of the external ID, from `data.act_aws_onboarding_parameters`. Passing it pins the external ID the role trusts, so a key rotation between plan and apply cannot change it. It only changes when `external_id_source` moves from `legacy` to `derived`. Null for a legacy external ID.
 - `external_id_source` (String) `derived` for an external ID Act derives from the deployment, or `legacy` for one stored by an older onboarding. Changing `legacy` to `derived` rotates it: Act checks that the role trusts the derived value first. `derived` cannot go back to `legacy`.
 - `name` (String) The name Act shows for the deployment, 1 to 64 characters. Act picks one when you leave it out.
 - `reverify_on_failure` (Boolean) When the deployment is `failed`, plan a verification so the next apply makes it active again once the role is fixed. Defaults to `true`. Only the provider uses it.
@@ -93,7 +93,7 @@ Destroying the resource disconnects the account: Act stops scanning and deletes 
 
 ### Read-Only
 
-- `console_url` (String) The deployment's page in the Act console.
+- `console_url` (String) The deployment's page in the Act console. Null when Act does not report one.
 - `created_at` (String) When the deployment was created, in RFC 3339.
 - `deployed_version` (String) The role version Act detected.
 - `error_code` (String) Why the deployment failed. Null while active.

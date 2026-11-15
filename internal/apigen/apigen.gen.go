@@ -417,6 +417,99 @@ func (e MemberAccountStatus) Valid() bool {
 	}
 }
 
+// Defines values for NotificationActionType.
+const (
+	NotificationActionTypeEmail NotificationActionType = "email"
+	NotificationActionTypeSlack NotificationActionType = "slack"
+)
+
+// Valid indicates whether the value is a known member of the NotificationActionType enum.
+func (e NotificationActionType) Valid() bool {
+	switch e {
+	case NotificationActionTypeEmail:
+		return true
+	case NotificationActionTypeSlack:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for NotificationChangeSource.
+const (
+	NotificationChangeSourceAPI       NotificationChangeSource = "api"
+	NotificationChangeSourceTerraform NotificationChangeSource = "terraform"
+	NotificationChangeSourceUI        NotificationChangeSource = "ui"
+)
+
+// Valid indicates whether the value is a known member of the NotificationChangeSource enum.
+func (e NotificationChangeSource) Valid() bool {
+	switch e {
+	case NotificationChangeSourceAPI:
+		return true
+	case NotificationChangeSourceTerraform:
+		return true
+	case NotificationChangeSourceUI:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for NotificationConditionField.
+const (
+	NotificationConditionFieldSource NotificationConditionField = "source"
+)
+
+// Valid indicates whether the value is a known member of the NotificationConditionField enum.
+func (e NotificationConditionField) Valid() bool {
+	switch e {
+	case NotificationConditionFieldSource:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for NotificationConditionOperator.
+const (
+	NotificationConditionOperatorIn NotificationConditionOperator = "in"
+)
+
+// Valid indicates whether the value is a known member of the NotificationConditionOperator enum.
+func (e NotificationConditionOperator) Valid() bool {
+	switch e {
+	case NotificationConditionOperatorIn:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for NotificationMatchResult.
+const (
+	NotificationMatchResultFailed        NotificationMatchResult = "failed"
+	NotificationMatchResultNotSent       NotificationMatchResult = "not_sent"
+	NotificationMatchResultPartiallySent NotificationMatchResult = "partially_sent"
+	NotificationMatchResultSent          NotificationMatchResult = "sent"
+)
+
+// Valid indicates whether the value is a known member of the NotificationMatchResult enum.
+func (e NotificationMatchResult) Valid() bool {
+	switch e {
+	case NotificationMatchResultFailed:
+		return true
+	case NotificationMatchResultNotSent:
+		return true
+	case NotificationMatchResultPartiallySent:
+		return true
+	case NotificationMatchResultSent:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for PrincipalKind.
 const (
 	PrincipalKindServiceAccount PrincipalKind = "service_account"
@@ -471,6 +564,24 @@ func (e TokenScope) Valid() bool {
 	}
 }
 
+// Defines values for ListNotificationRulesParamsEnabled.
+const (
+	ListNotificationRulesParamsEnabledFalse ListNotificationRulesParamsEnabled = "false"
+	ListNotificationRulesParamsEnabledTrue  ListNotificationRulesParamsEnabled = "true"
+)
+
+// Valid indicates whether the value is a known member of the ListNotificationRulesParamsEnabled enum.
+func (e ListNotificationRulesParamsEnabled) Valid() bool {
+	switch e {
+	case ListNotificationRulesParamsEnabledFalse:
+		return true
+	case ListNotificationRulesParamsEnabledTrue:
+		return true
+	default:
+		return false
+	}
+}
+
 // AuthMethod defines model for AuthMethod.
 type AuthMethod string
 
@@ -481,7 +592,7 @@ type AwsCapability string
 type AwsDeployment struct {
 	AccountID            *string                 `json:"accountId"`
 	AllowedRegions       *[]string               `json:"allowedRegions"`
-	ConsoleURL           string                  `json:"consoleUrl"`
+	ConsoleURL           *string                 `json:"consoleUrl"`
 	CreatedAt            time.Time               `json:"createdAt"`
 	CreatedVia           *DeploymentChangeSource `json:"createdVia"`
 	DeletionProtection   bool                    `json:"deletionProtection"`
@@ -491,12 +602,14 @@ type AwsDeployment struct {
 	ErrorCode            *string                 `json:"errorCode"`
 	ErrorMessage         *string                 `json:"errorMessage"`
 	ExternalID           string                  `json:"externalId"`
-	ExternalIDKeyVersion int                     `json:"externalIdKeyVersion"`
-	ExternalIDSource     ExternalIDSource        `json:"externalIdSource"`
-	ID                   string                  `json:"id"`
-	Name                 string                  `json:"name"`
-	Organization         *AwsOrganization        `json:"organization"`
-	RoleArn              string                  `json:"roleArn"`
+
+	// ExternalIDKeyVersion Null for a legacy external ID
+	ExternalIDKeyVersion *int             `json:"externalIdKeyVersion"`
+	ExternalIDSource     ExternalIDSource `json:"externalIdSource"`
+	ID                   string           `json:"id"`
+	Name                 string           `json:"name"`
+	Organization         *AwsOrganization `json:"organization"`
+	RoleArn              *string          `json:"roleArn"`
 
 	// Status pending_consent: Azure only, waiting for an Entra admin to approve Act in the directory
 	Status          DeploymentStatus    `json:"status"`
@@ -537,11 +650,15 @@ type AwsDeploymentPatch struct {
 
 // AwsOnboarding defines model for AwsOnboarding.
 type AwsOnboarding struct {
-	ActPrincipalArn              string            `json:"actPrincipalArn"`
-	AssumeRolePolicyJSON         string            `json:"assumeRolePolicyJson"`
-	CloudformationTemplateSha256 string            `json:"cloudformationTemplateSha256"`
-	CloudformationTemplateURL    string            `json:"cloudformationTemplateUrl"`
-	CustomPolicyDocuments        map[string]string `json:"customPolicyDocuments"`
+	ActPrincipalArn      string `json:"actPrincipalArn"`
+	AssumeRolePolicyJSON string `json:"assumeRolePolicyJson"`
+
+	// CloudformationTemplateSha256 Null until Act publishes versioned modules and templates
+	CloudformationTemplateSha256 *string `json:"cloudformationTemplateSha256"`
+	CloudformationTemplateURL    string  `json:"cloudformationTemplateUrl"`
+
+	// CustomPolicyDocuments Null until Act publishes versioned modules and templates
+	CustomPolicyDocuments *map[string]string `json:"customPolicyDocuments"`
 
 	// DeploymentID Derived by Act from the tenant and the target; stable, unpredictable to others
 	DeploymentID         string                `json:"deploymentId"`
@@ -549,18 +666,36 @@ type AwsOnboarding struct {
 	DeprecatedPrincipals []DeprecatedPrincipal `json:"deprecatedPrincipals"`
 
 	// ExistingDeployment The live deployment already holding this target, if any; import it instead of creating a new one
-	ExistingDeployment   *ExistingDeployment `json:"existingDeployment"`
-	ExternalID           string              `json:"externalId"`
-	ExternalIDKeyVersion int                 `json:"externalIdKeyVersion"`
-	ExternalIDSource     ExternalIDSource    `json:"externalIdSource"`
-	ManagedPolicyArns    []string            `json:"managedPolicyArns"`
-	MemberRoleName       string              `json:"memberRoleName"`
-	MemberRolePath       string              `json:"memberRolePath"`
-	ModuleSha256         string              `json:"moduleSha256"`
-	ModuleSource         string              `json:"moduleSource"`
-	ModuleVersion        string              `json:"moduleVersion"`
-	ModuleVersions       []ModuleVersion     `json:"moduleVersions"`
-	PermissionsHash      string              `json:"permissionsHash"`
+	ExistingDeployment *ExistingDeployment `json:"existingDeployment"`
+	ExternalID         string              `json:"externalId"`
+
+	// ExternalIDKeyVersion Null for a legacy external ID
+	ExternalIDKeyVersion *int             `json:"externalIdKeyVersion"`
+	ExternalIDSource     ExternalIDSource `json:"externalIdSource"`
+
+	// ManagedPolicyArns Null until Act publishes versioned modules and templates
+	ManagedPolicyArns *[]string `json:"managedPolicyArns"`
+
+	// MemberRoleName Role the StackSet creates in each member account; null for an account
+	MemberRoleName *string `json:"memberRoleName"`
+
+	// MemberRolePath Null for an account
+	MemberRolePath *string `json:"memberRolePath"`
+
+	// ModuleSha256 Null until Act publishes versioned modules and templates
+	ModuleSha256 *string `json:"moduleSha256"`
+
+	// ModuleSource Null until Act publishes versioned modules and templates
+	ModuleSource *string `json:"moduleSource"`
+
+	// ModuleVersion Null until Act publishes versioned modules and templates
+	ModuleVersion *string `json:"moduleVersion"`
+
+	// ModuleVersions Null until Act publishes versioned modules and templates
+	ModuleVersions *[]ModuleVersion `json:"moduleVersions"`
+
+	// PermissionsHash Null until Act publishes versioned modules and templates
+	PermissionsHash *string `json:"permissionsHash"`
 
 	// RoleArn Known before the role exists in account mode; null for organizations
 	RoleArn          *string `json:"roleArn"`
@@ -570,11 +705,13 @@ type AwsOnboarding struct {
 
 // AwsOrganization defines model for AwsOrganization.
 type AwsOrganization struct {
-	ExcludedAccountIds    *[]string `json:"excludedAccountIds"`
-	ManagementAccountID   string    `json:"managementAccountId"`
-	MemberRoleName        string    `json:"memberRoleName"`
-	MemberRolePath        string    `json:"memberRolePath"`
-	OrganizationID        string    `json:"organizationId"`
+	ExcludedAccountIds  *[]string `json:"excludedAccountIds"`
+	ManagementAccountID *string   `json:"managementAccountId"`
+	MemberRoleName      *string   `json:"memberRoleName"`
+	MemberRolePath      *string   `json:"memberRolePath"`
+
+	// OrganizationID Null for a deployment created before it was keyed on the organization
+	OrganizationID        *string   `json:"organizationId"`
 	OrganizationalUnitIds *[]string `json:"organizationalUnitIds"`
 	RootID                *string   `json:"rootId"`
 }
@@ -604,7 +741,7 @@ type AzureDeployment struct {
 
 	// ConsentURL Set while the deployment is pending_consent
 	ConsentURL         *string                 `json:"consentUrl"`
-	ConsoleURL         string                  `json:"consoleUrl"`
+	ConsoleURL         *string                 `json:"consoleUrl"`
 	CreatedAt          time.Time               `json:"createdAt"`
 	CreatedVia         *DeploymentChangeSource `json:"createdVia"`
 	DeletionProtection bool                    `json:"deletionProtection"`
@@ -670,18 +807,30 @@ type AzureOnboarding struct {
 	CustomRoleName    string   `json:"customRoleName"`
 
 	// DeploymentID Derived by Act from the tenant and the target; stable, unpredictable to others
-	DeploymentID      string `json:"deploymentId"`
-	DeploymentVersion string `json:"deploymentVersion"`
+	DeploymentID string `json:"deploymentId"`
+
+	// DeploymentVersion Null until Act publishes versioned modules and templates
+	DeploymentVersion *string `json:"deploymentVersion"`
 
 	// ExistingDeployment The live deployment already holding this target, if any; import it instead of creating a new one
-	ExistingDeployment      *ExistingDeployment `json:"existingDeployment"`
-	ModuleSha256            string              `json:"moduleSha256"`
-	ModuleSource            string              `json:"moduleSource"`
-	ModuleVersion           string              `json:"moduleVersion"`
-	ModuleVersions          []ModuleVersion     `json:"moduleVersions"`
-	PermissionsHash         string              `json:"permissionsHash"`
-	RequiredBuiltinRoleIds  []string            `json:"requiredBuiltinRoleIds"`
-	RequiredGraphAppRoleIds []string            `json:"requiredGraphAppRoleIds"`
+	ExistingDeployment *ExistingDeployment `json:"existingDeployment"`
+
+	// ModuleSha256 Null until Act publishes versioned modules and templates
+	ModuleSha256 *string `json:"moduleSha256"`
+
+	// ModuleSource Null until Act publishes versioned modules and templates
+	ModuleSource *string `json:"moduleSource"`
+
+	// ModuleVersion Null until Act publishes versioned modules and templates
+	ModuleVersion *string `json:"moduleVersion"`
+
+	// ModuleVersions Null until Act publishes versioned modules and templates
+	ModuleVersions *[]ModuleVersion `json:"moduleVersions"`
+
+	// PermissionsHash Null until Act publishes versioned modules and templates
+	PermissionsHash         *string  `json:"permissionsHash"`
+	RequiredBuiltinRoleIds  []string `json:"requiredBuiltinRoleIds"`
+	RequiredGraphAppRoleIds []string `json:"requiredGraphAppRoleIds"`
 
 	// TenantConsented Whether an Entra admin has approved Act for this tenant in this directory
 	TenantConsented bool `json:"tenantConsented"`
@@ -803,7 +952,7 @@ type Federation struct {
 
 // GcpDeployment defines model for GcpDeployment.
 type GcpDeployment struct {
-	ConsoleURL                  string                  `json:"consoleUrl"`
+	ConsoleURL                  *string                 `json:"consoleUrl"`
 	CreatedAt                   time.Time               `json:"createdAt"`
 	CreatedVia                  *DeploymentChangeSource `json:"createdVia"`
 	DeletionProtection          bool                    `json:"deletionProtection"`
@@ -861,19 +1010,31 @@ type GcpOnboarding struct {
 	CustomRolePermissions []string `json:"customRolePermissions"`
 
 	// DeploymentID Derived by Act from the tenant and the target; stable, unpredictable to others
-	DeploymentID      string `json:"deploymentId"`
-	DeploymentVersion string `json:"deploymentVersion"`
+	DeploymentID string `json:"deploymentId"`
+
+	// DeploymentVersion Null until Act publishes versioned modules and templates
+	DeploymentVersion *string `json:"deploymentVersion"`
 
 	// ExistingDeployment The live deployment already holding this target, if any; import it instead of creating a new one
 	ExistingDeployment *ExistingDeployment `json:"existingDeployment"`
 	FederationRoleName string              `json:"federationRoleName"`
-	ModuleSha256       string              `json:"moduleSha256"`
-	ModuleSource       string              `json:"moduleSource"`
-	ModuleVersion      string              `json:"moduleVersion"`
-	ModuleVersions     []ModuleVersion     `json:"moduleVersions"`
-	PermissionsHash    string              `json:"permissionsHash"`
-	PredefinedRoles    []string            `json:"predefinedRoles"`
-	ServiceAccountID   string              `json:"serviceAccountId"`
+
+	// ModuleSha256 Null until Act publishes versioned modules and templates
+	ModuleSha256 *string `json:"moduleSha256"`
+
+	// ModuleSource Null until Act publishes versioned modules and templates
+	ModuleSource *string `json:"moduleSource"`
+
+	// ModuleVersion Null until Act publishes versioned modules and templates
+	ModuleVersion *string `json:"moduleVersion"`
+
+	// ModuleVersions Null until Act publishes versioned modules and templates
+	ModuleVersions *[]ModuleVersion `json:"moduleVersions"`
+
+	// PermissionsHash Null until Act publishes versioned modules and templates
+	PermissionsHash  *string  `json:"permissionsHash"`
+	PredefinedRoles  []string `json:"predefinedRoles"`
+	ServiceAccountID string   `json:"serviceAccountId"`
 
 	// SessionBinding Role session name Act uses for this deployment; the pool admits only it
 	SessionBinding             string `json:"sessionBinding"`
@@ -1004,6 +1165,221 @@ type ModuleVersion struct {
 	Version           string `json:"version"`
 }
 
+// NotificationAction One delivery action. `type` names the member that carries its settings; the other member is absent.
+type NotificationAction struct {
+	Email *NotificationEmailAction `json:"email,omitempty"`
+	Slack *NotificationSlackAction `json:"slack,omitempty"`
+	Type  NotificationActionType   `json:"type"`
+}
+
+// NotificationActionType defines model for NotificationActionType.
+type NotificationActionType string
+
+// NotificationChangeSource Where a change came from: `ui` is the Act app, `terraform` is the Act Terraform provider, and `api` is any other public API client.
+type NotificationChangeSource string
+
+// NotificationCondition Narrows one event type of the rule: an event of that type matches only when `field` holds one of `values`. `GET /notification-event-types` lists the fields and values each event type takes.
+type NotificationCondition struct {
+	// EventType The event type of the rule this condition narrows.
+	EventType string                        `json:"eventType"`
+	Field     NotificationConditionField    `json:"field"`
+	Operator  NotificationConditionOperator `json:"operator"`
+	Values    []string                      `json:"values"`
+}
+
+// NotificationConditionField defines model for NotificationConditionField.
+type NotificationConditionField string
+
+// NotificationConditionFieldInfo defines model for NotificationConditionFieldInfo.
+type NotificationConditionFieldInfo struct {
+	Field    NotificationConditionField    `json:"field"`
+	Operator NotificationConditionOperator `json:"operator"`
+	Values   []string                      `json:"values"`
+}
+
+// NotificationConditionOperator defines model for NotificationConditionOperator.
+type NotificationConditionOperator string
+
+// NotificationEmailAction defines model for NotificationEmailAction.
+type NotificationEmailAction struct {
+	// IntegrationID The Act-managed email integration, from `GET /integrations?type=email`.
+	IntegrationID string `json:"integrationId"`
+
+	// Recipients Email addresses, each listed once, with no ASCII uppercase letter (A-Z) and no surrounding whitespace. Responses list them as sent, sorted.
+	Recipients []openapi_types.Email `json:"recipients"`
+}
+
+// NotificationEventTypeInfo defines model for NotificationEventTypeInfo.
+type NotificationEventTypeInfo struct {
+	ActionTypes     []NotificationActionType         `json:"actionTypes"`
+	Category        string                           `json:"category"`
+	ConditionFields []NotificationConditionFieldInfo `json:"conditionFields"`
+	Description     string                           `json:"description"`
+	EventType       string                           `json:"eventType"`
+	Title           string                           `json:"title"`
+}
+
+// NotificationEventTypeList defines model for NotificationEventTypeList.
+type NotificationEventTypeList struct {
+	Items  []NotificationEventTypeInfo `json:"items"`
+	Limits NotificationRuleLimits      `json:"limits"`
+}
+
+// NotificationLastDelivery defines model for NotificationLastDelivery.
+type NotificationLastDelivery struct {
+	At     time.Time               `json:"at"`
+	Result NotificationMatchResult `json:"result"`
+}
+
+// NotificationMatchResult defines model for NotificationMatchResult.
+type NotificationMatchResult string
+
+// NotificationRecipient defines model for NotificationRecipient.
+type NotificationRecipient struct {
+	CreatedAt time.Time `json:"createdAt"`
+
+	// CreatedVia Where a change came from: `ui` is the Act app, `terraform` is the Act Terraform provider, and `api` is any other public API client.
+	CreatedVia NotificationChangeSource `json:"createdVia"`
+	ID         string                   `json:"id"`
+
+	// LastModifiedVia Where a change came from: `ui` is the Act app, `terraform` is the Act Terraform provider, and `api` is any other public API client.
+	LastModifiedVia NotificationChangeSource `json:"lastModifiedVia"`
+	Methods         []NotificationAction     `json:"methods"`
+	Name            string                   `json:"name"`
+
+	// Revision Increases on every change. The `ETag` header carries it in quotes.
+	Revision int `json:"revision"`
+
+	// RuleIds The rules that name this recipient. It cannot be deleted while any do.
+	RuleIds   []string  `json:"ruleIds"`
+	UpdatedAt time.Time `json:"updatedAt"`
+}
+
+// NotificationRecipientPage defines model for NotificationRecipientPage.
+type NotificationRecipientPage struct {
+	Items         []NotificationRecipient `json:"items"`
+	NextPageToken *string                 `json:"nextPageToken"`
+}
+
+// NotificationRecipientWrite A tenant-wide address-book entry: a name and the addresses it stands for, at most one method per type.
+type NotificationRecipientWrite struct {
+	Methods []NotificationAction `json:"methods"`
+	Name    string               `json:"name"`
+}
+
+// NotificationRule defines model for NotificationRule.
+type NotificationRule struct {
+	Actions    []NotificationAction    `json:"actions"`
+	Conditions []NotificationCondition `json:"conditions"`
+	CreatedAt  time.Time               `json:"createdAt"`
+
+	// CreatedVia Where a change came from: `ui` is the Act app, `terraform` is the Act Terraform provider, and `api` is any other public API client.
+	CreatedVia NotificationChangeSource `json:"createdVia"`
+	Enabled    bool                     `json:"enabled"`
+	EventTypes []string                 `json:"eventTypes"`
+	ID         string                   `json:"id"`
+
+	// LastDelivery The latest event this rule matched, if any.
+	LastDelivery *NotificationLastDelivery `json:"lastDelivery"`
+
+	// LastModifiedVia Where a change came from: `ui` is the Act app, `terraform` is the Act Terraform provider, and `api` is any other public API client.
+	LastModifiedVia NotificationChangeSource `json:"lastModifiedVia"`
+
+	// MinClientRevision The oldest Act app revision that can show and edit this rule. A rule that uses features an older app lacks has a higher value.
+	MinClientRevision int      `json:"minClientRevision"`
+	Name              string   `json:"name"`
+	RecipientIds      []string `json:"recipientIds"`
+
+	// Revision Increases on every change. The `ETag` header carries it in quotes.
+	Revision  int       `json:"revision"`
+	UpdatedAt time.Time `json:"updatedAt"`
+
+	// WebURL The rule in the Act app, or null where the app address is not configured.
+	WebURL *string `json:"webUrl"`
+}
+
+// NotificationRuleActivity defines model for NotificationRuleActivity.
+type NotificationRuleActivity struct {
+	EventID   string                  `json:"eventId"`
+	EventType string                  `json:"eventType"`
+	ID        string                  `json:"id"`
+	MatchedAt time.Time               `json:"matchedAt"`
+	Reason    *string                 `json:"reason"`
+	Result    NotificationMatchResult `json:"result"`
+}
+
+// NotificationRuleActivityPage defines model for NotificationRuleActivityPage.
+type NotificationRuleActivityPage struct {
+	Items         []NotificationRuleActivity `json:"items"`
+	NextPageToken *string                    `json:"nextPageToken"`
+}
+
+// NotificationRuleLimits defines model for NotificationRuleLimits.
+type NotificationRuleLimits struct {
+	ActivityRetentionMonths     int `json:"activityRetentionMonths"`
+	MaxActionsPerRule           int `json:"maxActionsPerRule"`
+	MaxEmailRecipients          int `json:"maxEmailRecipients"`
+	MaxEnabledRulesPerEventType int `json:"maxEnabledRulesPerEventType"`
+	MaxEventTypesPerRule        int `json:"maxEventTypesPerRule"`
+	MaxNameLength               int `json:"maxNameLength"`
+	MaxRecipientNameLength      int `json:"maxRecipientNameLength"`
+	MaxRecipientsPerRule        int `json:"maxRecipientsPerRule"`
+	MaxSlackChannels            int `json:"maxSlackChannels"`
+}
+
+// NotificationRulePage defines model for NotificationRulePage.
+type NotificationRulePage struct {
+	Items         []NotificationRule `json:"items"`
+	NextPageToken *string            `json:"nextPageToken"`
+}
+
+// NotificationRuleValidate A rule to check without saving it. With `id`, it is checked as a replace of that rule.
+type NotificationRuleValidate struct {
+	Actions    *[]NotificationAction    `json:"actions,omitempty"`
+	Conditions *[]NotificationCondition `json:"conditions,omitempty"`
+	Enabled    *bool                    `json:"enabled,omitempty"`
+	EventTypes []string                 `json:"eventTypes"`
+	ID         *string                  `json:"id,omitempty"`
+	Name       string                   `json:"name"`
+
+	// RecipientIds Address-book recipients the rule also sends to, each listed once.
+	RecipientIds *[]string `json:"recipientIds,omitempty"`
+}
+
+// NotificationRuleValidation defines model for NotificationRuleValidation.
+type NotificationRuleValidation struct {
+	Error *NotificationRuleValidationError `json:"error"`
+	Valid bool                             `json:"valid"`
+}
+
+// NotificationRuleValidationError defines model for NotificationRuleValidationError.
+type NotificationRuleValidationError struct {
+	Code    string  `json:"code"`
+	Pointer *string `json:"pointer"`
+	Reason  *string `json:"reason"`
+}
+
+// NotificationRuleWrite A notification rule. Event types are joined by OR. On create, a member left out takes its empty value (enabled defaults to true). On replace, a member left out keeps its stored value, so a client that does not know a member never clears it; send an empty array to clear a list.
+type NotificationRuleWrite struct {
+	Actions    *[]NotificationAction    `json:"actions,omitempty"`
+	Conditions *[]NotificationCondition `json:"conditions,omitempty"`
+	Enabled    *bool                    `json:"enabled,omitempty"`
+	EventTypes []string                 `json:"eventTypes"`
+	Name       string                   `json:"name"`
+
+	// RecipientIds Address-book recipients the rule also sends to, each listed once.
+	RecipientIds *[]string `json:"recipientIds,omitempty"`
+}
+
+// NotificationSlackAction defines model for NotificationSlackAction.
+type NotificationSlackAction struct {
+	// ChannelIds Slack channel IDs, each listed once; `GET /integrations/slack/channels` finds a public channel by name. Responses list them sorted.
+	ChannelIds []string `json:"channelIds"`
+
+	// IntegrationID A connected Slack integration, from `GET /integrations?type=slack`.
+	IntegrationID string `json:"integrationId"`
+}
+
 // Principal defines model for Principal.
 type Principal struct {
 	ID   string        `json:"id"`
@@ -1014,6 +1390,17 @@ type Principal struct {
 
 // PrincipalKind defines model for PrincipalKind.
 type PrincipalKind string
+
+// SlackChannel defines model for SlackChannel.
+type SlackChannel struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}
+
+// SlackChannelList defines model for SlackChannelList.
+type SlackChannelList struct {
+	Items []SlackChannel `json:"items"`
+}
 
 // SplunkTLSVerification defines model for SplunkTlsVerification.
 type SplunkTLSVerification string
@@ -1130,6 +1517,12 @@ type CreateIntegrationParams struct {
 	IdempotencyKey *string `json:"idempotency-key,omitempty"`
 }
 
+// ListSlackChannelsParams defines parameters for ListSlackChannels.
+type ListSlackChannelsParams struct {
+	Name          string  `form:"name" json:"name"`
+	IntegrationID *string `form:"integrationId,omitempty" json:"integrationId,omitempty"`
+}
+
 // DeleteIntegrationParams defines parameters for DeleteIntegration.
 type DeleteIntegrationParams struct {
 	IfMatch *string `json:"if-match,omitempty"`
@@ -1138,6 +1531,60 @@ type DeleteIntegrationParams struct {
 // UpdateIntegrationParams defines parameters for UpdateIntegration.
 type UpdateIntegrationParams struct {
 	IfMatch string `json:"if-match"`
+}
+
+// ListNotificationRecipientsParams defines parameters for ListNotificationRecipients.
+type ListNotificationRecipientsParams struct {
+	PageSize  *int    `form:"pageSize,omitempty" json:"pageSize,omitempty"`
+	PageToken *string `form:"pageToken,omitempty" json:"pageToken,omitempty"`
+}
+
+// CreateNotificationRecipientParams defines parameters for CreateNotificationRecipient.
+type CreateNotificationRecipientParams struct {
+	IdempotencyKey *string `json:"idempotency-key,omitempty"`
+}
+
+// DeleteNotificationRecipientParams defines parameters for DeleteNotificationRecipient.
+type DeleteNotificationRecipientParams struct {
+	IfMatch *string `json:"if-match,omitempty"`
+}
+
+// ReplaceNotificationRecipientParams defines parameters for ReplaceNotificationRecipient.
+type ReplaceNotificationRecipientParams struct {
+	IfMatch string `json:"if-match"`
+}
+
+// ListNotificationRulesParams defines parameters for ListNotificationRules.
+type ListNotificationRulesParams struct {
+	EventType  *string                             `form:"eventType,omitempty" json:"eventType,omitempty"`
+	Enabled    *ListNotificationRulesParamsEnabled `form:"enabled,omitempty" json:"enabled,omitempty"`
+	CreatedVia *NotificationChangeSource           `form:"createdVia,omitempty" json:"createdVia,omitempty"`
+	PageSize   *int                                `form:"pageSize,omitempty" json:"pageSize,omitempty"`
+	PageToken  *string                             `form:"pageToken,omitempty" json:"pageToken,omitempty"`
+}
+
+// ListNotificationRulesParamsEnabled defines parameters for ListNotificationRules.
+type ListNotificationRulesParamsEnabled string
+
+// CreateNotificationRuleParams defines parameters for CreateNotificationRule.
+type CreateNotificationRuleParams struct {
+	IdempotencyKey *string `json:"idempotency-key,omitempty"`
+}
+
+// DeleteNotificationRuleParams defines parameters for DeleteNotificationRule.
+type DeleteNotificationRuleParams struct {
+	IfMatch *string `json:"if-match,omitempty"`
+}
+
+// ReplaceNotificationRuleParams defines parameters for ReplaceNotificationRule.
+type ReplaceNotificationRuleParams struct {
+	IfMatch string `json:"if-match"`
+}
+
+// ListNotificationRuleActivityParams defines parameters for ListNotificationRuleActivity.
+type ListNotificationRuleActivityParams struct {
+	PageSize  *int    `form:"pageSize,omitempty" json:"pageSize,omitempty"`
+	PageToken *string `form:"pageToken,omitempty" json:"pageToken,omitempty"`
 }
 
 // GetAwsOnboardingParams defines parameters for GetAwsOnboarding.
@@ -1186,6 +1633,21 @@ type CreateIntegrationJSONRequestBody = IntegrationCreate
 
 // UpdateIntegrationJSONRequestBody defines body for UpdateIntegration for application/json ContentType.
 type UpdateIntegrationJSONRequestBody = IntegrationPatch
+
+// CreateNotificationRecipientJSONRequestBody defines body for CreateNotificationRecipient for application/json ContentType.
+type CreateNotificationRecipientJSONRequestBody = NotificationRecipientWrite
+
+// ReplaceNotificationRecipientJSONRequestBody defines body for ReplaceNotificationRecipient for application/json ContentType.
+type ReplaceNotificationRecipientJSONRequestBody = NotificationRecipientWrite
+
+// CreateNotificationRuleJSONRequestBody defines body for CreateNotificationRule for application/json ContentType.
+type CreateNotificationRuleJSONRequestBody = NotificationRuleWrite
+
+// ValidateNotificationRuleJSONRequestBody defines body for ValidateNotificationRule for application/json ContentType.
+type ValidateNotificationRuleJSONRequestBody = NotificationRuleValidate
+
+// ReplaceNotificationRuleJSONRequestBody defines body for ReplaceNotificationRule for application/json ContentType.
+type ReplaceNotificationRuleJSONRequestBody = NotificationRuleWrite
 
 // RequestEditorFn is the function signature for the RequestEditor callback function
 type RequestEditorFn func(ctx context.Context, req *http.Request) error
@@ -1434,6 +1896,13 @@ type ClientInterface interface {
 	// Corresponds with POST /v1/integrations (the `CreateIntegration` operationId).
 	CreateIntegration(ctx context.Context, params *CreateIntegrationParams, body CreateIntegrationJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// ListSlackChannels Look up public Slack channels by exact name or ID, for actions that take channel IDs
+	//
+	// Matches a channel name exactly, with or without the leading `#`, or a channel ID. Private channels are not listed. Answers `integration_not_connected` when no Slack integration is connected.
+	//
+	// Corresponds with GET /v1/integrations/slack/channels (the `ListSlackChannels` operationId).
+	ListSlackChannels(ctx context.Context, params *ListSlackChannelsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// DeleteIntegration Uninstall an integration and delete its secrets
 	//
 	// Corresponds with DELETE /v1/integrations/{id} (the `DeleteIntegration` operationId).
@@ -1457,6 +1926,152 @@ type ClientInterface interface {
 	//
 	// Corresponds with PATCH /v1/integrations/{id} (the `UpdateIntegration` operationId).
 	UpdateIntegration(ctx context.Context, id string, params *UpdateIntegrationParams, body UpdateIntegrationJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ListNotificationEventTypes List the event types a rule can match, the actions and conditions each takes, and the rule limits
+	//
+	// Only event types this tenant can subscribe to with an email or Slack action are listed. `limits` are the caps every rule write enforces.
+	//
+	// Corresponds with GET /v1/notification-event-types (the `ListNotificationEventTypes` operationId).
+	ListNotificationEventTypes(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ListNotificationRecipients List the address-book recipients rules can name, one page at a time
+	//
+	// Pass `nextPageToken` back as `pageToken` for the next page.
+	//
+	// Corresponds with GET /v1/notification-recipients (the `ListNotificationRecipients` operationId).
+	ListNotificationRecipients(ctx context.Context, params *ListNotificationRecipientsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// CreateNotificationRecipientWithBody Create an address-book recipient
+	//
+	// Recipient names are unique per tenant. A retry with the same `Idempotency-Key` and body within 24 hours answers with the recipient the first request created.
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with POST /v1/notification-recipients (the `CreateNotificationRecipient` operationId).
+	CreateNotificationRecipientWithBody(ctx context.Context, params *CreateNotificationRecipientParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// CreateNotificationRecipient Create an address-book recipient
+	//
+	// Recipient names are unique per tenant. A retry with the same `Idempotency-Key` and body within 24 hours answers with the recipient the first request created.
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with POST /v1/notification-recipients (the `CreateNotificationRecipient` operationId).
+	CreateNotificationRecipient(ctx context.Context, params *CreateNotificationRecipientParams, body CreateNotificationRecipientJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// DeleteNotificationRecipient Delete an address-book recipient. Refused with 409 while a rule names it
+	//
+	// The 409 `conflict` carries `reason: notification_recipient_in_use` and the `ruleIds` that name it. With `If-Match`, the recipient is deleted only while it is at that revision; otherwise the answer is 412.
+	//
+	// Corresponds with DELETE /v1/notification-recipients/{id} (the `DeleteNotificationRecipient` operationId).
+	DeleteNotificationRecipient(ctx context.Context, id string, params *DeleteNotificationRecipientParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetNotificationRecipient Return one address-book recipient
+	//
+	// The `ETag` header carries the revision. Send it as `If-Match` to replace or delete this revision.
+	//
+	// Corresponds with GET /v1/notification-recipients/{id} (the `GetNotificationRecipient` operationId).
+	GetNotificationRecipient(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ReplaceNotificationRecipientWithBody Replace an address-book recipient; the rules that name it send to its new addresses
+	//
+	// `If-Match` must name the current `ETag` (strong comparison) or be `*`; otherwise the answer is 412 with the current `etag`.
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with PUT /v1/notification-recipients/{id} (the `ReplaceNotificationRecipient` operationId).
+	ReplaceNotificationRecipientWithBody(ctx context.Context, id string, params *ReplaceNotificationRecipientParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ReplaceNotificationRecipient Replace an address-book recipient; the rules that name it send to its new addresses
+	//
+	// `If-Match` must name the current `ETag` (strong comparison) or be `*`; otherwise the answer is 412 with the current `etag`.
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with PUT /v1/notification-recipients/{id} (the `ReplaceNotificationRecipient` operationId).
+	ReplaceNotificationRecipient(ctx context.Context, id string, params *ReplaceNotificationRecipientParams, body ReplaceNotificationRecipientJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ListNotificationRules List the notification rules of the calling tenant, one page at a time
+	//
+	// Rules are listed oldest first. Pass `nextPageToken` back as `pageToken` for the next page.
+	//
+	// Corresponds with GET /v1/notification-rules (the `ListNotificationRules` operationId).
+	ListNotificationRules(ctx context.Context, params *ListNotificationRulesParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// CreateNotificationRuleWithBody Create a notification rule
+	//
+	// Answers 201 with the rule and its `ETag`. A retry with the same `Idempotency-Key` and body within 24 hours answers with the rule the first request created. Domain errors are `invalid_request` with a `reason` and a JSON `pointer` into the request body.
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with POST /v1/notification-rules (the `CreateNotificationRule` operationId).
+	CreateNotificationRuleWithBody(ctx context.Context, params *CreateNotificationRuleParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// CreateNotificationRule Create a notification rule
+	//
+	// Answers 201 with the rule and its `ETag`. A retry with the same `Idempotency-Key` and body within 24 hours answers with the rule the first request created. Domain errors are `invalid_request` with a `reason` and a JSON `pointer` into the request body.
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with POST /v1/notification-rules (the `CreateNotificationRule` operationId).
+	CreateNotificationRule(ctx context.Context, params *CreateNotificationRuleParams, body CreateNotificationRuleJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ValidateNotificationRuleWithBody Check a rule as a create or a replace would, without saving it or sending anything
+	//
+	// Runs every check a write runs, the enabled-rules limit included, and answers `valid: false` with the error a write would answer. Requires the write scope because it can check a destination with its provider.
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with POST /v1/notification-rules/validate (the `ValidateNotificationRule` operationId).
+	ValidateNotificationRuleWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ValidateNotificationRule Check a rule as a create or a replace would, without saving it or sending anything
+	//
+	// Runs every check a write runs, the enabled-rules limit included, and answers `valid: false` with the error a write would answer. Requires the write scope because it can check a destination with its provider.
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with POST /v1/notification-rules/validate (the `ValidateNotificationRule` operationId).
+	ValidateNotificationRule(ctx context.Context, body ValidateNotificationRuleJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// DeleteNotificationRule Delete a notification rule. Its activity stays readable for six months
+	//
+	// With `If-Match`, the rule is deleted only while it is at that revision; otherwise the answer is 412.
+	//
+	// Corresponds with DELETE /v1/notification-rules/{id} (the `DeleteNotificationRule` operationId).
+	DeleteNotificationRule(ctx context.Context, id string, params *DeleteNotificationRuleParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetNotificationRule Return one notification rule
+	//
+	// The `ETag` header carries the revision. Send it as `If-Match` to replace or delete this revision.
+	//
+	// Corresponds with GET /v1/notification-rules/{id} (the `GetNotificationRule` operationId).
+	GetNotificationRule(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ReplaceNotificationRuleWithBody Replace a notification rule. A member left out keeps its stored value
+	//
+	// `If-Match` must name the current `ETag` (strong comparison) or be `*`; otherwise the answer is 412 with the current `etag`. Send an empty array to clear a list. Destinations on integrations the API does not represent are kept.
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with PUT /v1/notification-rules/{id} (the `ReplaceNotificationRule` operationId).
+	ReplaceNotificationRuleWithBody(ctx context.Context, id string, params *ReplaceNotificationRuleParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ReplaceNotificationRule Replace a notification rule. A member left out keeps its stored value
+	//
+	// `If-Match` must name the current `ETag` (strong comparison) or be `*`; otherwise the answer is 412 with the current `etag`. Send an empty array to clear a list. Destinations on integrations the API does not represent are kept.
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with PUT /v1/notification-rules/{id} (the `ReplaceNotificationRule` operationId).
+	ReplaceNotificationRule(ctx context.Context, id string, params *ReplaceNotificationRuleParams, body ReplaceNotificationRuleJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ListNotificationRuleActivity List the events a rule matched in the last six months and what was sent, newest first
+	//
+	// Works for a deleted rule too. Pass `nextPageToken` back as `pageToken` for the next page.
+	//
+	// Corresponds with GET /v1/notification-rules/{id}/activity (the `ListNotificationRuleActivity` operationId).
+	ListNotificationRuleActivity(ctx context.Context, id string, params *ListNotificationRuleActivityParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetAwsOnboarding Return what an AWS account or organization needs before it is connected, derived from the target
 	//
@@ -1942,6 +2557,23 @@ func (c *Client) CreateIntegration(ctx context.Context, params *CreateIntegratio
 	return c.Client.Do(req)
 }
 
+// ListSlackChannels Look up public Slack channels by exact name or ID, for actions that take channel IDs
+//
+// Matches a channel name exactly, with or without the leading `#`, or a channel ID. Private channels are not listed. Answers `integration_not_connected` when no Slack integration is connected.
+//
+// Corresponds with GET /v1/integrations/slack/channels (the `ListSlackChannels` operationId).
+func (c *Client) ListSlackChannels(ctx context.Context, params *ListSlackChannelsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewListSlackChannelsRequest(c.Server, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
 // DeleteIntegration Uninstall an integration and delete its secrets
 //
 // Corresponds with DELETE /v1/integrations/{id} (the `DeleteIntegration` operationId).
@@ -1996,6 +2628,332 @@ func (c *Client) UpdateIntegrationWithBody(ctx context.Context, id string, param
 // Corresponds with PATCH /v1/integrations/{id} (the `UpdateIntegration` operationId).
 func (c *Client) UpdateIntegration(ctx context.Context, id string, params *UpdateIntegrationParams, body UpdateIntegrationJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewUpdateIntegrationRequest(c.Server, id, params, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// ListNotificationEventTypes List the event types a rule can match, the actions and conditions each takes, and the rule limits
+//
+// Only event types this tenant can subscribe to with an email or Slack action are listed. `limits` are the caps every rule write enforces.
+//
+// Corresponds with GET /v1/notification-event-types (the `ListNotificationEventTypes` operationId).
+func (c *Client) ListNotificationEventTypes(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewListNotificationEventTypesRequest(c.Server)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// ListNotificationRecipients List the address-book recipients rules can name, one page at a time
+//
+// Pass `nextPageToken` back as `pageToken` for the next page.
+//
+// Corresponds with GET /v1/notification-recipients (the `ListNotificationRecipients` operationId).
+func (c *Client) ListNotificationRecipients(ctx context.Context, params *ListNotificationRecipientsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewListNotificationRecipientsRequest(c.Server, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// CreateNotificationRecipientWithBody Create an address-book recipient
+//
+// Recipient names are unique per tenant. A retry with the same `Idempotency-Key` and body within 24 hours answers with the recipient the first request created.
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with POST /v1/notification-recipients (the `CreateNotificationRecipient` operationId).
+func (c *Client) CreateNotificationRecipientWithBody(ctx context.Context, params *CreateNotificationRecipientParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateNotificationRecipientRequestWithBody(c.Server, params, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// CreateNotificationRecipient Create an address-book recipient
+//
+// Recipient names are unique per tenant. A retry with the same `Idempotency-Key` and body within 24 hours answers with the recipient the first request created.
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with POST /v1/notification-recipients (the `CreateNotificationRecipient` operationId).
+func (c *Client) CreateNotificationRecipient(ctx context.Context, params *CreateNotificationRecipientParams, body CreateNotificationRecipientJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateNotificationRecipientRequest(c.Server, params, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// DeleteNotificationRecipient Delete an address-book recipient. Refused with 409 while a rule names it
+//
+// The 409 `conflict` carries `reason: notification_recipient_in_use` and the `ruleIds` that name it. With `If-Match`, the recipient is deleted only while it is at that revision; otherwise the answer is 412.
+//
+// Corresponds with DELETE /v1/notification-recipients/{id} (the `DeleteNotificationRecipient` operationId).
+func (c *Client) DeleteNotificationRecipient(ctx context.Context, id string, params *DeleteNotificationRecipientParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewDeleteNotificationRecipientRequest(c.Server, id, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// GetNotificationRecipient Return one address-book recipient
+//
+// The `ETag` header carries the revision. Send it as `If-Match` to replace or delete this revision.
+//
+// Corresponds with GET /v1/notification-recipients/{id} (the `GetNotificationRecipient` operationId).
+func (c *Client) GetNotificationRecipient(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetNotificationRecipientRequest(c.Server, id)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// ReplaceNotificationRecipientWithBody Replace an address-book recipient; the rules that name it send to its new addresses
+//
+// `If-Match` must name the current `ETag` (strong comparison) or be `*`; otherwise the answer is 412 with the current `etag`.
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with PUT /v1/notification-recipients/{id} (the `ReplaceNotificationRecipient` operationId).
+func (c *Client) ReplaceNotificationRecipientWithBody(ctx context.Context, id string, params *ReplaceNotificationRecipientParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewReplaceNotificationRecipientRequestWithBody(c.Server, id, params, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// ReplaceNotificationRecipient Replace an address-book recipient; the rules that name it send to its new addresses
+//
+// `If-Match` must name the current `ETag` (strong comparison) or be `*`; otherwise the answer is 412 with the current `etag`.
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with PUT /v1/notification-recipients/{id} (the `ReplaceNotificationRecipient` operationId).
+func (c *Client) ReplaceNotificationRecipient(ctx context.Context, id string, params *ReplaceNotificationRecipientParams, body ReplaceNotificationRecipientJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewReplaceNotificationRecipientRequest(c.Server, id, params, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// ListNotificationRules List the notification rules of the calling tenant, one page at a time
+//
+// Rules are listed oldest first. Pass `nextPageToken` back as `pageToken` for the next page.
+//
+// Corresponds with GET /v1/notification-rules (the `ListNotificationRules` operationId).
+func (c *Client) ListNotificationRules(ctx context.Context, params *ListNotificationRulesParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewListNotificationRulesRequest(c.Server, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// CreateNotificationRuleWithBody Create a notification rule
+//
+// Answers 201 with the rule and its `ETag`. A retry with the same `Idempotency-Key` and body within 24 hours answers with the rule the first request created. Domain errors are `invalid_request` with a `reason` and a JSON `pointer` into the request body.
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with POST /v1/notification-rules (the `CreateNotificationRule` operationId).
+func (c *Client) CreateNotificationRuleWithBody(ctx context.Context, params *CreateNotificationRuleParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateNotificationRuleRequestWithBody(c.Server, params, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// CreateNotificationRule Create a notification rule
+//
+// Answers 201 with the rule and its `ETag`. A retry with the same `Idempotency-Key` and body within 24 hours answers with the rule the first request created. Domain errors are `invalid_request` with a `reason` and a JSON `pointer` into the request body.
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with POST /v1/notification-rules (the `CreateNotificationRule` operationId).
+func (c *Client) CreateNotificationRule(ctx context.Context, params *CreateNotificationRuleParams, body CreateNotificationRuleJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateNotificationRuleRequest(c.Server, params, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// ValidateNotificationRuleWithBody Check a rule as a create or a replace would, without saving it or sending anything
+//
+// Runs every check a write runs, the enabled-rules limit included, and answers `valid: false` with the error a write would answer. Requires the write scope because it can check a destination with its provider.
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with POST /v1/notification-rules/validate (the `ValidateNotificationRule` operationId).
+func (c *Client) ValidateNotificationRuleWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewValidateNotificationRuleRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// ValidateNotificationRule Check a rule as a create or a replace would, without saving it or sending anything
+//
+// Runs every check a write runs, the enabled-rules limit included, and answers `valid: false` with the error a write would answer. Requires the write scope because it can check a destination with its provider.
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with POST /v1/notification-rules/validate (the `ValidateNotificationRule` operationId).
+func (c *Client) ValidateNotificationRule(ctx context.Context, body ValidateNotificationRuleJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewValidateNotificationRuleRequest(c.Server, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// DeleteNotificationRule Delete a notification rule. Its activity stays readable for six months
+//
+// With `If-Match`, the rule is deleted only while it is at that revision; otherwise the answer is 412.
+//
+// Corresponds with DELETE /v1/notification-rules/{id} (the `DeleteNotificationRule` operationId).
+func (c *Client) DeleteNotificationRule(ctx context.Context, id string, params *DeleteNotificationRuleParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewDeleteNotificationRuleRequest(c.Server, id, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// GetNotificationRule Return one notification rule
+//
+// The `ETag` header carries the revision. Send it as `If-Match` to replace or delete this revision.
+//
+// Corresponds with GET /v1/notification-rules/{id} (the `GetNotificationRule` operationId).
+func (c *Client) GetNotificationRule(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetNotificationRuleRequest(c.Server, id)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// ReplaceNotificationRuleWithBody Replace a notification rule. A member left out keeps its stored value
+//
+// `If-Match` must name the current `ETag` (strong comparison) or be `*`; otherwise the answer is 412 with the current `etag`. Send an empty array to clear a list. Destinations on integrations the API does not represent are kept.
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with PUT /v1/notification-rules/{id} (the `ReplaceNotificationRule` operationId).
+func (c *Client) ReplaceNotificationRuleWithBody(ctx context.Context, id string, params *ReplaceNotificationRuleParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewReplaceNotificationRuleRequestWithBody(c.Server, id, params, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// ReplaceNotificationRule Replace a notification rule. A member left out keeps its stored value
+//
+// `If-Match` must name the current `ETag` (strong comparison) or be `*`; otherwise the answer is 412 with the current `etag`. Send an empty array to clear a list. Destinations on integrations the API does not represent are kept.
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with PUT /v1/notification-rules/{id} (the `ReplaceNotificationRule` operationId).
+func (c *Client) ReplaceNotificationRule(ctx context.Context, id string, params *ReplaceNotificationRuleParams, body ReplaceNotificationRuleJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewReplaceNotificationRuleRequest(c.Server, id, params, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// ListNotificationRuleActivity List the events a rule matched in the last six months and what was sent, newest first
+//
+// Works for a deleted rule too. Pass `nextPageToken` back as `pageToken` for the next page.
+//
+// Corresponds with GET /v1/notification-rules/{id}/activity (the `ListNotificationRuleActivity` operationId).
+func (c *Client) ListNotificationRuleActivity(ctx context.Context, id string, params *ListNotificationRuleActivityParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewListNotificationRuleActivityRequest(c.Server, id, params)
 	if err != nil {
 		return nil, err
 	}
@@ -3247,6 +4205,68 @@ func NewCreateIntegrationRequestWithBody(server string, params *CreateIntegratio
 	return req, nil
 }
 
+// NewListSlackChannelsRequest constructs an http.Request for the ListSlackChannels method
+func NewListSlackChannelsRequest(server string, params *ListSlackChannelsParams) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/integrations/slack/channels")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		// queryValues collects non-styled parameters (passthrough, JSON)
+		// that are safe to round-trip through url.Values.Encode().
+		queryValues := queryURL.Query()
+		// rawQueryFragments collects pre-encoded query fragments from
+		// styled parameters, preserving literal commas as delimiters
+		// per the OpenAPI spec (e.g. "color=blue,black,brown").
+		var rawQueryFragments []string
+
+		if queryFrag, err := runtime.StyleParamWithOptions("form", true, "name", params.Name, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+			return nil, err
+		} else {
+			for _, qp := range strings.Split(queryFrag, "&") {
+				rawQueryFragments = append(rawQueryFragments, qp)
+			}
+		}
+
+		if params.IntegrationID != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "integrationId", *params.IntegrationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: "uuid"}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if encoded := queryValues.Encode(); encoded != "" {
+			rawQueryFragments = append(rawQueryFragments, encoded)
+		}
+		queryURL.RawQuery = strings.Join(rawQueryFragments, "&")
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
 // NewDeleteIntegrationRequest constructs an http.Request for the DeleteIntegration method
 func NewDeleteIntegrationRequest(server string, id string, params *DeleteIntegrationParams) (*http.Request, error) {
 	var err error
@@ -3385,6 +4405,710 @@ func NewUpdateIntegrationRequestWithBody(server string, id string, params *Updat
 
 		req.Header.Set("if-match", headerParam0)
 
+	}
+
+	return req, nil
+}
+
+// NewListNotificationEventTypesRequest constructs an http.Request for the ListNotificationEventTypes method
+func NewListNotificationEventTypesRequest(server string) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/notification-event-types")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewListNotificationRecipientsRequest constructs an http.Request for the ListNotificationRecipients method
+func NewListNotificationRecipientsRequest(server string, params *ListNotificationRecipientsParams) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/notification-recipients")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		// queryValues collects non-styled parameters (passthrough, JSON)
+		// that are safe to round-trip through url.Values.Encode().
+		queryValues := queryURL.Query()
+		// rawQueryFragments collects pre-encoded query fragments from
+		// styled parameters, preserving literal commas as delimiters
+		// per the OpenAPI spec (e.g. "color=blue,black,brown").
+		var rawQueryFragments []string
+
+		if params.PageSize != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "pageSize", *params.PageSize, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.PageToken != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "pageToken", *params.PageToken, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if encoded := queryValues.Encode(); encoded != "" {
+			rawQueryFragments = append(rawQueryFragments, encoded)
+		}
+		queryURL.RawQuery = strings.Join(rawQueryFragments, "&")
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewCreateNotificationRecipientRequest calls the generic CreateNotificationRecipient builder with application/json body
+func NewCreateNotificationRecipientRequest(server string, params *CreateNotificationRecipientParams, body CreateNotificationRecipientJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewCreateNotificationRecipientRequestWithBody(server, params, "application/json", bodyReader)
+}
+
+// NewCreateNotificationRecipientRequestWithBody constructs an http.Request for the CreateNotificationRecipient method, with any body, and a specified content type
+func NewCreateNotificationRecipientRequestWithBody(server string, params *CreateNotificationRecipientParams, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/notification-recipients")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	if params != nil {
+
+		if params.IdempotencyKey != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "idempotency-key", *params.IdempotencyKey, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("idempotency-key", headerParam0)
+		}
+
+	}
+
+	return req, nil
+}
+
+// NewDeleteNotificationRecipientRequest constructs an http.Request for the DeleteNotificationRecipient method
+func NewDeleteNotificationRecipientRequest(server string, id string, params *DeleteNotificationRecipientParams) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "id", id, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: "uuid"})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/notification-recipients/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodDelete, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+
+		if params.IfMatch != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "if-match", *params.IfMatch, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("if-match", headerParam0)
+		}
+
+	}
+
+	return req, nil
+}
+
+// NewGetNotificationRecipientRequest constructs an http.Request for the GetNotificationRecipient method
+func NewGetNotificationRecipientRequest(server string, id string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "id", id, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: "uuid"})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/notification-recipients/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewReplaceNotificationRecipientRequest calls the generic ReplaceNotificationRecipient builder with application/json body
+func NewReplaceNotificationRecipientRequest(server string, id string, params *ReplaceNotificationRecipientParams, body ReplaceNotificationRecipientJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewReplaceNotificationRecipientRequestWithBody(server, id, params, "application/json", bodyReader)
+}
+
+// NewReplaceNotificationRecipientRequestWithBody constructs an http.Request for the ReplaceNotificationRecipient method, with any body, and a specified content type
+func NewReplaceNotificationRecipientRequestWithBody(server string, id string, params *ReplaceNotificationRecipientParams, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "id", id, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: "uuid"})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/notification-recipients/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPut, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "if-match", params.IfMatch, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("if-match", headerParam0)
+
+	}
+
+	return req, nil
+}
+
+// NewListNotificationRulesRequest constructs an http.Request for the ListNotificationRules method
+func NewListNotificationRulesRequest(server string, params *ListNotificationRulesParams) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/notification-rules")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		// queryValues collects non-styled parameters (passthrough, JSON)
+		// that are safe to round-trip through url.Values.Encode().
+		queryValues := queryURL.Query()
+		// rawQueryFragments collects pre-encoded query fragments from
+		// styled parameters, preserving literal commas as delimiters
+		// per the OpenAPI spec (e.g. "color=blue,black,brown").
+		var rawQueryFragments []string
+
+		if params.EventType != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "eventType", *params.EventType, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.Enabled != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "enabled", *params.Enabled, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.CreatedVia != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "createdVia", *params.CreatedVia, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.PageSize != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "pageSize", *params.PageSize, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.PageToken != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "pageToken", *params.PageToken, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if encoded := queryValues.Encode(); encoded != "" {
+			rawQueryFragments = append(rawQueryFragments, encoded)
+		}
+		queryURL.RawQuery = strings.Join(rawQueryFragments, "&")
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewCreateNotificationRuleRequest calls the generic CreateNotificationRule builder with application/json body
+func NewCreateNotificationRuleRequest(server string, params *CreateNotificationRuleParams, body CreateNotificationRuleJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewCreateNotificationRuleRequestWithBody(server, params, "application/json", bodyReader)
+}
+
+// NewCreateNotificationRuleRequestWithBody constructs an http.Request for the CreateNotificationRule method, with any body, and a specified content type
+func NewCreateNotificationRuleRequestWithBody(server string, params *CreateNotificationRuleParams, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/notification-rules")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	if params != nil {
+
+		if params.IdempotencyKey != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "idempotency-key", *params.IdempotencyKey, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("idempotency-key", headerParam0)
+		}
+
+	}
+
+	return req, nil
+}
+
+// NewValidateNotificationRuleRequest calls the generic ValidateNotificationRule builder with application/json body
+func NewValidateNotificationRuleRequest(server string, body ValidateNotificationRuleJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewValidateNotificationRuleRequestWithBody(server, "application/json", bodyReader)
+}
+
+// NewValidateNotificationRuleRequestWithBody constructs an http.Request for the ValidateNotificationRule method, with any body, and a specified content type
+func NewValidateNotificationRuleRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/notification-rules/validate")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewDeleteNotificationRuleRequest constructs an http.Request for the DeleteNotificationRule method
+func NewDeleteNotificationRuleRequest(server string, id string, params *DeleteNotificationRuleParams) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "id", id, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: "uuid"})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/notification-rules/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodDelete, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+
+		if params.IfMatch != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "if-match", *params.IfMatch, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("if-match", headerParam0)
+		}
+
+	}
+
+	return req, nil
+}
+
+// NewGetNotificationRuleRequest constructs an http.Request for the GetNotificationRule method
+func NewGetNotificationRuleRequest(server string, id string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "id", id, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: "uuid"})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/notification-rules/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewReplaceNotificationRuleRequest calls the generic ReplaceNotificationRule builder with application/json body
+func NewReplaceNotificationRuleRequest(server string, id string, params *ReplaceNotificationRuleParams, body ReplaceNotificationRuleJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewReplaceNotificationRuleRequestWithBody(server, id, params, "application/json", bodyReader)
+}
+
+// NewReplaceNotificationRuleRequestWithBody constructs an http.Request for the ReplaceNotificationRule method, with any body, and a specified content type
+func NewReplaceNotificationRuleRequestWithBody(server string, id string, params *ReplaceNotificationRuleParams, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "id", id, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: "uuid"})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/notification-rules/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPut, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "if-match", params.IfMatch, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("if-match", headerParam0)
+
+	}
+
+	return req, nil
+}
+
+// NewListNotificationRuleActivityRequest constructs an http.Request for the ListNotificationRuleActivity method
+func NewListNotificationRuleActivityRequest(server string, id string, params *ListNotificationRuleActivityParams) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "id", id, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: "uuid"})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/notification-rules/%s/activity", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		// queryValues collects non-styled parameters (passthrough, JSON)
+		// that are safe to round-trip through url.Values.Encode().
+		queryValues := queryURL.Query()
+		// rawQueryFragments collects pre-encoded query fragments from
+		// styled parameters, preserving literal commas as delimiters
+		// per the OpenAPI spec (e.g. "color=blue,black,brown").
+		var rawQueryFragments []string
+
+		if params.PageSize != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "pageSize", *params.PageSize, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.PageToken != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "pageToken", *params.PageToken, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if encoded := queryValues.Encode(); encoded != "" {
+			rawQueryFragments = append(rawQueryFragments, encoded)
+		}
+		queryURL.RawQuery = strings.Join(rawQueryFragments, "&")
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
 	}
 
 	return req, nil
@@ -3918,6 +5642,15 @@ type ClientWithResponsesInterface interface {
 	// Corresponds with POST /v1/integrations (the `CreateIntegration` operationId).
 	CreateIntegrationWithResponse(ctx context.Context, params *CreateIntegrationParams, body CreateIntegrationJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateIntegrationResponse, error)
 
+	// ListSlackChannelsWithResponse Look up public Slack channels by exact name or ID, for actions that take channel IDs
+	//
+	// Matches a channel name exactly, with or without the leading `#`, or a channel ID. Private channels are not listed. Answers `integration_not_connected` when no Slack integration is connected.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with GET /v1/integrations/slack/channels (the `ListSlackChannels` operationId).
+	ListSlackChannelsWithResponse(ctx context.Context, params *ListSlackChannelsParams, reqEditors ...RequestEditorFn) (*ListSlackChannelsResponse, error)
+
 	// DeleteIntegrationWithResponse Uninstall an integration and delete its secrets
 	//
 	// Returns a wrapper object for the known response body format(s).
@@ -3945,6 +5678,168 @@ type ClientWithResponsesInterface interface {
 	//
 	// Corresponds with PATCH /v1/integrations/{id} (the `UpdateIntegration` operationId).
 	UpdateIntegrationWithResponse(ctx context.Context, id string, params *UpdateIntegrationParams, body UpdateIntegrationJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateIntegrationResponse, error)
+
+	// ListNotificationEventTypesWithResponse List the event types a rule can match, the actions and conditions each takes, and the rule limits
+	//
+	// Only event types this tenant can subscribe to with an email or Slack action are listed. `limits` are the caps every rule write enforces.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with GET /v1/notification-event-types (the `ListNotificationEventTypes` operationId).
+	ListNotificationEventTypesWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*ListNotificationEventTypesResponse, error)
+
+	// ListNotificationRecipientsWithResponse List the address-book recipients rules can name, one page at a time
+	//
+	// Pass `nextPageToken` back as `pageToken` for the next page.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with GET /v1/notification-recipients (the `ListNotificationRecipients` operationId).
+	ListNotificationRecipientsWithResponse(ctx context.Context, params *ListNotificationRecipientsParams, reqEditors ...RequestEditorFn) (*ListNotificationRecipientsResponse, error)
+
+	// CreateNotificationRecipientWithBodyWithResponse Create an address-book recipient
+	//
+	// Recipient names are unique per tenant. A retry with the same `Idempotency-Key` and body within 24 hours answers with the recipient the first request created.
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /v1/notification-recipients (the `CreateNotificationRecipient` operationId).
+	CreateNotificationRecipientWithBodyWithResponse(ctx context.Context, params *CreateNotificationRecipientParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateNotificationRecipientResponse, error)
+
+	// CreateNotificationRecipientWithResponse Create an address-book recipient
+	//
+	// Recipient names are unique per tenant. A retry with the same `Idempotency-Key` and body within 24 hours answers with the recipient the first request created.
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /v1/notification-recipients (the `CreateNotificationRecipient` operationId).
+	CreateNotificationRecipientWithResponse(ctx context.Context, params *CreateNotificationRecipientParams, body CreateNotificationRecipientJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateNotificationRecipientResponse, error)
+
+	// DeleteNotificationRecipientWithResponse Delete an address-book recipient. Refused with 409 while a rule names it
+	//
+	// The 409 `conflict` carries `reason: notification_recipient_in_use` and the `ruleIds` that name it. With `If-Match`, the recipient is deleted only while it is at that revision; otherwise the answer is 412.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with DELETE /v1/notification-recipients/{id} (the `DeleteNotificationRecipient` operationId).
+	DeleteNotificationRecipientWithResponse(ctx context.Context, id string, params *DeleteNotificationRecipientParams, reqEditors ...RequestEditorFn) (*DeleteNotificationRecipientResponse, error)
+
+	// GetNotificationRecipientWithResponse Return one address-book recipient
+	//
+	// The `ETag` header carries the revision. Send it as `If-Match` to replace or delete this revision.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with GET /v1/notification-recipients/{id} (the `GetNotificationRecipient` operationId).
+	GetNotificationRecipientWithResponse(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*GetNotificationRecipientResponse, error)
+
+	// ReplaceNotificationRecipientWithBodyWithResponse Replace an address-book recipient; the rules that name it send to its new addresses
+	//
+	// `If-Match` must name the current `ETag` (strong comparison) or be `*`; otherwise the answer is 412 with the current `etag`.
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with PUT /v1/notification-recipients/{id} (the `ReplaceNotificationRecipient` operationId).
+	ReplaceNotificationRecipientWithBodyWithResponse(ctx context.Context, id string, params *ReplaceNotificationRecipientParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*ReplaceNotificationRecipientResponse, error)
+
+	// ReplaceNotificationRecipientWithResponse Replace an address-book recipient; the rules that name it send to its new addresses
+	//
+	// `If-Match` must name the current `ETag` (strong comparison) or be `*`; otherwise the answer is 412 with the current `etag`.
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with PUT /v1/notification-recipients/{id} (the `ReplaceNotificationRecipient` operationId).
+	ReplaceNotificationRecipientWithResponse(ctx context.Context, id string, params *ReplaceNotificationRecipientParams, body ReplaceNotificationRecipientJSONRequestBody, reqEditors ...RequestEditorFn) (*ReplaceNotificationRecipientResponse, error)
+
+	// ListNotificationRulesWithResponse List the notification rules of the calling tenant, one page at a time
+	//
+	// Rules are listed oldest first. Pass `nextPageToken` back as `pageToken` for the next page.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with GET /v1/notification-rules (the `ListNotificationRules` operationId).
+	ListNotificationRulesWithResponse(ctx context.Context, params *ListNotificationRulesParams, reqEditors ...RequestEditorFn) (*ListNotificationRulesResponse, error)
+
+	// CreateNotificationRuleWithBodyWithResponse Create a notification rule
+	//
+	// Answers 201 with the rule and its `ETag`. A retry with the same `Idempotency-Key` and body within 24 hours answers with the rule the first request created. Domain errors are `invalid_request` with a `reason` and a JSON `pointer` into the request body.
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /v1/notification-rules (the `CreateNotificationRule` operationId).
+	CreateNotificationRuleWithBodyWithResponse(ctx context.Context, params *CreateNotificationRuleParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateNotificationRuleResponse, error)
+
+	// CreateNotificationRuleWithResponse Create a notification rule
+	//
+	// Answers 201 with the rule and its `ETag`. A retry with the same `Idempotency-Key` and body within 24 hours answers with the rule the first request created. Domain errors are `invalid_request` with a `reason` and a JSON `pointer` into the request body.
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /v1/notification-rules (the `CreateNotificationRule` operationId).
+	CreateNotificationRuleWithResponse(ctx context.Context, params *CreateNotificationRuleParams, body CreateNotificationRuleJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateNotificationRuleResponse, error)
+
+	// ValidateNotificationRuleWithBodyWithResponse Check a rule as a create or a replace would, without saving it or sending anything
+	//
+	// Runs every check a write runs, the enabled-rules limit included, and answers `valid: false` with the error a write would answer. Requires the write scope because it can check a destination with its provider.
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /v1/notification-rules/validate (the `ValidateNotificationRule` operationId).
+	ValidateNotificationRuleWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*ValidateNotificationRuleResponse, error)
+
+	// ValidateNotificationRuleWithResponse Check a rule as a create or a replace would, without saving it or sending anything
+	//
+	// Runs every check a write runs, the enabled-rules limit included, and answers `valid: false` with the error a write would answer. Requires the write scope because it can check a destination with its provider.
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /v1/notification-rules/validate (the `ValidateNotificationRule` operationId).
+	ValidateNotificationRuleWithResponse(ctx context.Context, body ValidateNotificationRuleJSONRequestBody, reqEditors ...RequestEditorFn) (*ValidateNotificationRuleResponse, error)
+
+	// DeleteNotificationRuleWithResponse Delete a notification rule. Its activity stays readable for six months
+	//
+	// With `If-Match`, the rule is deleted only while it is at that revision; otherwise the answer is 412.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with DELETE /v1/notification-rules/{id} (the `DeleteNotificationRule` operationId).
+	DeleteNotificationRuleWithResponse(ctx context.Context, id string, params *DeleteNotificationRuleParams, reqEditors ...RequestEditorFn) (*DeleteNotificationRuleResponse, error)
+
+	// GetNotificationRuleWithResponse Return one notification rule
+	//
+	// The `ETag` header carries the revision. Send it as `If-Match` to replace or delete this revision.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with GET /v1/notification-rules/{id} (the `GetNotificationRule` operationId).
+	GetNotificationRuleWithResponse(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*GetNotificationRuleResponse, error)
+
+	// ReplaceNotificationRuleWithBodyWithResponse Replace a notification rule. A member left out keeps its stored value
+	//
+	// `If-Match` must name the current `ETag` (strong comparison) or be `*`; otherwise the answer is 412 with the current `etag`. Send an empty array to clear a list. Destinations on integrations the API does not represent are kept.
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with PUT /v1/notification-rules/{id} (the `ReplaceNotificationRule` operationId).
+	ReplaceNotificationRuleWithBodyWithResponse(ctx context.Context, id string, params *ReplaceNotificationRuleParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*ReplaceNotificationRuleResponse, error)
+
+	// ReplaceNotificationRuleWithResponse Replace a notification rule. A member left out keeps its stored value
+	//
+	// `If-Match` must name the current `ETag` (strong comparison) or be `*`; otherwise the answer is 412 with the current `etag`. Send an empty array to clear a list. Destinations on integrations the API does not represent are kept.
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with PUT /v1/notification-rules/{id} (the `ReplaceNotificationRule` operationId).
+	ReplaceNotificationRuleWithResponse(ctx context.Context, id string, params *ReplaceNotificationRuleParams, body ReplaceNotificationRuleJSONRequestBody, reqEditors ...RequestEditorFn) (*ReplaceNotificationRuleResponse, error)
+
+	// ListNotificationRuleActivityWithResponse List the events a rule matched in the last six months and what was sent, newest first
+	//
+	// Works for a deleted rule too. Pass `nextPageToken` back as `pageToken` for the next page.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with GET /v1/notification-rules/{id}/activity (the `ListNotificationRuleActivity` operationId).
+	ListNotificationRuleActivityWithResponse(ctx context.Context, id string, params *ListNotificationRuleActivityParams, reqEditors ...RequestEditorFn) (*ListNotificationRuleActivityResponse, error)
 
 	// GetAwsOnboardingWithResponse Return what an AWS account or organization needs before it is connected, derived from the target
 	//
@@ -6823,6 +8718,124 @@ func (r CreateIntegrationResponse) ContentType() string {
 	return ""
 }
 
+// ListSlackChannelsResponse401Headers the declared response headers of an HTTP 401 response for ListSlackChannels
+type ListSlackChannelsResponse401Headers struct {
+	WWWAuthenticate *string
+}
+
+// ListSlackChannelsResponse403Headers the declared response headers of an HTTP 403 response for ListSlackChannels
+type ListSlackChannelsResponse403Headers struct {
+	WWWAuthenticate *string
+}
+
+// ListSlackChannelsResponse429Headers the declared response headers of an HTTP 429 response for ListSlackChannels
+type ListSlackChannelsResponse429Headers struct {
+	RetryAfter *int
+}
+
+// ListSlackChannelsResponse503Headers the declared response headers of an HTTP 503 response for ListSlackChannels
+type ListSlackChannelsResponse503Headers struct {
+	RetryAfter *int
+}
+
+type ListSlackChannelsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *SlackChannelList
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *ErrorEnvelope
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *ErrorEnvelope
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *ErrorEnvelope
+	// JSON422 the response for an HTTP 422 `application/json` response
+	JSON422 *ErrorEnvelope
+	// JSON429 the response for an HTTP 429 `application/json` response
+	JSON429 *ErrorEnvelope
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *ErrorEnvelope
+	// JSON503 the response for an HTTP 503 `application/json` response
+	JSON503 *ErrorEnvelope
+	// Headers401 the parsed response headers for an HTTP 401 response
+	Headers401 *ListSlackChannelsResponse401Headers
+	// Headers403 the parsed response headers for an HTTP 403 response
+	Headers403 *ListSlackChannelsResponse403Headers
+	// Headers429 the parsed response headers for an HTTP 429 response
+	Headers429 *ListSlackChannelsResponse429Headers
+	// Headers503 the parsed response headers for an HTTP 503 response
+	Headers503 *ListSlackChannelsResponse503Headers
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r ListSlackChannelsResponse) GetJSON200() *SlackChannelList {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r ListSlackChannelsResponse) GetJSON400() *ErrorEnvelope {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r ListSlackChannelsResponse) GetJSON401() *ErrorEnvelope {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r ListSlackChannelsResponse) GetJSON403() *ErrorEnvelope {
+	return r.JSON403
+}
+
+// GetJSON422 returns the response for an HTTP 422 `application/json` response
+func (r ListSlackChannelsResponse) GetJSON422() *ErrorEnvelope {
+	return r.JSON422
+}
+
+// GetJSON429 returns the response for an HTTP 429 `application/json` response
+func (r ListSlackChannelsResponse) GetJSON429() *ErrorEnvelope {
+	return r.JSON429
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r ListSlackChannelsResponse) GetJSON500() *ErrorEnvelope {
+	return r.JSON500
+}
+
+// GetJSON503 returns the response for an HTTP 503 `application/json` response
+func (r ListSlackChannelsResponse) GetJSON503() *ErrorEnvelope {
+	return r.JSON503
+}
+
+// GetBody returns the raw response body bytes
+func (r ListSlackChannelsResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r ListSlackChannelsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ListSlackChannelsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r ListSlackChannelsResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
 // DeleteIntegrationResponse401Headers the declared response headers of an HTTP 401 response for DeleteIntegration
 type DeleteIntegrationResponse401Headers struct {
 	WWWAuthenticate *string
@@ -7199,6 +9212,1617 @@ func (r UpdateIntegrationResponse) StatusCode() int {
 
 // ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
 func (r UpdateIntegrationResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+// ListNotificationEventTypesResponse401Headers the declared response headers of an HTTP 401 response for ListNotificationEventTypes
+type ListNotificationEventTypesResponse401Headers struct {
+	WWWAuthenticate *string
+}
+
+// ListNotificationEventTypesResponse403Headers the declared response headers of an HTTP 403 response for ListNotificationEventTypes
+type ListNotificationEventTypesResponse403Headers struct {
+	WWWAuthenticate *string
+}
+
+// ListNotificationEventTypesResponse429Headers the declared response headers of an HTTP 429 response for ListNotificationEventTypes
+type ListNotificationEventTypesResponse429Headers struct {
+	RetryAfter *int
+}
+
+// ListNotificationEventTypesResponse503Headers the declared response headers of an HTTP 503 response for ListNotificationEventTypes
+type ListNotificationEventTypesResponse503Headers struct {
+	RetryAfter *int
+}
+
+type ListNotificationEventTypesResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *NotificationEventTypeList
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *ErrorEnvelope
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *ErrorEnvelope
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *ErrorEnvelope
+	// JSON429 the response for an HTTP 429 `application/json` response
+	JSON429 *ErrorEnvelope
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *ErrorEnvelope
+	// JSON503 the response for an HTTP 503 `application/json` response
+	JSON503 *ErrorEnvelope
+	// Headers401 the parsed response headers for an HTTP 401 response
+	Headers401 *ListNotificationEventTypesResponse401Headers
+	// Headers403 the parsed response headers for an HTTP 403 response
+	Headers403 *ListNotificationEventTypesResponse403Headers
+	// Headers429 the parsed response headers for an HTTP 429 response
+	Headers429 *ListNotificationEventTypesResponse429Headers
+	// Headers503 the parsed response headers for an HTTP 503 response
+	Headers503 *ListNotificationEventTypesResponse503Headers
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r ListNotificationEventTypesResponse) GetJSON200() *NotificationEventTypeList {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r ListNotificationEventTypesResponse) GetJSON400() *ErrorEnvelope {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r ListNotificationEventTypesResponse) GetJSON401() *ErrorEnvelope {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r ListNotificationEventTypesResponse) GetJSON403() *ErrorEnvelope {
+	return r.JSON403
+}
+
+// GetJSON429 returns the response for an HTTP 429 `application/json` response
+func (r ListNotificationEventTypesResponse) GetJSON429() *ErrorEnvelope {
+	return r.JSON429
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r ListNotificationEventTypesResponse) GetJSON500() *ErrorEnvelope {
+	return r.JSON500
+}
+
+// GetJSON503 returns the response for an HTTP 503 `application/json` response
+func (r ListNotificationEventTypesResponse) GetJSON503() *ErrorEnvelope {
+	return r.JSON503
+}
+
+// GetBody returns the raw response body bytes
+func (r ListNotificationEventTypesResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r ListNotificationEventTypesResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ListNotificationEventTypesResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r ListNotificationEventTypesResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+// ListNotificationRecipientsResponse401Headers the declared response headers of an HTTP 401 response for ListNotificationRecipients
+type ListNotificationRecipientsResponse401Headers struct {
+	WWWAuthenticate *string
+}
+
+// ListNotificationRecipientsResponse403Headers the declared response headers of an HTTP 403 response for ListNotificationRecipients
+type ListNotificationRecipientsResponse403Headers struct {
+	WWWAuthenticate *string
+}
+
+// ListNotificationRecipientsResponse429Headers the declared response headers of an HTTP 429 response for ListNotificationRecipients
+type ListNotificationRecipientsResponse429Headers struct {
+	RetryAfter *int
+}
+
+// ListNotificationRecipientsResponse503Headers the declared response headers of an HTTP 503 response for ListNotificationRecipients
+type ListNotificationRecipientsResponse503Headers struct {
+	RetryAfter *int
+}
+
+type ListNotificationRecipientsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *NotificationRecipientPage
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *ErrorEnvelope
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *ErrorEnvelope
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *ErrorEnvelope
+	// JSON429 the response for an HTTP 429 `application/json` response
+	JSON429 *ErrorEnvelope
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *ErrorEnvelope
+	// JSON503 the response for an HTTP 503 `application/json` response
+	JSON503 *ErrorEnvelope
+	// Headers401 the parsed response headers for an HTTP 401 response
+	Headers401 *ListNotificationRecipientsResponse401Headers
+	// Headers403 the parsed response headers for an HTTP 403 response
+	Headers403 *ListNotificationRecipientsResponse403Headers
+	// Headers429 the parsed response headers for an HTTP 429 response
+	Headers429 *ListNotificationRecipientsResponse429Headers
+	// Headers503 the parsed response headers for an HTTP 503 response
+	Headers503 *ListNotificationRecipientsResponse503Headers
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r ListNotificationRecipientsResponse) GetJSON200() *NotificationRecipientPage {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r ListNotificationRecipientsResponse) GetJSON400() *ErrorEnvelope {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r ListNotificationRecipientsResponse) GetJSON401() *ErrorEnvelope {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r ListNotificationRecipientsResponse) GetJSON403() *ErrorEnvelope {
+	return r.JSON403
+}
+
+// GetJSON429 returns the response for an HTTP 429 `application/json` response
+func (r ListNotificationRecipientsResponse) GetJSON429() *ErrorEnvelope {
+	return r.JSON429
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r ListNotificationRecipientsResponse) GetJSON500() *ErrorEnvelope {
+	return r.JSON500
+}
+
+// GetJSON503 returns the response for an HTTP 503 `application/json` response
+func (r ListNotificationRecipientsResponse) GetJSON503() *ErrorEnvelope {
+	return r.JSON503
+}
+
+// GetBody returns the raw response body bytes
+func (r ListNotificationRecipientsResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r ListNotificationRecipientsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ListNotificationRecipientsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r ListNotificationRecipientsResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+// CreateNotificationRecipientResponse201Headers the declared response headers of an HTTP 201 response for CreateNotificationRecipient
+type CreateNotificationRecipientResponse201Headers struct {
+	ETag string
+}
+
+// CreateNotificationRecipientResponse401Headers the declared response headers of an HTTP 401 response for CreateNotificationRecipient
+type CreateNotificationRecipientResponse401Headers struct {
+	WWWAuthenticate *string
+}
+
+// CreateNotificationRecipientResponse403Headers the declared response headers of an HTTP 403 response for CreateNotificationRecipient
+type CreateNotificationRecipientResponse403Headers struct {
+	WWWAuthenticate *string
+}
+
+// CreateNotificationRecipientResponse429Headers the declared response headers of an HTTP 429 response for CreateNotificationRecipient
+type CreateNotificationRecipientResponse429Headers struct {
+	RetryAfter *int
+}
+
+// CreateNotificationRecipientResponse503Headers the declared response headers of an HTTP 503 response for CreateNotificationRecipient
+type CreateNotificationRecipientResponse503Headers struct {
+	RetryAfter *int
+}
+
+type CreateNotificationRecipientResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON201 the response for an HTTP 201 `application/json` response
+	JSON201 *NotificationRecipient
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *ErrorEnvelope
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *ErrorEnvelope
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *ErrorEnvelope
+	// JSON409 the response for an HTTP 409 `application/json` response
+	JSON409 *ErrorEnvelope
+	// JSON422 the response for an HTTP 422 `application/json` response
+	JSON422 *ErrorEnvelope
+	// JSON429 the response for an HTTP 429 `application/json` response
+	JSON429 *ErrorEnvelope
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *ErrorEnvelope
+	// JSON503 the response for an HTTP 503 `application/json` response
+	JSON503 *ErrorEnvelope
+	// Headers201 the parsed response headers for an HTTP 201 response
+	Headers201 *CreateNotificationRecipientResponse201Headers
+	// Headers401 the parsed response headers for an HTTP 401 response
+	Headers401 *CreateNotificationRecipientResponse401Headers
+	// Headers403 the parsed response headers for an HTTP 403 response
+	Headers403 *CreateNotificationRecipientResponse403Headers
+	// Headers429 the parsed response headers for an HTTP 429 response
+	Headers429 *CreateNotificationRecipientResponse429Headers
+	// Headers503 the parsed response headers for an HTTP 503 response
+	Headers503 *CreateNotificationRecipientResponse503Headers
+}
+
+// GetJSON201 returns the response for an HTTP 201 `application/json` response
+func (r CreateNotificationRecipientResponse) GetJSON201() *NotificationRecipient {
+	return r.JSON201
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r CreateNotificationRecipientResponse) GetJSON400() *ErrorEnvelope {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r CreateNotificationRecipientResponse) GetJSON401() *ErrorEnvelope {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r CreateNotificationRecipientResponse) GetJSON403() *ErrorEnvelope {
+	return r.JSON403
+}
+
+// GetJSON409 returns the response for an HTTP 409 `application/json` response
+func (r CreateNotificationRecipientResponse) GetJSON409() *ErrorEnvelope {
+	return r.JSON409
+}
+
+// GetJSON422 returns the response for an HTTP 422 `application/json` response
+func (r CreateNotificationRecipientResponse) GetJSON422() *ErrorEnvelope {
+	return r.JSON422
+}
+
+// GetJSON429 returns the response for an HTTP 429 `application/json` response
+func (r CreateNotificationRecipientResponse) GetJSON429() *ErrorEnvelope {
+	return r.JSON429
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r CreateNotificationRecipientResponse) GetJSON500() *ErrorEnvelope {
+	return r.JSON500
+}
+
+// GetJSON503 returns the response for an HTTP 503 `application/json` response
+func (r CreateNotificationRecipientResponse) GetJSON503() *ErrorEnvelope {
+	return r.JSON503
+}
+
+// GetBody returns the raw response body bytes
+func (r CreateNotificationRecipientResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r CreateNotificationRecipientResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r CreateNotificationRecipientResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r CreateNotificationRecipientResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+// DeleteNotificationRecipientResponse401Headers the declared response headers of an HTTP 401 response for DeleteNotificationRecipient
+type DeleteNotificationRecipientResponse401Headers struct {
+	WWWAuthenticate *string
+}
+
+// DeleteNotificationRecipientResponse403Headers the declared response headers of an HTTP 403 response for DeleteNotificationRecipient
+type DeleteNotificationRecipientResponse403Headers struct {
+	WWWAuthenticate *string
+}
+
+// DeleteNotificationRecipientResponse429Headers the declared response headers of an HTTP 429 response for DeleteNotificationRecipient
+type DeleteNotificationRecipientResponse429Headers struct {
+	RetryAfter *int
+}
+
+// DeleteNotificationRecipientResponse503Headers the declared response headers of an HTTP 503 response for DeleteNotificationRecipient
+type DeleteNotificationRecipientResponse503Headers struct {
+	RetryAfter *int
+}
+
+type DeleteNotificationRecipientResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *ErrorEnvelope
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *ErrorEnvelope
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *ErrorEnvelope
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *ErrorEnvelope
+	// JSON409 the response for an HTTP 409 `application/json` response
+	JSON409 *ErrorEnvelope
+	// JSON412 the response for an HTTP 412 `application/json` response
+	JSON412 *ErrorEnvelope
+	// JSON429 the response for an HTTP 429 `application/json` response
+	JSON429 *ErrorEnvelope
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *ErrorEnvelope
+	// JSON503 the response for an HTTP 503 `application/json` response
+	JSON503 *ErrorEnvelope
+	// Headers401 the parsed response headers for an HTTP 401 response
+	Headers401 *DeleteNotificationRecipientResponse401Headers
+	// Headers403 the parsed response headers for an HTTP 403 response
+	Headers403 *DeleteNotificationRecipientResponse403Headers
+	// Headers429 the parsed response headers for an HTTP 429 response
+	Headers429 *DeleteNotificationRecipientResponse429Headers
+	// Headers503 the parsed response headers for an HTTP 503 response
+	Headers503 *DeleteNotificationRecipientResponse503Headers
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r DeleteNotificationRecipientResponse) GetJSON400() *ErrorEnvelope {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r DeleteNotificationRecipientResponse) GetJSON401() *ErrorEnvelope {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r DeleteNotificationRecipientResponse) GetJSON403() *ErrorEnvelope {
+	return r.JSON403
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r DeleteNotificationRecipientResponse) GetJSON404() *ErrorEnvelope {
+	return r.JSON404
+}
+
+// GetJSON409 returns the response for an HTTP 409 `application/json` response
+func (r DeleteNotificationRecipientResponse) GetJSON409() *ErrorEnvelope {
+	return r.JSON409
+}
+
+// GetJSON412 returns the response for an HTTP 412 `application/json` response
+func (r DeleteNotificationRecipientResponse) GetJSON412() *ErrorEnvelope {
+	return r.JSON412
+}
+
+// GetJSON429 returns the response for an HTTP 429 `application/json` response
+func (r DeleteNotificationRecipientResponse) GetJSON429() *ErrorEnvelope {
+	return r.JSON429
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r DeleteNotificationRecipientResponse) GetJSON500() *ErrorEnvelope {
+	return r.JSON500
+}
+
+// GetJSON503 returns the response for an HTTP 503 `application/json` response
+func (r DeleteNotificationRecipientResponse) GetJSON503() *ErrorEnvelope {
+	return r.JSON503
+}
+
+// GetBody returns the raw response body bytes
+func (r DeleteNotificationRecipientResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r DeleteNotificationRecipientResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r DeleteNotificationRecipientResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r DeleteNotificationRecipientResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+// GetNotificationRecipientResponse200Headers the declared response headers of an HTTP 200 response for GetNotificationRecipient
+type GetNotificationRecipientResponse200Headers struct {
+	ETag string
+}
+
+// GetNotificationRecipientResponse401Headers the declared response headers of an HTTP 401 response for GetNotificationRecipient
+type GetNotificationRecipientResponse401Headers struct {
+	WWWAuthenticate *string
+}
+
+// GetNotificationRecipientResponse403Headers the declared response headers of an HTTP 403 response for GetNotificationRecipient
+type GetNotificationRecipientResponse403Headers struct {
+	WWWAuthenticate *string
+}
+
+// GetNotificationRecipientResponse429Headers the declared response headers of an HTTP 429 response for GetNotificationRecipient
+type GetNotificationRecipientResponse429Headers struct {
+	RetryAfter *int
+}
+
+// GetNotificationRecipientResponse503Headers the declared response headers of an HTTP 503 response for GetNotificationRecipient
+type GetNotificationRecipientResponse503Headers struct {
+	RetryAfter *int
+}
+
+type GetNotificationRecipientResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *NotificationRecipient
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *ErrorEnvelope
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *ErrorEnvelope
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *ErrorEnvelope
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *ErrorEnvelope
+	// JSON429 the response for an HTTP 429 `application/json` response
+	JSON429 *ErrorEnvelope
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *ErrorEnvelope
+	// JSON503 the response for an HTTP 503 `application/json` response
+	JSON503 *ErrorEnvelope
+	// Headers200 the parsed response headers for an HTTP 200 response
+	Headers200 *GetNotificationRecipientResponse200Headers
+	// Headers401 the parsed response headers for an HTTP 401 response
+	Headers401 *GetNotificationRecipientResponse401Headers
+	// Headers403 the parsed response headers for an HTTP 403 response
+	Headers403 *GetNotificationRecipientResponse403Headers
+	// Headers429 the parsed response headers for an HTTP 429 response
+	Headers429 *GetNotificationRecipientResponse429Headers
+	// Headers503 the parsed response headers for an HTTP 503 response
+	Headers503 *GetNotificationRecipientResponse503Headers
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r GetNotificationRecipientResponse) GetJSON200() *NotificationRecipient {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r GetNotificationRecipientResponse) GetJSON400() *ErrorEnvelope {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r GetNotificationRecipientResponse) GetJSON401() *ErrorEnvelope {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r GetNotificationRecipientResponse) GetJSON403() *ErrorEnvelope {
+	return r.JSON403
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r GetNotificationRecipientResponse) GetJSON404() *ErrorEnvelope {
+	return r.JSON404
+}
+
+// GetJSON429 returns the response for an HTTP 429 `application/json` response
+func (r GetNotificationRecipientResponse) GetJSON429() *ErrorEnvelope {
+	return r.JSON429
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r GetNotificationRecipientResponse) GetJSON500() *ErrorEnvelope {
+	return r.JSON500
+}
+
+// GetJSON503 returns the response for an HTTP 503 `application/json` response
+func (r GetNotificationRecipientResponse) GetJSON503() *ErrorEnvelope {
+	return r.JSON503
+}
+
+// GetBody returns the raw response body bytes
+func (r GetNotificationRecipientResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r GetNotificationRecipientResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetNotificationRecipientResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetNotificationRecipientResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+// ReplaceNotificationRecipientResponse200Headers the declared response headers of an HTTP 200 response for ReplaceNotificationRecipient
+type ReplaceNotificationRecipientResponse200Headers struct {
+	ETag string
+}
+
+// ReplaceNotificationRecipientResponse401Headers the declared response headers of an HTTP 401 response for ReplaceNotificationRecipient
+type ReplaceNotificationRecipientResponse401Headers struct {
+	WWWAuthenticate *string
+}
+
+// ReplaceNotificationRecipientResponse403Headers the declared response headers of an HTTP 403 response for ReplaceNotificationRecipient
+type ReplaceNotificationRecipientResponse403Headers struct {
+	WWWAuthenticate *string
+}
+
+// ReplaceNotificationRecipientResponse429Headers the declared response headers of an HTTP 429 response for ReplaceNotificationRecipient
+type ReplaceNotificationRecipientResponse429Headers struct {
+	RetryAfter *int
+}
+
+// ReplaceNotificationRecipientResponse503Headers the declared response headers of an HTTP 503 response for ReplaceNotificationRecipient
+type ReplaceNotificationRecipientResponse503Headers struct {
+	RetryAfter *int
+}
+
+type ReplaceNotificationRecipientResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *NotificationRecipient
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *ErrorEnvelope
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *ErrorEnvelope
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *ErrorEnvelope
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *ErrorEnvelope
+	// JSON409 the response for an HTTP 409 `application/json` response
+	JSON409 *ErrorEnvelope
+	// JSON412 the response for an HTTP 412 `application/json` response
+	JSON412 *ErrorEnvelope
+	// JSON422 the response for an HTTP 422 `application/json` response
+	JSON422 *ErrorEnvelope
+	// JSON429 the response for an HTTP 429 `application/json` response
+	JSON429 *ErrorEnvelope
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *ErrorEnvelope
+	// JSON503 the response for an HTTP 503 `application/json` response
+	JSON503 *ErrorEnvelope
+	// Headers200 the parsed response headers for an HTTP 200 response
+	Headers200 *ReplaceNotificationRecipientResponse200Headers
+	// Headers401 the parsed response headers for an HTTP 401 response
+	Headers401 *ReplaceNotificationRecipientResponse401Headers
+	// Headers403 the parsed response headers for an HTTP 403 response
+	Headers403 *ReplaceNotificationRecipientResponse403Headers
+	// Headers429 the parsed response headers for an HTTP 429 response
+	Headers429 *ReplaceNotificationRecipientResponse429Headers
+	// Headers503 the parsed response headers for an HTTP 503 response
+	Headers503 *ReplaceNotificationRecipientResponse503Headers
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r ReplaceNotificationRecipientResponse) GetJSON200() *NotificationRecipient {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r ReplaceNotificationRecipientResponse) GetJSON400() *ErrorEnvelope {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r ReplaceNotificationRecipientResponse) GetJSON401() *ErrorEnvelope {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r ReplaceNotificationRecipientResponse) GetJSON403() *ErrorEnvelope {
+	return r.JSON403
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r ReplaceNotificationRecipientResponse) GetJSON404() *ErrorEnvelope {
+	return r.JSON404
+}
+
+// GetJSON409 returns the response for an HTTP 409 `application/json` response
+func (r ReplaceNotificationRecipientResponse) GetJSON409() *ErrorEnvelope {
+	return r.JSON409
+}
+
+// GetJSON412 returns the response for an HTTP 412 `application/json` response
+func (r ReplaceNotificationRecipientResponse) GetJSON412() *ErrorEnvelope {
+	return r.JSON412
+}
+
+// GetJSON422 returns the response for an HTTP 422 `application/json` response
+func (r ReplaceNotificationRecipientResponse) GetJSON422() *ErrorEnvelope {
+	return r.JSON422
+}
+
+// GetJSON429 returns the response for an HTTP 429 `application/json` response
+func (r ReplaceNotificationRecipientResponse) GetJSON429() *ErrorEnvelope {
+	return r.JSON429
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r ReplaceNotificationRecipientResponse) GetJSON500() *ErrorEnvelope {
+	return r.JSON500
+}
+
+// GetJSON503 returns the response for an HTTP 503 `application/json` response
+func (r ReplaceNotificationRecipientResponse) GetJSON503() *ErrorEnvelope {
+	return r.JSON503
+}
+
+// GetBody returns the raw response body bytes
+func (r ReplaceNotificationRecipientResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r ReplaceNotificationRecipientResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ReplaceNotificationRecipientResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r ReplaceNotificationRecipientResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+// ListNotificationRulesResponse401Headers the declared response headers of an HTTP 401 response for ListNotificationRules
+type ListNotificationRulesResponse401Headers struct {
+	WWWAuthenticate *string
+}
+
+// ListNotificationRulesResponse403Headers the declared response headers of an HTTP 403 response for ListNotificationRules
+type ListNotificationRulesResponse403Headers struct {
+	WWWAuthenticate *string
+}
+
+// ListNotificationRulesResponse429Headers the declared response headers of an HTTP 429 response for ListNotificationRules
+type ListNotificationRulesResponse429Headers struct {
+	RetryAfter *int
+}
+
+// ListNotificationRulesResponse503Headers the declared response headers of an HTTP 503 response for ListNotificationRules
+type ListNotificationRulesResponse503Headers struct {
+	RetryAfter *int
+}
+
+type ListNotificationRulesResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *NotificationRulePage
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *ErrorEnvelope
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *ErrorEnvelope
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *ErrorEnvelope
+	// JSON429 the response for an HTTP 429 `application/json` response
+	JSON429 *ErrorEnvelope
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *ErrorEnvelope
+	// JSON503 the response for an HTTP 503 `application/json` response
+	JSON503 *ErrorEnvelope
+	// Headers401 the parsed response headers for an HTTP 401 response
+	Headers401 *ListNotificationRulesResponse401Headers
+	// Headers403 the parsed response headers for an HTTP 403 response
+	Headers403 *ListNotificationRulesResponse403Headers
+	// Headers429 the parsed response headers for an HTTP 429 response
+	Headers429 *ListNotificationRulesResponse429Headers
+	// Headers503 the parsed response headers for an HTTP 503 response
+	Headers503 *ListNotificationRulesResponse503Headers
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r ListNotificationRulesResponse) GetJSON200() *NotificationRulePage {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r ListNotificationRulesResponse) GetJSON400() *ErrorEnvelope {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r ListNotificationRulesResponse) GetJSON401() *ErrorEnvelope {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r ListNotificationRulesResponse) GetJSON403() *ErrorEnvelope {
+	return r.JSON403
+}
+
+// GetJSON429 returns the response for an HTTP 429 `application/json` response
+func (r ListNotificationRulesResponse) GetJSON429() *ErrorEnvelope {
+	return r.JSON429
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r ListNotificationRulesResponse) GetJSON500() *ErrorEnvelope {
+	return r.JSON500
+}
+
+// GetJSON503 returns the response for an HTTP 503 `application/json` response
+func (r ListNotificationRulesResponse) GetJSON503() *ErrorEnvelope {
+	return r.JSON503
+}
+
+// GetBody returns the raw response body bytes
+func (r ListNotificationRulesResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r ListNotificationRulesResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ListNotificationRulesResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r ListNotificationRulesResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+// CreateNotificationRuleResponse201Headers the declared response headers of an HTTP 201 response for CreateNotificationRule
+type CreateNotificationRuleResponse201Headers struct {
+	ETag string
+}
+
+// CreateNotificationRuleResponse401Headers the declared response headers of an HTTP 401 response for CreateNotificationRule
+type CreateNotificationRuleResponse401Headers struct {
+	WWWAuthenticate *string
+}
+
+// CreateNotificationRuleResponse403Headers the declared response headers of an HTTP 403 response for CreateNotificationRule
+type CreateNotificationRuleResponse403Headers struct {
+	WWWAuthenticate *string
+}
+
+// CreateNotificationRuleResponse429Headers the declared response headers of an HTTP 429 response for CreateNotificationRule
+type CreateNotificationRuleResponse429Headers struct {
+	RetryAfter *int
+}
+
+// CreateNotificationRuleResponse503Headers the declared response headers of an HTTP 503 response for CreateNotificationRule
+type CreateNotificationRuleResponse503Headers struct {
+	RetryAfter *int
+}
+
+type CreateNotificationRuleResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON201 the response for an HTTP 201 `application/json` response
+	JSON201 *NotificationRule
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *ErrorEnvelope
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *ErrorEnvelope
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *ErrorEnvelope
+	// JSON409 the response for an HTTP 409 `application/json` response
+	JSON409 *ErrorEnvelope
+	// JSON422 the response for an HTTP 422 `application/json` response
+	JSON422 *ErrorEnvelope
+	// JSON429 the response for an HTTP 429 `application/json` response
+	JSON429 *ErrorEnvelope
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *ErrorEnvelope
+	// JSON503 the response for an HTTP 503 `application/json` response
+	JSON503 *ErrorEnvelope
+	// Headers201 the parsed response headers for an HTTP 201 response
+	Headers201 *CreateNotificationRuleResponse201Headers
+	// Headers401 the parsed response headers for an HTTP 401 response
+	Headers401 *CreateNotificationRuleResponse401Headers
+	// Headers403 the parsed response headers for an HTTP 403 response
+	Headers403 *CreateNotificationRuleResponse403Headers
+	// Headers429 the parsed response headers for an HTTP 429 response
+	Headers429 *CreateNotificationRuleResponse429Headers
+	// Headers503 the parsed response headers for an HTTP 503 response
+	Headers503 *CreateNotificationRuleResponse503Headers
+}
+
+// GetJSON201 returns the response for an HTTP 201 `application/json` response
+func (r CreateNotificationRuleResponse) GetJSON201() *NotificationRule {
+	return r.JSON201
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r CreateNotificationRuleResponse) GetJSON400() *ErrorEnvelope {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r CreateNotificationRuleResponse) GetJSON401() *ErrorEnvelope {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r CreateNotificationRuleResponse) GetJSON403() *ErrorEnvelope {
+	return r.JSON403
+}
+
+// GetJSON409 returns the response for an HTTP 409 `application/json` response
+func (r CreateNotificationRuleResponse) GetJSON409() *ErrorEnvelope {
+	return r.JSON409
+}
+
+// GetJSON422 returns the response for an HTTP 422 `application/json` response
+func (r CreateNotificationRuleResponse) GetJSON422() *ErrorEnvelope {
+	return r.JSON422
+}
+
+// GetJSON429 returns the response for an HTTP 429 `application/json` response
+func (r CreateNotificationRuleResponse) GetJSON429() *ErrorEnvelope {
+	return r.JSON429
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r CreateNotificationRuleResponse) GetJSON500() *ErrorEnvelope {
+	return r.JSON500
+}
+
+// GetJSON503 returns the response for an HTTP 503 `application/json` response
+func (r CreateNotificationRuleResponse) GetJSON503() *ErrorEnvelope {
+	return r.JSON503
+}
+
+// GetBody returns the raw response body bytes
+func (r CreateNotificationRuleResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r CreateNotificationRuleResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r CreateNotificationRuleResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r CreateNotificationRuleResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+// ValidateNotificationRuleResponse401Headers the declared response headers of an HTTP 401 response for ValidateNotificationRule
+type ValidateNotificationRuleResponse401Headers struct {
+	WWWAuthenticate *string
+}
+
+// ValidateNotificationRuleResponse403Headers the declared response headers of an HTTP 403 response for ValidateNotificationRule
+type ValidateNotificationRuleResponse403Headers struct {
+	WWWAuthenticate *string
+}
+
+// ValidateNotificationRuleResponse429Headers the declared response headers of an HTTP 429 response for ValidateNotificationRule
+type ValidateNotificationRuleResponse429Headers struct {
+	RetryAfter *int
+}
+
+// ValidateNotificationRuleResponse503Headers the declared response headers of an HTTP 503 response for ValidateNotificationRule
+type ValidateNotificationRuleResponse503Headers struct {
+	RetryAfter *int
+}
+
+type ValidateNotificationRuleResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *NotificationRuleValidation
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *ErrorEnvelope
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *ErrorEnvelope
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *ErrorEnvelope
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *ErrorEnvelope
+	// JSON429 the response for an HTTP 429 `application/json` response
+	JSON429 *ErrorEnvelope
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *ErrorEnvelope
+	// JSON503 the response for an HTTP 503 `application/json` response
+	JSON503 *ErrorEnvelope
+	// Headers401 the parsed response headers for an HTTP 401 response
+	Headers401 *ValidateNotificationRuleResponse401Headers
+	// Headers403 the parsed response headers for an HTTP 403 response
+	Headers403 *ValidateNotificationRuleResponse403Headers
+	// Headers429 the parsed response headers for an HTTP 429 response
+	Headers429 *ValidateNotificationRuleResponse429Headers
+	// Headers503 the parsed response headers for an HTTP 503 response
+	Headers503 *ValidateNotificationRuleResponse503Headers
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r ValidateNotificationRuleResponse) GetJSON200() *NotificationRuleValidation {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r ValidateNotificationRuleResponse) GetJSON400() *ErrorEnvelope {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r ValidateNotificationRuleResponse) GetJSON401() *ErrorEnvelope {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r ValidateNotificationRuleResponse) GetJSON403() *ErrorEnvelope {
+	return r.JSON403
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r ValidateNotificationRuleResponse) GetJSON404() *ErrorEnvelope {
+	return r.JSON404
+}
+
+// GetJSON429 returns the response for an HTTP 429 `application/json` response
+func (r ValidateNotificationRuleResponse) GetJSON429() *ErrorEnvelope {
+	return r.JSON429
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r ValidateNotificationRuleResponse) GetJSON500() *ErrorEnvelope {
+	return r.JSON500
+}
+
+// GetJSON503 returns the response for an HTTP 503 `application/json` response
+func (r ValidateNotificationRuleResponse) GetJSON503() *ErrorEnvelope {
+	return r.JSON503
+}
+
+// GetBody returns the raw response body bytes
+func (r ValidateNotificationRuleResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r ValidateNotificationRuleResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ValidateNotificationRuleResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r ValidateNotificationRuleResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+// DeleteNotificationRuleResponse401Headers the declared response headers of an HTTP 401 response for DeleteNotificationRule
+type DeleteNotificationRuleResponse401Headers struct {
+	WWWAuthenticate *string
+}
+
+// DeleteNotificationRuleResponse403Headers the declared response headers of an HTTP 403 response for DeleteNotificationRule
+type DeleteNotificationRuleResponse403Headers struct {
+	WWWAuthenticate *string
+}
+
+// DeleteNotificationRuleResponse429Headers the declared response headers of an HTTP 429 response for DeleteNotificationRule
+type DeleteNotificationRuleResponse429Headers struct {
+	RetryAfter *int
+}
+
+// DeleteNotificationRuleResponse503Headers the declared response headers of an HTTP 503 response for DeleteNotificationRule
+type DeleteNotificationRuleResponse503Headers struct {
+	RetryAfter *int
+}
+
+type DeleteNotificationRuleResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *ErrorEnvelope
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *ErrorEnvelope
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *ErrorEnvelope
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *ErrorEnvelope
+	// JSON412 the response for an HTTP 412 `application/json` response
+	JSON412 *ErrorEnvelope
+	// JSON429 the response for an HTTP 429 `application/json` response
+	JSON429 *ErrorEnvelope
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *ErrorEnvelope
+	// JSON503 the response for an HTTP 503 `application/json` response
+	JSON503 *ErrorEnvelope
+	// Headers401 the parsed response headers for an HTTP 401 response
+	Headers401 *DeleteNotificationRuleResponse401Headers
+	// Headers403 the parsed response headers for an HTTP 403 response
+	Headers403 *DeleteNotificationRuleResponse403Headers
+	// Headers429 the parsed response headers for an HTTP 429 response
+	Headers429 *DeleteNotificationRuleResponse429Headers
+	// Headers503 the parsed response headers for an HTTP 503 response
+	Headers503 *DeleteNotificationRuleResponse503Headers
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r DeleteNotificationRuleResponse) GetJSON400() *ErrorEnvelope {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r DeleteNotificationRuleResponse) GetJSON401() *ErrorEnvelope {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r DeleteNotificationRuleResponse) GetJSON403() *ErrorEnvelope {
+	return r.JSON403
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r DeleteNotificationRuleResponse) GetJSON404() *ErrorEnvelope {
+	return r.JSON404
+}
+
+// GetJSON412 returns the response for an HTTP 412 `application/json` response
+func (r DeleteNotificationRuleResponse) GetJSON412() *ErrorEnvelope {
+	return r.JSON412
+}
+
+// GetJSON429 returns the response for an HTTP 429 `application/json` response
+func (r DeleteNotificationRuleResponse) GetJSON429() *ErrorEnvelope {
+	return r.JSON429
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r DeleteNotificationRuleResponse) GetJSON500() *ErrorEnvelope {
+	return r.JSON500
+}
+
+// GetJSON503 returns the response for an HTTP 503 `application/json` response
+func (r DeleteNotificationRuleResponse) GetJSON503() *ErrorEnvelope {
+	return r.JSON503
+}
+
+// GetBody returns the raw response body bytes
+func (r DeleteNotificationRuleResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r DeleteNotificationRuleResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r DeleteNotificationRuleResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r DeleteNotificationRuleResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+// GetNotificationRuleResponse200Headers the declared response headers of an HTTP 200 response for GetNotificationRule
+type GetNotificationRuleResponse200Headers struct {
+	ETag string
+}
+
+// GetNotificationRuleResponse401Headers the declared response headers of an HTTP 401 response for GetNotificationRule
+type GetNotificationRuleResponse401Headers struct {
+	WWWAuthenticate *string
+}
+
+// GetNotificationRuleResponse403Headers the declared response headers of an HTTP 403 response for GetNotificationRule
+type GetNotificationRuleResponse403Headers struct {
+	WWWAuthenticate *string
+}
+
+// GetNotificationRuleResponse429Headers the declared response headers of an HTTP 429 response for GetNotificationRule
+type GetNotificationRuleResponse429Headers struct {
+	RetryAfter *int
+}
+
+// GetNotificationRuleResponse503Headers the declared response headers of an HTTP 503 response for GetNotificationRule
+type GetNotificationRuleResponse503Headers struct {
+	RetryAfter *int
+}
+
+type GetNotificationRuleResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *NotificationRule
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *ErrorEnvelope
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *ErrorEnvelope
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *ErrorEnvelope
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *ErrorEnvelope
+	// JSON429 the response for an HTTP 429 `application/json` response
+	JSON429 *ErrorEnvelope
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *ErrorEnvelope
+	// JSON503 the response for an HTTP 503 `application/json` response
+	JSON503 *ErrorEnvelope
+	// Headers200 the parsed response headers for an HTTP 200 response
+	Headers200 *GetNotificationRuleResponse200Headers
+	// Headers401 the parsed response headers for an HTTP 401 response
+	Headers401 *GetNotificationRuleResponse401Headers
+	// Headers403 the parsed response headers for an HTTP 403 response
+	Headers403 *GetNotificationRuleResponse403Headers
+	// Headers429 the parsed response headers for an HTTP 429 response
+	Headers429 *GetNotificationRuleResponse429Headers
+	// Headers503 the parsed response headers for an HTTP 503 response
+	Headers503 *GetNotificationRuleResponse503Headers
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r GetNotificationRuleResponse) GetJSON200() *NotificationRule {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r GetNotificationRuleResponse) GetJSON400() *ErrorEnvelope {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r GetNotificationRuleResponse) GetJSON401() *ErrorEnvelope {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r GetNotificationRuleResponse) GetJSON403() *ErrorEnvelope {
+	return r.JSON403
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r GetNotificationRuleResponse) GetJSON404() *ErrorEnvelope {
+	return r.JSON404
+}
+
+// GetJSON429 returns the response for an HTTP 429 `application/json` response
+func (r GetNotificationRuleResponse) GetJSON429() *ErrorEnvelope {
+	return r.JSON429
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r GetNotificationRuleResponse) GetJSON500() *ErrorEnvelope {
+	return r.JSON500
+}
+
+// GetJSON503 returns the response for an HTTP 503 `application/json` response
+func (r GetNotificationRuleResponse) GetJSON503() *ErrorEnvelope {
+	return r.JSON503
+}
+
+// GetBody returns the raw response body bytes
+func (r GetNotificationRuleResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r GetNotificationRuleResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetNotificationRuleResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetNotificationRuleResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+// ReplaceNotificationRuleResponse200Headers the declared response headers of an HTTP 200 response for ReplaceNotificationRule
+type ReplaceNotificationRuleResponse200Headers struct {
+	ETag string
+}
+
+// ReplaceNotificationRuleResponse401Headers the declared response headers of an HTTP 401 response for ReplaceNotificationRule
+type ReplaceNotificationRuleResponse401Headers struct {
+	WWWAuthenticate *string
+}
+
+// ReplaceNotificationRuleResponse403Headers the declared response headers of an HTTP 403 response for ReplaceNotificationRule
+type ReplaceNotificationRuleResponse403Headers struct {
+	WWWAuthenticate *string
+}
+
+// ReplaceNotificationRuleResponse429Headers the declared response headers of an HTTP 429 response for ReplaceNotificationRule
+type ReplaceNotificationRuleResponse429Headers struct {
+	RetryAfter *int
+}
+
+// ReplaceNotificationRuleResponse503Headers the declared response headers of an HTTP 503 response for ReplaceNotificationRule
+type ReplaceNotificationRuleResponse503Headers struct {
+	RetryAfter *int
+}
+
+type ReplaceNotificationRuleResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *NotificationRule
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *ErrorEnvelope
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *ErrorEnvelope
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *ErrorEnvelope
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *ErrorEnvelope
+	// JSON409 the response for an HTTP 409 `application/json` response
+	JSON409 *ErrorEnvelope
+	// JSON412 the response for an HTTP 412 `application/json` response
+	JSON412 *ErrorEnvelope
+	// JSON422 the response for an HTTP 422 `application/json` response
+	JSON422 *ErrorEnvelope
+	// JSON429 the response for an HTTP 429 `application/json` response
+	JSON429 *ErrorEnvelope
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *ErrorEnvelope
+	// JSON503 the response for an HTTP 503 `application/json` response
+	JSON503 *ErrorEnvelope
+	// Headers200 the parsed response headers for an HTTP 200 response
+	Headers200 *ReplaceNotificationRuleResponse200Headers
+	// Headers401 the parsed response headers for an HTTP 401 response
+	Headers401 *ReplaceNotificationRuleResponse401Headers
+	// Headers403 the parsed response headers for an HTTP 403 response
+	Headers403 *ReplaceNotificationRuleResponse403Headers
+	// Headers429 the parsed response headers for an HTTP 429 response
+	Headers429 *ReplaceNotificationRuleResponse429Headers
+	// Headers503 the parsed response headers for an HTTP 503 response
+	Headers503 *ReplaceNotificationRuleResponse503Headers
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r ReplaceNotificationRuleResponse) GetJSON200() *NotificationRule {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r ReplaceNotificationRuleResponse) GetJSON400() *ErrorEnvelope {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r ReplaceNotificationRuleResponse) GetJSON401() *ErrorEnvelope {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r ReplaceNotificationRuleResponse) GetJSON403() *ErrorEnvelope {
+	return r.JSON403
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r ReplaceNotificationRuleResponse) GetJSON404() *ErrorEnvelope {
+	return r.JSON404
+}
+
+// GetJSON409 returns the response for an HTTP 409 `application/json` response
+func (r ReplaceNotificationRuleResponse) GetJSON409() *ErrorEnvelope {
+	return r.JSON409
+}
+
+// GetJSON412 returns the response for an HTTP 412 `application/json` response
+func (r ReplaceNotificationRuleResponse) GetJSON412() *ErrorEnvelope {
+	return r.JSON412
+}
+
+// GetJSON422 returns the response for an HTTP 422 `application/json` response
+func (r ReplaceNotificationRuleResponse) GetJSON422() *ErrorEnvelope {
+	return r.JSON422
+}
+
+// GetJSON429 returns the response for an HTTP 429 `application/json` response
+func (r ReplaceNotificationRuleResponse) GetJSON429() *ErrorEnvelope {
+	return r.JSON429
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r ReplaceNotificationRuleResponse) GetJSON500() *ErrorEnvelope {
+	return r.JSON500
+}
+
+// GetJSON503 returns the response for an HTTP 503 `application/json` response
+func (r ReplaceNotificationRuleResponse) GetJSON503() *ErrorEnvelope {
+	return r.JSON503
+}
+
+// GetBody returns the raw response body bytes
+func (r ReplaceNotificationRuleResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r ReplaceNotificationRuleResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ReplaceNotificationRuleResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r ReplaceNotificationRuleResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+// ListNotificationRuleActivityResponse401Headers the declared response headers of an HTTP 401 response for ListNotificationRuleActivity
+type ListNotificationRuleActivityResponse401Headers struct {
+	WWWAuthenticate *string
+}
+
+// ListNotificationRuleActivityResponse403Headers the declared response headers of an HTTP 403 response for ListNotificationRuleActivity
+type ListNotificationRuleActivityResponse403Headers struct {
+	WWWAuthenticate *string
+}
+
+// ListNotificationRuleActivityResponse429Headers the declared response headers of an HTTP 429 response for ListNotificationRuleActivity
+type ListNotificationRuleActivityResponse429Headers struct {
+	RetryAfter *int
+}
+
+// ListNotificationRuleActivityResponse503Headers the declared response headers of an HTTP 503 response for ListNotificationRuleActivity
+type ListNotificationRuleActivityResponse503Headers struct {
+	RetryAfter *int
+}
+
+type ListNotificationRuleActivityResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *NotificationRuleActivityPage
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *ErrorEnvelope
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *ErrorEnvelope
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *ErrorEnvelope
+	// JSON429 the response for an HTTP 429 `application/json` response
+	JSON429 *ErrorEnvelope
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *ErrorEnvelope
+	// JSON503 the response for an HTTP 503 `application/json` response
+	JSON503 *ErrorEnvelope
+	// Headers401 the parsed response headers for an HTTP 401 response
+	Headers401 *ListNotificationRuleActivityResponse401Headers
+	// Headers403 the parsed response headers for an HTTP 403 response
+	Headers403 *ListNotificationRuleActivityResponse403Headers
+	// Headers429 the parsed response headers for an HTTP 429 response
+	Headers429 *ListNotificationRuleActivityResponse429Headers
+	// Headers503 the parsed response headers for an HTTP 503 response
+	Headers503 *ListNotificationRuleActivityResponse503Headers
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r ListNotificationRuleActivityResponse) GetJSON200() *NotificationRuleActivityPage {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r ListNotificationRuleActivityResponse) GetJSON400() *ErrorEnvelope {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r ListNotificationRuleActivityResponse) GetJSON401() *ErrorEnvelope {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r ListNotificationRuleActivityResponse) GetJSON403() *ErrorEnvelope {
+	return r.JSON403
+}
+
+// GetJSON429 returns the response for an HTTP 429 `application/json` response
+func (r ListNotificationRuleActivityResponse) GetJSON429() *ErrorEnvelope {
+	return r.JSON429
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r ListNotificationRuleActivityResponse) GetJSON500() *ErrorEnvelope {
+	return r.JSON500
+}
+
+// GetJSON503 returns the response for an HTTP 503 `application/json` response
+func (r ListNotificationRuleActivityResponse) GetJSON503() *ErrorEnvelope {
+	return r.JSON503
+}
+
+// GetBody returns the raw response body bytes
+func (r ListNotificationRuleActivityResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r ListNotificationRuleActivityResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ListNotificationRuleActivityResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r ListNotificationRuleActivityResponse) ContentType() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Header.Get("Content-Type")
 	}
@@ -8026,6 +11650,21 @@ func (c *ClientWithResponses) CreateIntegrationWithResponse(ctx context.Context,
 	return ParseCreateIntegrationResponse(rsp)
 }
 
+// ListSlackChannelsWithResponse Look up public Slack channels by exact name or ID, for actions that take channel IDs
+//
+// Matches a channel name exactly, with or without the leading `#`, or a channel ID. Private channels are not listed. Answers `integration_not_connected` when no Slack integration is connected.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with GET /v1/integrations/slack/channels (the `ListSlackChannels` operationId).
+func (c *ClientWithResponses) ListSlackChannelsWithResponse(ctx context.Context, params *ListSlackChannelsParams, reqEditors ...RequestEditorFn) (*ListSlackChannelsResponse, error) {
+	rsp, err := c.ListSlackChannels(ctx, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseListSlackChannelsResponse(rsp)
+}
+
 // DeleteIntegrationWithResponse Uninstall an integration and delete its secrets
 //
 // Returns a wrapper object for the known response body format(s).
@@ -8076,6 +11715,276 @@ func (c *ClientWithResponses) UpdateIntegrationWithResponse(ctx context.Context,
 		return nil, err
 	}
 	return ParseUpdateIntegrationResponse(rsp)
+}
+
+// ListNotificationEventTypesWithResponse List the event types a rule can match, the actions and conditions each takes, and the rule limits
+//
+// Only event types this tenant can subscribe to with an email or Slack action are listed. `limits` are the caps every rule write enforces.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with GET /v1/notification-event-types (the `ListNotificationEventTypes` operationId).
+func (c *ClientWithResponses) ListNotificationEventTypesWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*ListNotificationEventTypesResponse, error) {
+	rsp, err := c.ListNotificationEventTypes(ctx, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseListNotificationEventTypesResponse(rsp)
+}
+
+// ListNotificationRecipientsWithResponse List the address-book recipients rules can name, one page at a time
+//
+// Pass `nextPageToken` back as `pageToken` for the next page.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with GET /v1/notification-recipients (the `ListNotificationRecipients` operationId).
+func (c *ClientWithResponses) ListNotificationRecipientsWithResponse(ctx context.Context, params *ListNotificationRecipientsParams, reqEditors ...RequestEditorFn) (*ListNotificationRecipientsResponse, error) {
+	rsp, err := c.ListNotificationRecipients(ctx, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseListNotificationRecipientsResponse(rsp)
+}
+
+// CreateNotificationRecipientWithBodyWithResponse Create an address-book recipient
+//
+// Recipient names are unique per tenant. A retry with the same `Idempotency-Key` and body within 24 hours answers with the recipient the first request created.
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /v1/notification-recipients (the `CreateNotificationRecipient` operationId).
+func (c *ClientWithResponses) CreateNotificationRecipientWithBodyWithResponse(ctx context.Context, params *CreateNotificationRecipientParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateNotificationRecipientResponse, error) {
+	rsp, err := c.CreateNotificationRecipientWithBody(ctx, params, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCreateNotificationRecipientResponse(rsp)
+}
+
+// CreateNotificationRecipientWithResponse Create an address-book recipient
+//
+// Recipient names are unique per tenant. A retry with the same `Idempotency-Key` and body within 24 hours answers with the recipient the first request created.
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /v1/notification-recipients (the `CreateNotificationRecipient` operationId).
+func (c *ClientWithResponses) CreateNotificationRecipientWithResponse(ctx context.Context, params *CreateNotificationRecipientParams, body CreateNotificationRecipientJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateNotificationRecipientResponse, error) {
+	rsp, err := c.CreateNotificationRecipient(ctx, params, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCreateNotificationRecipientResponse(rsp)
+}
+
+// DeleteNotificationRecipientWithResponse Delete an address-book recipient. Refused with 409 while a rule names it
+//
+// The 409 `conflict` carries `reason: notification_recipient_in_use` and the `ruleIds` that name it. With `If-Match`, the recipient is deleted only while it is at that revision; otherwise the answer is 412.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with DELETE /v1/notification-recipients/{id} (the `DeleteNotificationRecipient` operationId).
+func (c *ClientWithResponses) DeleteNotificationRecipientWithResponse(ctx context.Context, id string, params *DeleteNotificationRecipientParams, reqEditors ...RequestEditorFn) (*DeleteNotificationRecipientResponse, error) {
+	rsp, err := c.DeleteNotificationRecipient(ctx, id, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseDeleteNotificationRecipientResponse(rsp)
+}
+
+// GetNotificationRecipientWithResponse Return one address-book recipient
+//
+// The `ETag` header carries the revision. Send it as `If-Match` to replace or delete this revision.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with GET /v1/notification-recipients/{id} (the `GetNotificationRecipient` operationId).
+func (c *ClientWithResponses) GetNotificationRecipientWithResponse(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*GetNotificationRecipientResponse, error) {
+	rsp, err := c.GetNotificationRecipient(ctx, id, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetNotificationRecipientResponse(rsp)
+}
+
+// ReplaceNotificationRecipientWithBodyWithResponse Replace an address-book recipient; the rules that name it send to its new addresses
+//
+// `If-Match` must name the current `ETag` (strong comparison) or be `*`; otherwise the answer is 412 with the current `etag`.
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with PUT /v1/notification-recipients/{id} (the `ReplaceNotificationRecipient` operationId).
+func (c *ClientWithResponses) ReplaceNotificationRecipientWithBodyWithResponse(ctx context.Context, id string, params *ReplaceNotificationRecipientParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*ReplaceNotificationRecipientResponse, error) {
+	rsp, err := c.ReplaceNotificationRecipientWithBody(ctx, id, params, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseReplaceNotificationRecipientResponse(rsp)
+}
+
+// ReplaceNotificationRecipientWithResponse Replace an address-book recipient; the rules that name it send to its new addresses
+//
+// `If-Match` must name the current `ETag` (strong comparison) or be `*`; otherwise the answer is 412 with the current `etag`.
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with PUT /v1/notification-recipients/{id} (the `ReplaceNotificationRecipient` operationId).
+func (c *ClientWithResponses) ReplaceNotificationRecipientWithResponse(ctx context.Context, id string, params *ReplaceNotificationRecipientParams, body ReplaceNotificationRecipientJSONRequestBody, reqEditors ...RequestEditorFn) (*ReplaceNotificationRecipientResponse, error) {
+	rsp, err := c.ReplaceNotificationRecipient(ctx, id, params, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseReplaceNotificationRecipientResponse(rsp)
+}
+
+// ListNotificationRulesWithResponse List the notification rules of the calling tenant, one page at a time
+//
+// Rules are listed oldest first. Pass `nextPageToken` back as `pageToken` for the next page.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with GET /v1/notification-rules (the `ListNotificationRules` operationId).
+func (c *ClientWithResponses) ListNotificationRulesWithResponse(ctx context.Context, params *ListNotificationRulesParams, reqEditors ...RequestEditorFn) (*ListNotificationRulesResponse, error) {
+	rsp, err := c.ListNotificationRules(ctx, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseListNotificationRulesResponse(rsp)
+}
+
+// CreateNotificationRuleWithBodyWithResponse Create a notification rule
+//
+// Answers 201 with the rule and its `ETag`. A retry with the same `Idempotency-Key` and body within 24 hours answers with the rule the first request created. Domain errors are `invalid_request` with a `reason` and a JSON `pointer` into the request body.
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /v1/notification-rules (the `CreateNotificationRule` operationId).
+func (c *ClientWithResponses) CreateNotificationRuleWithBodyWithResponse(ctx context.Context, params *CreateNotificationRuleParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateNotificationRuleResponse, error) {
+	rsp, err := c.CreateNotificationRuleWithBody(ctx, params, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCreateNotificationRuleResponse(rsp)
+}
+
+// CreateNotificationRuleWithResponse Create a notification rule
+//
+// Answers 201 with the rule and its `ETag`. A retry with the same `Idempotency-Key` and body within 24 hours answers with the rule the first request created. Domain errors are `invalid_request` with a `reason` and a JSON `pointer` into the request body.
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /v1/notification-rules (the `CreateNotificationRule` operationId).
+func (c *ClientWithResponses) CreateNotificationRuleWithResponse(ctx context.Context, params *CreateNotificationRuleParams, body CreateNotificationRuleJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateNotificationRuleResponse, error) {
+	rsp, err := c.CreateNotificationRule(ctx, params, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCreateNotificationRuleResponse(rsp)
+}
+
+// ValidateNotificationRuleWithBodyWithResponse Check a rule as a create or a replace would, without saving it or sending anything
+//
+// Runs every check a write runs, the enabled-rules limit included, and answers `valid: false` with the error a write would answer. Requires the write scope because it can check a destination with its provider.
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /v1/notification-rules/validate (the `ValidateNotificationRule` operationId).
+func (c *ClientWithResponses) ValidateNotificationRuleWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*ValidateNotificationRuleResponse, error) {
+	rsp, err := c.ValidateNotificationRuleWithBody(ctx, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseValidateNotificationRuleResponse(rsp)
+}
+
+// ValidateNotificationRuleWithResponse Check a rule as a create or a replace would, without saving it or sending anything
+//
+// Runs every check a write runs, the enabled-rules limit included, and answers `valid: false` with the error a write would answer. Requires the write scope because it can check a destination with its provider.
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /v1/notification-rules/validate (the `ValidateNotificationRule` operationId).
+func (c *ClientWithResponses) ValidateNotificationRuleWithResponse(ctx context.Context, body ValidateNotificationRuleJSONRequestBody, reqEditors ...RequestEditorFn) (*ValidateNotificationRuleResponse, error) {
+	rsp, err := c.ValidateNotificationRule(ctx, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseValidateNotificationRuleResponse(rsp)
+}
+
+// DeleteNotificationRuleWithResponse Delete a notification rule. Its activity stays readable for six months
+//
+// With `If-Match`, the rule is deleted only while it is at that revision; otherwise the answer is 412.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with DELETE /v1/notification-rules/{id} (the `DeleteNotificationRule` operationId).
+func (c *ClientWithResponses) DeleteNotificationRuleWithResponse(ctx context.Context, id string, params *DeleteNotificationRuleParams, reqEditors ...RequestEditorFn) (*DeleteNotificationRuleResponse, error) {
+	rsp, err := c.DeleteNotificationRule(ctx, id, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseDeleteNotificationRuleResponse(rsp)
+}
+
+// GetNotificationRuleWithResponse Return one notification rule
+//
+// The `ETag` header carries the revision. Send it as `If-Match` to replace or delete this revision.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with GET /v1/notification-rules/{id} (the `GetNotificationRule` operationId).
+func (c *ClientWithResponses) GetNotificationRuleWithResponse(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*GetNotificationRuleResponse, error) {
+	rsp, err := c.GetNotificationRule(ctx, id, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetNotificationRuleResponse(rsp)
+}
+
+// ReplaceNotificationRuleWithBodyWithResponse Replace a notification rule. A member left out keeps its stored value
+//
+// `If-Match` must name the current `ETag` (strong comparison) or be `*`; otherwise the answer is 412 with the current `etag`. Send an empty array to clear a list. Destinations on integrations the API does not represent are kept.
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with PUT /v1/notification-rules/{id} (the `ReplaceNotificationRule` operationId).
+func (c *ClientWithResponses) ReplaceNotificationRuleWithBodyWithResponse(ctx context.Context, id string, params *ReplaceNotificationRuleParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*ReplaceNotificationRuleResponse, error) {
+	rsp, err := c.ReplaceNotificationRuleWithBody(ctx, id, params, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseReplaceNotificationRuleResponse(rsp)
+}
+
+// ReplaceNotificationRuleWithResponse Replace a notification rule. A member left out keeps its stored value
+//
+// `If-Match` must name the current `ETag` (strong comparison) or be `*`; otherwise the answer is 412 with the current `etag`. Send an empty array to clear a list. Destinations on integrations the API does not represent are kept.
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with PUT /v1/notification-rules/{id} (the `ReplaceNotificationRule` operationId).
+func (c *ClientWithResponses) ReplaceNotificationRuleWithResponse(ctx context.Context, id string, params *ReplaceNotificationRuleParams, body ReplaceNotificationRuleJSONRequestBody, reqEditors ...RequestEditorFn) (*ReplaceNotificationRuleResponse, error) {
+	rsp, err := c.ReplaceNotificationRule(ctx, id, params, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseReplaceNotificationRuleResponse(rsp)
+}
+
+// ListNotificationRuleActivityWithResponse List the events a rule matched in the last six months and what was sent, newest first
+//
+// Works for a deleted rule too. Pass `nextPageToken` back as `pageToken` for the next page.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with GET /v1/notification-rules/{id}/activity (the `ListNotificationRuleActivity` operationId).
+func (c *ClientWithResponses) ListNotificationRuleActivityWithResponse(ctx context.Context, id string, params *ListNotificationRuleActivityParams, reqEditors ...RequestEditorFn) (*ListNotificationRuleActivityResponse, error) {
+	rsp, err := c.ListNotificationRuleActivity(ctx, id, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseListNotificationRuleActivityResponse(rsp)
 }
 
 // GetAwsOnboardingWithResponse Return what an AWS account or organization needs before it is connected, derived from the target
@@ -11020,6 +14929,124 @@ func ParseCreateIntegrationResponse(rsp *http.Response) (*CreateIntegrationRespo
 	return response, nil
 }
 
+// ParseListSlackChannelsResponse parses an HTTP response from a ListSlackChannelsWithResponse call
+func ParseListSlackChannelsResponse(rsp *http.Response) (*ListSlackChannelsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ListSlackChannelsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest SlackChannelList
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 422:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON422 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON429 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON503 = &dest
+
+	}
+
+	switch {
+	case rsp.StatusCode == 401:
+		var headers ListSlackChannelsResponse401Headers
+		if values := rsp.Header.Values("WWW-Authenticate"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "WWW-Authenticate", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.WWWAuthenticate = &value
+		}
+		response.Headers401 = &headers
+	case rsp.StatusCode == 403:
+		var headers ListSlackChannelsResponse403Headers
+		if values := rsp.Header.Values("WWW-Authenticate"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "WWW-Authenticate", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.WWWAuthenticate = &value
+		}
+		response.Headers403 = &headers
+	case rsp.StatusCode == 429:
+		var headers ListSlackChannelsResponse429Headers
+		if values := rsp.Header.Values("Retry-After"); len(values) > 0 {
+			var value int
+			if err := runtime.BindStyledParameterWithOptions("simple", "Retry-After", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.RetryAfter = &value
+		}
+		response.Headers429 = &headers
+	case rsp.StatusCode == 503:
+		var headers ListSlackChannelsResponse503Headers
+		if values := rsp.Header.Values("Retry-After"); len(values) > 0 {
+			var value int
+			if err := runtime.BindStyledParameterWithOptions("simple", "Retry-After", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.RetryAfter = &value
+		}
+		response.Headers503 = &headers
+	}
+
+	return response, nil
+}
+
 // ParseDeleteIntegrationResponse parses an HTTP response from a DeleteIntegrationWithResponse call
 func ParseDeleteIntegrationResponse(rsp *http.Response) (*DeleteIntegrationResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -11398,6 +15425,1641 @@ func ParseUpdateIntegrationResponse(rsp *http.Response) (*UpdateIntegrationRespo
 		response.Headers429 = &headers
 	case rsp.StatusCode == 503:
 		var headers UpdateIntegrationResponse503Headers
+		if values := rsp.Header.Values("Retry-After"); len(values) > 0 {
+			var value int
+			if err := runtime.BindStyledParameterWithOptions("simple", "Retry-After", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.RetryAfter = &value
+		}
+		response.Headers503 = &headers
+	}
+
+	return response, nil
+}
+
+// ParseListNotificationEventTypesResponse parses an HTTP response from a ListNotificationEventTypesWithResponse call
+func ParseListNotificationEventTypesResponse(rsp *http.Response) (*ListNotificationEventTypesResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ListNotificationEventTypesResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest NotificationEventTypeList
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON429 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON503 = &dest
+
+	}
+
+	switch {
+	case rsp.StatusCode == 401:
+		var headers ListNotificationEventTypesResponse401Headers
+		if values := rsp.Header.Values("WWW-Authenticate"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "WWW-Authenticate", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.WWWAuthenticate = &value
+		}
+		response.Headers401 = &headers
+	case rsp.StatusCode == 403:
+		var headers ListNotificationEventTypesResponse403Headers
+		if values := rsp.Header.Values("WWW-Authenticate"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "WWW-Authenticate", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.WWWAuthenticate = &value
+		}
+		response.Headers403 = &headers
+	case rsp.StatusCode == 429:
+		var headers ListNotificationEventTypesResponse429Headers
+		if values := rsp.Header.Values("Retry-After"); len(values) > 0 {
+			var value int
+			if err := runtime.BindStyledParameterWithOptions("simple", "Retry-After", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.RetryAfter = &value
+		}
+		response.Headers429 = &headers
+	case rsp.StatusCode == 503:
+		var headers ListNotificationEventTypesResponse503Headers
+		if values := rsp.Header.Values("Retry-After"); len(values) > 0 {
+			var value int
+			if err := runtime.BindStyledParameterWithOptions("simple", "Retry-After", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.RetryAfter = &value
+		}
+		response.Headers503 = &headers
+	}
+
+	return response, nil
+}
+
+// ParseListNotificationRecipientsResponse parses an HTTP response from a ListNotificationRecipientsWithResponse call
+func ParseListNotificationRecipientsResponse(rsp *http.Response) (*ListNotificationRecipientsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ListNotificationRecipientsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest NotificationRecipientPage
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON429 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON503 = &dest
+
+	}
+
+	switch {
+	case rsp.StatusCode == 401:
+		var headers ListNotificationRecipientsResponse401Headers
+		if values := rsp.Header.Values("WWW-Authenticate"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "WWW-Authenticate", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.WWWAuthenticate = &value
+		}
+		response.Headers401 = &headers
+	case rsp.StatusCode == 403:
+		var headers ListNotificationRecipientsResponse403Headers
+		if values := rsp.Header.Values("WWW-Authenticate"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "WWW-Authenticate", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.WWWAuthenticate = &value
+		}
+		response.Headers403 = &headers
+	case rsp.StatusCode == 429:
+		var headers ListNotificationRecipientsResponse429Headers
+		if values := rsp.Header.Values("Retry-After"); len(values) > 0 {
+			var value int
+			if err := runtime.BindStyledParameterWithOptions("simple", "Retry-After", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.RetryAfter = &value
+		}
+		response.Headers429 = &headers
+	case rsp.StatusCode == 503:
+		var headers ListNotificationRecipientsResponse503Headers
+		if values := rsp.Header.Values("Retry-After"); len(values) > 0 {
+			var value int
+			if err := runtime.BindStyledParameterWithOptions("simple", "Retry-After", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.RetryAfter = &value
+		}
+		response.Headers503 = &headers
+	}
+
+	return response, nil
+}
+
+// ParseCreateNotificationRecipientResponse parses an HTTP response from a CreateNotificationRecipientWithResponse call
+func ParseCreateNotificationRecipientResponse(rsp *http.Response) (*CreateNotificationRecipientResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &CreateNotificationRecipientResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 201:
+		var dest NotificationRecipient
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON201 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 422:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON422 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON429 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON503 = &dest
+
+	}
+
+	switch {
+	case rsp.StatusCode == 201:
+		var headers CreateNotificationRecipientResponse201Headers
+		if values := rsp.Header.Values("ETag"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "ETag", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.ETag = value
+		}
+		response.Headers201 = &headers
+	case rsp.StatusCode == 401:
+		var headers CreateNotificationRecipientResponse401Headers
+		if values := rsp.Header.Values("WWW-Authenticate"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "WWW-Authenticate", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.WWWAuthenticate = &value
+		}
+		response.Headers401 = &headers
+	case rsp.StatusCode == 403:
+		var headers CreateNotificationRecipientResponse403Headers
+		if values := rsp.Header.Values("WWW-Authenticate"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "WWW-Authenticate", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.WWWAuthenticate = &value
+		}
+		response.Headers403 = &headers
+	case rsp.StatusCode == 429:
+		var headers CreateNotificationRecipientResponse429Headers
+		if values := rsp.Header.Values("Retry-After"); len(values) > 0 {
+			var value int
+			if err := runtime.BindStyledParameterWithOptions("simple", "Retry-After", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.RetryAfter = &value
+		}
+		response.Headers429 = &headers
+	case rsp.StatusCode == 503:
+		var headers CreateNotificationRecipientResponse503Headers
+		if values := rsp.Header.Values("Retry-After"); len(values) > 0 {
+			var value int
+			if err := runtime.BindStyledParameterWithOptions("simple", "Retry-After", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.RetryAfter = &value
+		}
+		response.Headers503 = &headers
+	}
+
+	return response, nil
+}
+
+// ParseDeleteNotificationRecipientResponse parses an HTTP response from a DeleteNotificationRecipientWithResponse call
+func ParseDeleteNotificationRecipientResponse(rsp *http.Response) (*DeleteNotificationRecipientResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &DeleteNotificationRecipientResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case rsp.StatusCode == 204:
+		break // No content-type
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 412:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON412 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON429 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON503 = &dest
+
+	}
+
+	switch {
+	case rsp.StatusCode == 401:
+		var headers DeleteNotificationRecipientResponse401Headers
+		if values := rsp.Header.Values("WWW-Authenticate"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "WWW-Authenticate", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.WWWAuthenticate = &value
+		}
+		response.Headers401 = &headers
+	case rsp.StatusCode == 403:
+		var headers DeleteNotificationRecipientResponse403Headers
+		if values := rsp.Header.Values("WWW-Authenticate"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "WWW-Authenticate", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.WWWAuthenticate = &value
+		}
+		response.Headers403 = &headers
+	case rsp.StatusCode == 429:
+		var headers DeleteNotificationRecipientResponse429Headers
+		if values := rsp.Header.Values("Retry-After"); len(values) > 0 {
+			var value int
+			if err := runtime.BindStyledParameterWithOptions("simple", "Retry-After", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.RetryAfter = &value
+		}
+		response.Headers429 = &headers
+	case rsp.StatusCode == 503:
+		var headers DeleteNotificationRecipientResponse503Headers
+		if values := rsp.Header.Values("Retry-After"); len(values) > 0 {
+			var value int
+			if err := runtime.BindStyledParameterWithOptions("simple", "Retry-After", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.RetryAfter = &value
+		}
+		response.Headers503 = &headers
+	}
+
+	return response, nil
+}
+
+// ParseGetNotificationRecipientResponse parses an HTTP response from a GetNotificationRecipientWithResponse call
+func ParseGetNotificationRecipientResponse(rsp *http.Response) (*GetNotificationRecipientResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetNotificationRecipientResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest NotificationRecipient
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON429 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON503 = &dest
+
+	}
+
+	switch {
+	case rsp.StatusCode == 200:
+		var headers GetNotificationRecipientResponse200Headers
+		if values := rsp.Header.Values("ETag"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "ETag", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.ETag = value
+		}
+		response.Headers200 = &headers
+	case rsp.StatusCode == 401:
+		var headers GetNotificationRecipientResponse401Headers
+		if values := rsp.Header.Values("WWW-Authenticate"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "WWW-Authenticate", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.WWWAuthenticate = &value
+		}
+		response.Headers401 = &headers
+	case rsp.StatusCode == 403:
+		var headers GetNotificationRecipientResponse403Headers
+		if values := rsp.Header.Values("WWW-Authenticate"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "WWW-Authenticate", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.WWWAuthenticate = &value
+		}
+		response.Headers403 = &headers
+	case rsp.StatusCode == 429:
+		var headers GetNotificationRecipientResponse429Headers
+		if values := rsp.Header.Values("Retry-After"); len(values) > 0 {
+			var value int
+			if err := runtime.BindStyledParameterWithOptions("simple", "Retry-After", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.RetryAfter = &value
+		}
+		response.Headers429 = &headers
+	case rsp.StatusCode == 503:
+		var headers GetNotificationRecipientResponse503Headers
+		if values := rsp.Header.Values("Retry-After"); len(values) > 0 {
+			var value int
+			if err := runtime.BindStyledParameterWithOptions("simple", "Retry-After", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.RetryAfter = &value
+		}
+		response.Headers503 = &headers
+	}
+
+	return response, nil
+}
+
+// ParseReplaceNotificationRecipientResponse parses an HTTP response from a ReplaceNotificationRecipientWithResponse call
+func ParseReplaceNotificationRecipientResponse(rsp *http.Response) (*ReplaceNotificationRecipientResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ReplaceNotificationRecipientResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest NotificationRecipient
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 412:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON412 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 422:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON422 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON429 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON503 = &dest
+
+	}
+
+	switch {
+	case rsp.StatusCode == 200:
+		var headers ReplaceNotificationRecipientResponse200Headers
+		if values := rsp.Header.Values("ETag"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "ETag", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.ETag = value
+		}
+		response.Headers200 = &headers
+	case rsp.StatusCode == 401:
+		var headers ReplaceNotificationRecipientResponse401Headers
+		if values := rsp.Header.Values("WWW-Authenticate"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "WWW-Authenticate", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.WWWAuthenticate = &value
+		}
+		response.Headers401 = &headers
+	case rsp.StatusCode == 403:
+		var headers ReplaceNotificationRecipientResponse403Headers
+		if values := rsp.Header.Values("WWW-Authenticate"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "WWW-Authenticate", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.WWWAuthenticate = &value
+		}
+		response.Headers403 = &headers
+	case rsp.StatusCode == 429:
+		var headers ReplaceNotificationRecipientResponse429Headers
+		if values := rsp.Header.Values("Retry-After"); len(values) > 0 {
+			var value int
+			if err := runtime.BindStyledParameterWithOptions("simple", "Retry-After", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.RetryAfter = &value
+		}
+		response.Headers429 = &headers
+	case rsp.StatusCode == 503:
+		var headers ReplaceNotificationRecipientResponse503Headers
+		if values := rsp.Header.Values("Retry-After"); len(values) > 0 {
+			var value int
+			if err := runtime.BindStyledParameterWithOptions("simple", "Retry-After", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.RetryAfter = &value
+		}
+		response.Headers503 = &headers
+	}
+
+	return response, nil
+}
+
+// ParseListNotificationRulesResponse parses an HTTP response from a ListNotificationRulesWithResponse call
+func ParseListNotificationRulesResponse(rsp *http.Response) (*ListNotificationRulesResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ListNotificationRulesResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest NotificationRulePage
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON429 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON503 = &dest
+
+	}
+
+	switch {
+	case rsp.StatusCode == 401:
+		var headers ListNotificationRulesResponse401Headers
+		if values := rsp.Header.Values("WWW-Authenticate"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "WWW-Authenticate", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.WWWAuthenticate = &value
+		}
+		response.Headers401 = &headers
+	case rsp.StatusCode == 403:
+		var headers ListNotificationRulesResponse403Headers
+		if values := rsp.Header.Values("WWW-Authenticate"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "WWW-Authenticate", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.WWWAuthenticate = &value
+		}
+		response.Headers403 = &headers
+	case rsp.StatusCode == 429:
+		var headers ListNotificationRulesResponse429Headers
+		if values := rsp.Header.Values("Retry-After"); len(values) > 0 {
+			var value int
+			if err := runtime.BindStyledParameterWithOptions("simple", "Retry-After", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.RetryAfter = &value
+		}
+		response.Headers429 = &headers
+	case rsp.StatusCode == 503:
+		var headers ListNotificationRulesResponse503Headers
+		if values := rsp.Header.Values("Retry-After"); len(values) > 0 {
+			var value int
+			if err := runtime.BindStyledParameterWithOptions("simple", "Retry-After", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.RetryAfter = &value
+		}
+		response.Headers503 = &headers
+	}
+
+	return response, nil
+}
+
+// ParseCreateNotificationRuleResponse parses an HTTP response from a CreateNotificationRuleWithResponse call
+func ParseCreateNotificationRuleResponse(rsp *http.Response) (*CreateNotificationRuleResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &CreateNotificationRuleResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 201:
+		var dest NotificationRule
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON201 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 422:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON422 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON429 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON503 = &dest
+
+	}
+
+	switch {
+	case rsp.StatusCode == 201:
+		var headers CreateNotificationRuleResponse201Headers
+		if values := rsp.Header.Values("ETag"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "ETag", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.ETag = value
+		}
+		response.Headers201 = &headers
+	case rsp.StatusCode == 401:
+		var headers CreateNotificationRuleResponse401Headers
+		if values := rsp.Header.Values("WWW-Authenticate"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "WWW-Authenticate", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.WWWAuthenticate = &value
+		}
+		response.Headers401 = &headers
+	case rsp.StatusCode == 403:
+		var headers CreateNotificationRuleResponse403Headers
+		if values := rsp.Header.Values("WWW-Authenticate"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "WWW-Authenticate", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.WWWAuthenticate = &value
+		}
+		response.Headers403 = &headers
+	case rsp.StatusCode == 429:
+		var headers CreateNotificationRuleResponse429Headers
+		if values := rsp.Header.Values("Retry-After"); len(values) > 0 {
+			var value int
+			if err := runtime.BindStyledParameterWithOptions("simple", "Retry-After", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.RetryAfter = &value
+		}
+		response.Headers429 = &headers
+	case rsp.StatusCode == 503:
+		var headers CreateNotificationRuleResponse503Headers
+		if values := rsp.Header.Values("Retry-After"); len(values) > 0 {
+			var value int
+			if err := runtime.BindStyledParameterWithOptions("simple", "Retry-After", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.RetryAfter = &value
+		}
+		response.Headers503 = &headers
+	}
+
+	return response, nil
+}
+
+// ParseValidateNotificationRuleResponse parses an HTTP response from a ValidateNotificationRuleWithResponse call
+func ParseValidateNotificationRuleResponse(rsp *http.Response) (*ValidateNotificationRuleResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ValidateNotificationRuleResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest NotificationRuleValidation
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON429 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON503 = &dest
+
+	}
+
+	switch {
+	case rsp.StatusCode == 401:
+		var headers ValidateNotificationRuleResponse401Headers
+		if values := rsp.Header.Values("WWW-Authenticate"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "WWW-Authenticate", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.WWWAuthenticate = &value
+		}
+		response.Headers401 = &headers
+	case rsp.StatusCode == 403:
+		var headers ValidateNotificationRuleResponse403Headers
+		if values := rsp.Header.Values("WWW-Authenticate"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "WWW-Authenticate", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.WWWAuthenticate = &value
+		}
+		response.Headers403 = &headers
+	case rsp.StatusCode == 429:
+		var headers ValidateNotificationRuleResponse429Headers
+		if values := rsp.Header.Values("Retry-After"); len(values) > 0 {
+			var value int
+			if err := runtime.BindStyledParameterWithOptions("simple", "Retry-After", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.RetryAfter = &value
+		}
+		response.Headers429 = &headers
+	case rsp.StatusCode == 503:
+		var headers ValidateNotificationRuleResponse503Headers
+		if values := rsp.Header.Values("Retry-After"); len(values) > 0 {
+			var value int
+			if err := runtime.BindStyledParameterWithOptions("simple", "Retry-After", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.RetryAfter = &value
+		}
+		response.Headers503 = &headers
+	}
+
+	return response, nil
+}
+
+// ParseDeleteNotificationRuleResponse parses an HTTP response from a DeleteNotificationRuleWithResponse call
+func ParseDeleteNotificationRuleResponse(rsp *http.Response) (*DeleteNotificationRuleResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &DeleteNotificationRuleResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case rsp.StatusCode == 204:
+		break // No content-type
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 412:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON412 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON429 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON503 = &dest
+
+	}
+
+	switch {
+	case rsp.StatusCode == 401:
+		var headers DeleteNotificationRuleResponse401Headers
+		if values := rsp.Header.Values("WWW-Authenticate"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "WWW-Authenticate", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.WWWAuthenticate = &value
+		}
+		response.Headers401 = &headers
+	case rsp.StatusCode == 403:
+		var headers DeleteNotificationRuleResponse403Headers
+		if values := rsp.Header.Values("WWW-Authenticate"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "WWW-Authenticate", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.WWWAuthenticate = &value
+		}
+		response.Headers403 = &headers
+	case rsp.StatusCode == 429:
+		var headers DeleteNotificationRuleResponse429Headers
+		if values := rsp.Header.Values("Retry-After"); len(values) > 0 {
+			var value int
+			if err := runtime.BindStyledParameterWithOptions("simple", "Retry-After", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.RetryAfter = &value
+		}
+		response.Headers429 = &headers
+	case rsp.StatusCode == 503:
+		var headers DeleteNotificationRuleResponse503Headers
+		if values := rsp.Header.Values("Retry-After"); len(values) > 0 {
+			var value int
+			if err := runtime.BindStyledParameterWithOptions("simple", "Retry-After", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.RetryAfter = &value
+		}
+		response.Headers503 = &headers
+	}
+
+	return response, nil
+}
+
+// ParseGetNotificationRuleResponse parses an HTTP response from a GetNotificationRuleWithResponse call
+func ParseGetNotificationRuleResponse(rsp *http.Response) (*GetNotificationRuleResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetNotificationRuleResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest NotificationRule
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON429 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON503 = &dest
+
+	}
+
+	switch {
+	case rsp.StatusCode == 200:
+		var headers GetNotificationRuleResponse200Headers
+		if values := rsp.Header.Values("ETag"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "ETag", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.ETag = value
+		}
+		response.Headers200 = &headers
+	case rsp.StatusCode == 401:
+		var headers GetNotificationRuleResponse401Headers
+		if values := rsp.Header.Values("WWW-Authenticate"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "WWW-Authenticate", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.WWWAuthenticate = &value
+		}
+		response.Headers401 = &headers
+	case rsp.StatusCode == 403:
+		var headers GetNotificationRuleResponse403Headers
+		if values := rsp.Header.Values("WWW-Authenticate"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "WWW-Authenticate", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.WWWAuthenticate = &value
+		}
+		response.Headers403 = &headers
+	case rsp.StatusCode == 429:
+		var headers GetNotificationRuleResponse429Headers
+		if values := rsp.Header.Values("Retry-After"); len(values) > 0 {
+			var value int
+			if err := runtime.BindStyledParameterWithOptions("simple", "Retry-After", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.RetryAfter = &value
+		}
+		response.Headers429 = &headers
+	case rsp.StatusCode == 503:
+		var headers GetNotificationRuleResponse503Headers
+		if values := rsp.Header.Values("Retry-After"); len(values) > 0 {
+			var value int
+			if err := runtime.BindStyledParameterWithOptions("simple", "Retry-After", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.RetryAfter = &value
+		}
+		response.Headers503 = &headers
+	}
+
+	return response, nil
+}
+
+// ParseReplaceNotificationRuleResponse parses an HTTP response from a ReplaceNotificationRuleWithResponse call
+func ParseReplaceNotificationRuleResponse(rsp *http.Response) (*ReplaceNotificationRuleResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ReplaceNotificationRuleResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest NotificationRule
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 412:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON412 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 422:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON422 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON429 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON503 = &dest
+
+	}
+
+	switch {
+	case rsp.StatusCode == 200:
+		var headers ReplaceNotificationRuleResponse200Headers
+		if values := rsp.Header.Values("ETag"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "ETag", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.ETag = value
+		}
+		response.Headers200 = &headers
+	case rsp.StatusCode == 401:
+		var headers ReplaceNotificationRuleResponse401Headers
+		if values := rsp.Header.Values("WWW-Authenticate"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "WWW-Authenticate", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.WWWAuthenticate = &value
+		}
+		response.Headers401 = &headers
+	case rsp.StatusCode == 403:
+		var headers ReplaceNotificationRuleResponse403Headers
+		if values := rsp.Header.Values("WWW-Authenticate"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "WWW-Authenticate", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.WWWAuthenticate = &value
+		}
+		response.Headers403 = &headers
+	case rsp.StatusCode == 429:
+		var headers ReplaceNotificationRuleResponse429Headers
+		if values := rsp.Header.Values("Retry-After"); len(values) > 0 {
+			var value int
+			if err := runtime.BindStyledParameterWithOptions("simple", "Retry-After", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.RetryAfter = &value
+		}
+		response.Headers429 = &headers
+	case rsp.StatusCode == 503:
+		var headers ReplaceNotificationRuleResponse503Headers
+		if values := rsp.Header.Values("Retry-After"); len(values) > 0 {
+			var value int
+			if err := runtime.BindStyledParameterWithOptions("simple", "Retry-After", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.RetryAfter = &value
+		}
+		response.Headers503 = &headers
+	}
+
+	return response, nil
+}
+
+// ParseListNotificationRuleActivityResponse parses an HTTP response from a ListNotificationRuleActivityWithResponse call
+func ParseListNotificationRuleActivityResponse(rsp *http.Response) (*ListNotificationRuleActivityResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ListNotificationRuleActivityResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest NotificationRuleActivityPage
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON429 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON503 = &dest
+
+	}
+
+	switch {
+	case rsp.StatusCode == 401:
+		var headers ListNotificationRuleActivityResponse401Headers
+		if values := rsp.Header.Values("WWW-Authenticate"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "WWW-Authenticate", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.WWWAuthenticate = &value
+		}
+		response.Headers401 = &headers
+	case rsp.StatusCode == 403:
+		var headers ListNotificationRuleActivityResponse403Headers
+		if values := rsp.Header.Values("WWW-Authenticate"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "WWW-Authenticate", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.WWWAuthenticate = &value
+		}
+		response.Headers403 = &headers
+	case rsp.StatusCode == 429:
+		var headers ListNotificationRuleActivityResponse429Headers
+		if values := rsp.Header.Values("Retry-After"); len(values) > 0 {
+			var value int
+			if err := runtime.BindStyledParameterWithOptions("simple", "Retry-After", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.RetryAfter = &value
+		}
+		response.Headers429 = &headers
+	case rsp.StatusCode == 503:
+		var headers ListNotificationRuleActivityResponse503Headers
 		if values := rsp.Header.Values("Retry-After"); len(values) > 0 {
 			var value int
 			if err := runtime.BindStyledParameterWithOptions("simple", "Retry-After", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {
