@@ -24,6 +24,14 @@ func (e *APIError) Detail(key string) string {
 	return ""
 }
 
+func (e *APIError) DecodeDetails(target any) error {
+	raw, err := json.Marshal(e.Details)
+	if err != nil {
+		return err
+	}
+	return json.Unmarshal(raw, target)
+}
+
 func (e *APIError) DetailStrings(key string) []string {
 	raw, ok := e.Details[key].([]any)
 	if !ok {

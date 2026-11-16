@@ -59,7 +59,7 @@ If your runners sit behind a firewall, allow outbound HTTPS to `auth.act.securit
 
 ## Retries
 
-The provider retries a request up to 4 times when the Act STS or API answers `429`, `502`, `503` or `504`, when the API marks an error as retryable, or when the connection fails. It waits with exponential backoff and honours `Retry-After` up to 30 seconds. Certificate errors and requests the server rejected are never retried.
+The provider retries a request up to 4 times when the Act STS or API answers `429`, `502`, `503` or `504`, when the API marks an error as retryable, or when the connection fails. It waits with exponential backoff and honours `Retry-After` up to 30 seconds. A `POST` is retried only when it carries an idempotency key, as creating an integration or a deployment does, so a retry never creates a second one. Certificate errors and requests the server rejected are never retried.
 
 When the API answers `401`, the provider gets a new token once and repeats the request.
 

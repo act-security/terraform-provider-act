@@ -50,6 +50,7 @@ type Fake struct {
 	now           func() time.Time
 	integrations  *integrationStore
 	notifications *notificationStore
+	deployments   *deploymentStore
 }
 
 func New(cfg Config, stsOrigin, apiOrigin string) (*Fake, error) {
@@ -70,6 +71,7 @@ func New(cfg Config, stsOrigin, apiOrigin string) (*Fake, error) {
 		now:           time.Now,
 		integrations:  newIntegrationStore(time.Now().UTC()),
 		notifications: newNotificationStore(),
+		deployments:   newDeploymentStore(),
 	}, nil
 }
 

@@ -1,0 +1,42 @@
+---
+page_title: "{{ .Name }} {{ .Type }} - {{ .ProviderName }}"
+subcategory: ""
+description: |-
+{{ .Description | plainmarkdown | trimspace | prefixlines "  " }}
+---
+
+# {{ .Name }} ({{ .Type }})
+
+{{ .Description | trimspace }}
+
+## Example Usage
+
+Create the role in the management account, or in a StackSets delegated administrator account, then connect the organization:
+
+{{ tffile .ExampleFile }}
+
+Member accounts need a role too. Deploy `cloudformation_template_url` from the onboarding data source as a service-managed StackSet to the same root or organizational units. Act reads the accounts from the StackSet, so it never waits for the rollout: use `act_deployment_coverage` to see how far it got.
+
+## Scope
+
+Set `root_id` to cover the whole organization, or `organizational_unit_ids` to cover some units. To leave a unit out, list the others. `excluded_account_ids` leaves single accounts out. Changing the scope updates the deployment in place, and Act verifies it again.
+
+A StackSet accepts at most 850 characters of target IDs. When the units do not fit, the plan fails and suggests `root_id` with `excluded_account_ids`.
+
+## Verification
+
+Act assumes the role, checks that its account belongs to the organization and is the management or delegated administrator account, and checks the external ID, before it stores anything. While AWS answers `AccessDenied` for a new role, the provider asks again for up to 2 minutes. A failure that cannot fix itself stops after the same answer comes back twice, and a failed create stores nothing. Use `timeouts` to cap the operation; the defaults are 5 minutes for create and update.
+
+## Deletion protection
+
+`deletion_protection` defaults to `true` here, so a plan that would destroy the deployment fails before anything changes, and destroying the configuration never removes member roles while the deployment survives. Set `deletion_protection = false` and apply before you destroy it. Destroying it disconnects the organization and lists what still trusts Act in a warning. To stop managing the deployment without disconnecting it, use a `removed` block with `lifecycle { destroy = false }` on Terraform 1.7 and later, or `terraform state rm`.
+
+{{ .SchemaMarkdown | trimspace }}
+
+## Import
+
+Import by the organization ID, the root ID or the deployment ID:
+
+{{ codefile "shell" .ImportFile }}
+
+On Terraform 1.5 and later you can use an `import` block with the same IDs.

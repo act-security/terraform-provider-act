@@ -1,0 +1,22 @@
+---
+page_title: "{{ .Name }} {{ .Type }} - {{ .ProviderName }}"
+subcategory: ""
+description: |-
+{{ .Description | plainmarkdown | trimspace | prefixlines "  " }}
+---
+
+# {{ .Name }} ({{ .Type }})
+
+{{ .Description | trimspace }}
+
+## Example Usage
+
+{{ tffile .ExampleFile }}
+
+Pass `deployment_id` and `external_id_key_version` to `act_aws_account_deployment` or `act_aws_organization_deployment`, and build the role from `role_name` and `assume_role_policy_json`. None of the values is a secret.
+
+When `existing_deployment` is set, the target already has a deployment, for example one created in the Act console. Import it rather than creating another; the resource docs show the `import` block.
+
+During an Act principal rotation, `deprecated_principal_arns` lists the principals that are being retired. Trust them as well as `act_principal_arn` until they expire, so the connection keeps working through the rotation.
+
+{{ .SchemaMarkdown | trimspace }}

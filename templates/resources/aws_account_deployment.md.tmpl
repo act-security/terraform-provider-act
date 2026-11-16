@@ -1,0 +1,55 @@
+---
+page_title: "{{ .Name }} {{ .Type }} - {{ .ProviderName }}"
+subcategory: ""
+description: |-
+{{ .Description | plainmarkdown | trimspace | prefixlines "  " }}
+---
+
+# {{ .Name }} ({{ .Type }})
+
+{{ .Description | trimspace }}
+
+## Example Usage
+
+Read the onboarding values first, create the role from them, then connect the account:
+
+{{ tffile .ExampleFile }}
+
+`data.act_aws_onboarding_parameters` is a read and creates nothing. Its `deployment_id`, `role_name` and `external_id` are stable, so a plan you run again shows no change.
+
+## Verification
+
+Act assumes the role, checks the account and checks that the trust policy requires the external ID before it stores anything. A new role can take a minute or two to work everywhere in AWS, so while AWS answers `AccessDenied` the provider asks again, backing off up to 30 seconds between attempts, for up to 2 minutes. A failure that cannot fix itself, such as a trust policy without the external ID, stops after the same answer comes back twice. A failed create stores nothing, so the next apply starts clean.
+
+Use `timeouts` to cap the whole operation; the defaults are 5 minutes for create and update.
+
+On success the apply prints a warning with the deployment's console link. It is not an error: it confirms that Act reached the account.
+
+## When the role breaks
+
+If someone deletes the role or changes its trust policy, the next refresh reports `status = "failed"` with a warning, and the plan updates the deployment in place. Once the configuration has fixed the role, the apply asks Act to verify it again and the deployment is active in the same apply. Set `reverify_on_failure = false` to keep the warning without the extra update.
+
+## External ID
+
+Act derives the external ID from the deployment, so it never changes on its own. A deployment created before derived IDs keeps its stored value with `external_id_source = "legacy"`. Set `external_id_source = "derived"` to move it: Act first checks that the role trusts the derived value, `target_external_id` of the onboarding data source, then switches. Update the trust policy before you apply.
+
+## Destroy
+
+Destroying the resource disconnects the account: Act stops scanning and deletes the credentials it held. The role stays in AWS, and the apply lists it in a warning. With `deletion_protection = true`, a plan that destroys the deployment fails before anything changes. To stop managing the deployment without disconnecting it, use a `removed` block with `lifecycle { destroy = false }` on Terraform 1.7 and later, or `terraform state rm`.
+
+{{ .SchemaMarkdown | trimspace }}
+
+## Import
+
+Import by the 12-digit account ID or by the deployment ID:
+
+{{ codefile "shell" .ImportFile }}
+
+On Terraform 1.5 and later you can use an `import` block instead. When the onboarding data source returns `existing_deployment`, the account already has a deployment, for example one created in the Act console, and creating another fails with the `import` block to use.
+
+```terraform
+import {
+  to = act_aws_account_deployment.this
+  id = "111111111111"
+}
+```
