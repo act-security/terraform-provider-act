@@ -29,7 +29,7 @@ Act assumes the role, checks that its account belongs to the organization and is
 
 ## Deletion protection
 
-`deletion_protection` defaults to `true` here, so a plan that would destroy the deployment fails before anything changes, and destroying the configuration never removes member roles while the deployment survives. Set `deletion_protection = false` and apply before you destroy it. Destroying it disconnects the organization and lists what still trusts Act in a warning. To stop managing the deployment without disconnecting it, use a `removed` block with `lifecycle { destroy = false }` on Terraform 1.7 and later, or `terraform state rm`.
+`deletion_protection` defaults to `true` here, so a plan that would destroy the deployment fails before anything changes, and destroying the configuration never removes member roles while the deployment survives. Changing `deployment_method` replaces the deployment and fails the same way. Set `deletion_protection = false` and apply before you destroy or replace it. Destroying it disconnects the organization and lists what still trusts Act in a warning. To stop managing the deployment without disconnecting it, use a `removed` block with `lifecycle { destroy = false }` on Terraform 1.7 and later, or `terraform state rm`.
 
 {{ .SchemaMarkdown | trimspace }}
 

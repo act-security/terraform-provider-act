@@ -302,6 +302,26 @@ func TestAwsAccountDeploymentReplacesItWhenTheDeploymentMethodChanges(t *testing
 					statecheck.ExpectKnownValue(accountAddress, tfjsonpath.New("deployment_method"), knownvalue.StringExact("cloudformation")),
 				},
 			},
+			{
+				Config: accountConfig(`
+  deployment_method   = "cloudformation"
+  deletion_protection = true
+`),
+			},
+			{
+				Config: accountConfig(`
+  deployment_method   = "terraform"
+  deletion_protection = true
+`),
+				PlanOnly:    true,
+				ExpectError: regexp.MustCompile(`(?s)This change replaces .*Set\s+deletion_protection = false\s+and apply first`),
+			},
+			{
+				Config: accountConfig(`
+  deployment_method   = "cloudformation"
+  deletion_protection = false
+`),
+			},
 		},
 	})
 }

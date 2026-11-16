@@ -168,7 +168,7 @@ func (r *awsDeploymentResource[M, P]) Schema(ctx context.Context, _ resource.Sch
 			PlanModifiers:       []planmodifier.Set{setplanmodifier.UseStateForUnknown()},
 		},
 		"deployment_method": schema.StringAttribute{
-			MarkdownDescription: "How the role was deployed: `terraform` (default) or `cloudformation`. Act cannot change it in place, so changing it replaces the deployment. When you import a deployment set up with CloudFormation, set `cloudformation`.",
+			MarkdownDescription: "How the role was deployed: `terraform` (default) or `cloudformation`. Act cannot change it in place, so changing it replaces the deployment: on a protected deployment, set `deletion_protection = false` and apply that first, or the plan fails. When you import a deployment set up with CloudFormation, set `cloudformation`.",
 			Optional:            true,
 			Computed:            true,
 			Default:             stringdefault.StaticString(string(apigen.AwsDeploymentMethodTerraform)),
@@ -413,8 +413,9 @@ type planChange struct {
 func (c planChange) refuseProtectedReplacement() bool {
 	next, prior := c.next.common(), c.prior.common()
 	key := c.next.targetKey()
-	replaced := (!next.DeploymentID.IsUnknown() && !next.DeploymentID.Equal(prior.DeploymentID)) ||
-		(!key.IsUnknown() && !c.prior.targetKey().IsNull() && !key.Equal(c.prior.targetKey()))
+	replaced := changedValue(next.DeploymentID, prior.DeploymentID) ||
+		changedValue(next.DeploymentMethod, prior.DeploymentMethod) ||
+		(!c.prior.targetKey().IsNull() && changedValue(key, c.prior.targetKey()))
 	if !replaced || !prior.DeletionProtection.ValueBool() {
 		return false
 	}
@@ -423,6 +424,10 @@ func (c planChange) refuseProtectedReplacement() bool {
 		fmt.Sprintf("This change replaces %s, which deletes it first, and Act refuses to delete it while deletion_protection is true. Set deletion_protection = false and apply first.", prior.ID.ValueString()),
 	)
 	return true
+}
+
+func changedValue(next, prior types.String) bool {
+	return !next.IsUnknown() && !next.Equal(prior)
 }
 
 func (c planChange) refuseLegacyExternalID() bool {

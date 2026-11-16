@@ -35,7 +35,7 @@ Act derives the external ID from the deployment, so it never changes on its own.
 
 ## Destroy
 
-Destroying the resource disconnects the account: Act stops scanning and deletes the credentials it held. The role stays in AWS, and the apply lists it in a warning. With `deletion_protection = true`, a plan that destroys the deployment fails before anything changes. To stop managing the deployment without disconnecting it, use a `removed` block with `lifecycle { destroy = false }` on Terraform 1.7 and later, or `terraform state rm`.
+Destroying the resource disconnects the account: Act stops scanning and deletes the credentials it held. The role stays in AWS, and the apply lists it in a warning. With `deletion_protection = true`, a plan that destroys or replaces the deployment fails before anything changes; changing `deployment_method` replaces it, so turn protection off and apply that first. To stop managing the deployment without disconnecting it, use a `removed` block with `lifecycle { destroy = false }` on Terraform 1.7 and later, or `terraform state rm`.
 
 {{ .SchemaMarkdown | trimspace }}
 
