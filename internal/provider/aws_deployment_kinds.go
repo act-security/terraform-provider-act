@@ -104,7 +104,7 @@ func organizationAttributes() map[string]schema.Attribute {
 			},
 		},
 		"organizational_unit_ids": schema.SetAttribute{
-			MarkdownDescription: "The organizational units to cover, `ou-...`. Set this or `root_id`. To leave a sandbox OU out, list the other OUs.",
+			MarkdownDescription: "The organizational units to cover, `ou-...`. Set this or `root_id`. To leave a sandbox OU out, list the other OUs. Changing them updates the deployment in place once the StackSet targets them, and Act verifies it again.",
 			ElementType:         types.StringType,
 			Optional:            true,
 			Validators: []validator.Set{
