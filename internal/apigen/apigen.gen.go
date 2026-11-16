@@ -2196,11 +2196,6 @@ type ClientInterface interface {
 	// Corresponds with GET /v1/onboarding/gcp (the `GetGcpOnboarding` operationId).
 	GetGcpOnboarding(ctx context.Context, params *GetGcpOnboardingParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	// GetProbe Probe
-	//
-	// Corresponds with GET /v1/probe (the `GetProbe` operationId).
-	GetProbe(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
-
 	// ListUsers Find the Act user of the calling tenant with an exact email address
 	//
 	// Matches the whole address, ignoring case, and never lists or searches, so it answers at most one user. A recipient group names users by `id`.
@@ -3119,21 +3114,6 @@ func (c *Client) GetAzureOnboarding(ctx context.Context, params *GetAzureOnboard
 // Corresponds with GET /v1/onboarding/gcp (the `GetGcpOnboarding` operationId).
 func (c *Client) GetGcpOnboarding(ctx context.Context, params *GetGcpOnboardingParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetGcpOnboardingRequest(c.Server, params)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-// GetProbe Probe
-//
-// Corresponds with GET /v1/probe (the `GetProbe` operationId).
-func (c *Client) GetProbe(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewGetProbeRequest(c.Server)
 	if err != nil {
 		return nil, err
 	}
@@ -5520,33 +5500,6 @@ func NewGetGcpOnboardingRequest(server string, params *GetGcpOnboardingParams) (
 	return req, nil
 }
 
-// NewGetProbeRequest constructs an http.Request for the GetProbe method
-func NewGetProbeRequest(server string) (*http.Request, error) {
-	var err error
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/v1/probe")
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	return req, nil
-}
-
 // NewListUsersRequest constructs an http.Request for the ListUsers method
 func NewListUsersRequest(server string, params *ListUsersParams) (*http.Request, error) {
 	var err error
@@ -6090,13 +6043,6 @@ type ClientWithResponsesInterface interface {
 	//
 	// Corresponds with GET /v1/onboarding/gcp (the `GetGcpOnboarding` operationId).
 	GetGcpOnboardingWithResponse(ctx context.Context, params *GetGcpOnboardingParams, reqEditors ...RequestEditorFn) (*GetGcpOnboardingResponse, error)
-
-	// GetProbeWithResponse Probe
-	//
-	// Returns a wrapper object for the known response body format(s).
-	//
-	// Corresponds with GET /v1/probe (the `GetProbe` operationId).
-	GetProbeWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetProbeResponse, error)
 
 	// ListUsersWithResponse Find the Act user of the calling tenant with an exact email address
 	//
@@ -11407,51 +11353,6 @@ func (r GetGcpOnboardingResponse) ContentType() string {
 	return ""
 }
 
-type GetProbeResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	// JSON200 the response for an HTTP 200 `application/json` response
-	JSON200 *struct {
-		Ok *bool `json:"ok,omitempty"`
-	}
-}
-
-// GetJSON200 returns the response for an HTTP 200 `application/json` response
-func (r GetProbeResponse) GetJSON200() *struct {
-	Ok *bool `json:"ok,omitempty"`
-} {
-	return r.JSON200
-}
-
-// GetBody returns the raw response body bytes
-func (r GetProbeResponse) GetBody() []byte {
-	return r.Body
-}
-
-// Status returns HTTPResponse.Status
-func (r GetProbeResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r GetProbeResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
-func (r GetProbeResponse) ContentType() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Header.Get("Content-Type")
-	}
-	return ""
-}
-
 // ListUsersResponse401Headers the declared response headers of an HTTP 401 response for ListUsers
 type ListUsersResponse401Headers struct {
 	WWWAuthenticate *string
@@ -12425,19 +12326,6 @@ func (c *ClientWithResponses) GetGcpOnboardingWithResponse(ctx context.Context, 
 		return nil, err
 	}
 	return ParseGetGcpOnboardingResponse(rsp)
-}
-
-// GetProbeWithResponse Probe
-//
-// Returns a wrapper object for the known response body format(s).
-//
-// Corresponds with GET /v1/probe (the `GetProbe` operationId).
-func (c *ClientWithResponses) GetProbeWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetProbeResponse, error) {
-	rsp, err := c.GetProbe(ctx, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseGetProbeResponse(rsp)
 }
 
 // ListUsersWithResponse Find the Act user of the calling tenant with an exact email address
@@ -17830,34 +17718,6 @@ func ParseGetGcpOnboardingResponse(rsp *http.Response) (*GetGcpOnboardingRespons
 			headers.RetryAfter = &value
 		}
 		response.Headers503 = &headers
-	}
-
-	return response, nil
-}
-
-// ParseGetProbeResponse parses an HTTP response from a GetProbeWithResponse call
-func ParseGetProbeResponse(rsp *http.Response) (*GetProbeResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &GetProbeResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest struct {
-			Ok *bool `json:"ok,omitempty"`
-		}
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON200 = &dest
-
 	}
 
 	return response, nil

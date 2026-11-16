@@ -179,10 +179,6 @@ func (UnimplementedStrictServer) GetGcpOnboarding(context.Context, GetGcpOnboard
 	return nil, ErrNotImplemented
 }
 
-func (UnimplementedStrictServer) GetProbe(context.Context, GetProbeRequestObject) (GetProbeResponseObject, error) {
-	return nil, ErrNotImplemented
-}
-
 func (UnimplementedStrictServer) ListUsers(context.Context, ListUsersRequestObject) (ListUsersResponseObject, error) {
 	return nil, ErrNotImplemented
 }

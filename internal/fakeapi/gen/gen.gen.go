@@ -1885,9 +1885,6 @@ type ServerInterface interface {
 	// GetGcpOnboarding Return what a GCP project or organization needs before it is connected
 	// (GET /v1/onboarding/gcp)
 	GetGcpOnboarding(w http.ResponseWriter, r *http.Request, params GetGcpOnboardingParams)
-	// GetProbe Probe
-	// (GET /v1/probe)
-	GetProbe(w http.ResponseWriter, r *http.Request)
 	// ListUsers Find the Act user of the calling tenant with an exact email address
 	// (GET /v1/users)
 	ListUsers(w http.ResponseWriter, r *http.Request, params ListUsersParams)
@@ -3900,20 +3897,6 @@ func (siw *ServerInterfaceWrapper) GetGcpOnboarding(w http.ResponseWriter, r *ht
 	handler.ServeHTTP(w, r)
 }
 
-// GetProbe operation middleware
-func (siw *ServerInterfaceWrapper) GetProbe(w http.ResponseWriter, r *http.Request) {
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetProbe(w, r)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
 // ListUsers operation middleware
 func (siw *ServerInterfaceWrapper) ListUsers(w http.ResponseWriter, r *http.Request) {
 
@@ -4123,7 +4106,6 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/v1/onboarding/aws", wrapper.GetAwsOnboarding)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/v1/onboarding/azure", wrapper.GetAzureOnboarding)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/v1/onboarding/gcp", wrapper.GetGcpOnboarding)
-	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/v1/probe", wrapper.GetProbe)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/v1/users", wrapper.ListUsers)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/v1/whoami", wrapper.GetWhoami)
 
@@ -11442,29 +11424,6 @@ func (response GetGcpOnboarding503JSONResponse) VisitGetGcpOnboardingResponse(w 
 	return err
 }
 
-type GetProbeRequestObject struct {
-}
-
-type GetProbeResponseObject interface {
-	VisitGetProbeResponse(w http.ResponseWriter) error
-}
-
-type GetProbe200JSONResponse struct {
-	Ok *bool `json:"ok,omitempty"`
-}
-
-func (response GetProbe200JSONResponse) VisitGetProbeResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(200)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
 type ListUsersRequestObject struct {
 	Params ListUsersParams
 }
@@ -11884,9 +11843,6 @@ type StrictServerInterface interface {
 	// GetGcpOnboarding Return what a GCP project or organization needs before it is connected
 	// (GET /v1/onboarding/gcp)
 	GetGcpOnboarding(ctx context.Context, request GetGcpOnboardingRequestObject) (GetGcpOnboardingResponseObject, error)
-	// GetProbe Probe
-	// (GET /v1/probe)
-	GetProbe(ctx context.Context, request GetProbeRequestObject) (GetProbeResponseObject, error)
 	// ListUsers Find the Act user of the calling tenant with an exact email address
 	// (GET /v1/users)
 	ListUsers(ctx context.Context, request ListUsersRequestObject) (ListUsersResponseObject, error)
@@ -13122,30 +13078,6 @@ func (sh *strictHandler) GetGcpOnboarding(w http.ResponseWriter, r *http.Request
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(GetGcpOnboardingResponseObject); ok {
 		if err := validResponse.VisitGetGcpOnboardingResponse(w); err != nil {
-			sh.options.ResponseErrorHandlerFunc(w, r, err)
-		}
-	} else if response != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
-	}
-}
-
-// GetProbe operation middleware
-func (sh *strictHandler) GetProbe(w http.ResponseWriter, r *http.Request) {
-	var request GetProbeRequestObject
-
-	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
-		return sh.ssi.GetProbe(ctx, request.(GetProbeRequestObject))
-	}
-	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "GetProbe")
-	}
-
-	response, err := handler(r.Context(), w, r, request)
-
-	if err != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(GetProbeResponseObject); ok {
-		if err := validResponse.VisitGetProbeResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
