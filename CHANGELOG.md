@@ -1,5 +1,28 @@
 # Changelog
 
+## [0.3.0](https://github.com/act-security/terraform-provider-act/compare/v0.2.1...v0.3.0) (2026-11-16)
+
+
+### Features
+
+* answer 501 from the fake for operations it lacks and publish api/support.json ([#14](https://github.com/act-security/terraform-provider-act/issues/14)) ([cc484ef](https://github.com/act-security/terraform-provider-act/commit/cc484ef26018a36f6e5dbd0db89e6a20a890734a))
+* manage AWS account and organization deployments ([#10](https://github.com/act-security/terraform-provider-act/issues/10)) ([ce27342](https://github.com/act-security/terraform-provider-act/commit/ce273424d17e984df8efb289f387c9a88c019131))
+* manage notification rules and recipients ([#7](https://github.com/act-security/terraform-provider-act/issues/7)) ([de68318](https://github.com/act-security/terraform-provider-act/commit/de683183d4e24c48ea9f3f5f8d407231f190ebfa))
+* warn at plan and refuse the apply when the API key cannot write the change ([#16](https://github.com/act-security/terraform-provider-act/issues/16)) ([eaf0cc7](https://github.com/act-security/terraform-provider-act/commit/eaf0cc750fc5fd62f4f4fcb78dcdb28092b5cf2d))
+
+
+### Bug Fixes
+
+* accept the CloudTrail logs and AI services capabilities on AWS deployments ([#19](https://github.com/act-security/terraform-provider-act/issues/19)) ([cabca92](https://github.com/act-security/terraform-provider-act/commit/cabca927d316e36567f868dc32017ca96f1dccfc))
+* force replacement when deployment_method changes ([#15](https://github.com/act-security/terraform-provider-act/issues/15)) ([02c6c00](https://github.com/act-security/terraform-provider-act/commit/02c6c0087ab35d966f31283d2bcdd002e46f6539))
+* honour X-Retry-After when a 429 has no Retry-After ([#13](https://github.com/act-security/terraform-provider-act/issues/13)) ([ababe44](https://github.com/act-security/terraform-provider-act/commit/ababe444f0345f359fc110f01b85f4f8c2b23d3a))
+* let a deterministic verification failure settle before giving up ([#12](https://github.com/act-security/terraform-provider-act/issues/12)) ([4e88b51](https://github.com/act-security/terraform-provider-act/commit/4e88b510f2a76566d96096f7753fc35e2c012637))
+
+
+### Documentation
+
+* prepare the 0.3.0 release of the AWS deployment resources ([#18](https://github.com/act-security/terraform-provider-act/issues/18)) ([db27688](https://github.com/act-security/terraform-provider-act/commit/db27688fc7f4e70ca19595a05d69170a5c41b638))
+
 ## [0.2.1](https://github.com/act-security/terraform-provider-act/compare/v0.2.0...v0.2.1) (2026-11-11)
 
 
