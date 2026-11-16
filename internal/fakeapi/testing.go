@@ -27,6 +27,10 @@ func WithoutTenantClaim() Option {
 	return func(c *Config) { c.OmitTenantClaim = true }
 }
 
+func WithKey(key Key) Option {
+	return func(c *Config) { c.Key = key }
+}
+
 func WithScript(s Script) Option {
 	return func(c *Config) { c.Script = s }
 }

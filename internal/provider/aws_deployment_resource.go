@@ -272,9 +272,17 @@ func (r *awsDeploymentResource[M, P]) ModifyPlan(ctx context.Context, req resour
 	default:
 		r.planUpdate(ctx, req, resp)
 	}
+	r.writeAccess().warnAtPlan(r.data, req, resp)
+}
+
+func (r *awsDeploymentResource[M, P]) writeAccess() writeAccess {
+	return writeAccess{scope: deploymentsWriteScope, typeName: r.typeName()}
 }
 
 func (r *awsDeploymentResource[M, P]) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
+	if r.writeAccess().refuseAtApply(r.data, "creates", &resp.Diagnostics) {
+		return
+	}
 	diags := &resp.Diagnostics
 	var plan M
 	if diags.Append(req.Plan.Get(ctx, &plan)...); diags.HasError() {
@@ -320,6 +328,9 @@ func (r *awsDeploymentResource[M, P]) Read(ctx context.Context, req resource.Rea
 }
 
 func (r *awsDeploymentResource[M, P]) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+	if r.writeAccess().refuseAtApply(r.data, "changes", &resp.Diagnostics) {
+		return
+	}
 	diags := &resp.Diagnostics
 	var plan, state M
 	diags.Append(req.Plan.Get(ctx, &plan)...)
@@ -342,6 +353,9 @@ func (r *awsDeploymentResource[M, P]) Update(ctx context.Context, req resource.U
 }
 
 func (r *awsDeploymentResource[M, P]) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
+	if r.writeAccess().refuseAtApply(r.data, "destroys", &resp.Diagnostics) {
+		return
+	}
 	diags := &resp.Diagnostics
 	var state M
 	if diags.Append(req.State.Get(ctx, &state)...); diags.HasError() {

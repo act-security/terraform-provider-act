@@ -164,9 +164,17 @@ func (r *notificationRuleResource) Configure(_ context.Context, req resource.Con
 
 func (r *notificationRuleResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
 	keepStateWhenOnlyComputedDiffer(ctx, req, resp, "revision", "min_client_revision", "last_modified_via")
+	r.writeAccess().warnAtPlan(r.data, req, resp)
+}
+
+func (r *notificationRuleResource) writeAccess() writeAccess {
+	return writeAccess{scope: integrationsWriteScope, typeName: "act_notification_rule"}
 }
 
 func (r *notificationRuleResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
+	if r.writeAccess().refuseAtApply(r.data, "creates", &resp.Diagnostics) {
+		return
+	}
 	var plan notificationRuleModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
 	if resp.Diagnostics.HasError() {
@@ -209,6 +217,9 @@ func (r *notificationRuleResource) Read(ctx context.Context, req resource.ReadRe
 }
 
 func (r *notificationRuleResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+	if r.writeAccess().refuseAtApply(r.data, "changes", &resp.Diagnostics) {
+		return
+	}
 	var plan, prior notificationRuleModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
 	resp.Diagnostics.Append(req.State.Get(ctx, &prior)...)
@@ -232,6 +243,9 @@ func (r *notificationRuleResource) Update(ctx context.Context, req resource.Upda
 }
 
 func (r *notificationRuleResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
+	if r.writeAccess().refuseAtApply(r.data, "destroys", &resp.Diagnostics) {
+		return
+	}
 	var prior notificationRuleModel
 	resp.Diagnostics.Append(req.State.Get(ctx, &prior)...)
 	if resp.Diagnostics.HasError() {

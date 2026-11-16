@@ -52,6 +52,7 @@ func (s *apiServer) GetWhoami(ctx context.Context, _ gen.GetWhoamiRequestObject)
 		}
 	}
 	region := s.fake.cfg.Region
+	key := s.fake.key.Load()
 	return gen.GetWhoami200JSONResponse{
 		TenantID:          s.fake.cfg.TenantID,
 		TenantDisplayName: s.fake.cfg.TenantDisplayName,
@@ -61,8 +62,8 @@ func (s *apiServer) GetWhoami(ctx context.Context, _ gen.GetWhoamiRequestObject)
 			Kind: gen.PrincipalKindServiceAccount,
 			Name: DefaultServiceAccount,
 		},
-		TokenScope:     gen.TokenScopeActRead,
-		Scopes:         []string{"act:read"},
+		TokenScope:     key.TokenScope,
+		Scopes:         key.Scopes,
 		AuthMethod:     gen.AuthMethodClientCredentials,
 		TokenExpiresAt: expiry,
 	}, nil
