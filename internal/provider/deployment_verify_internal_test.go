@@ -92,6 +92,57 @@ func TestVerificationStopsAfterTwoIdenticalDeterministicAnswers(t *testing.T) {
 	}
 }
 
+func TestVerificationWaitsForADeterministicAnswerToSettle(t *testing.T) {
+	clock := &fakeClock{now: time.Unix(0, 0)}
+	policy := clock.policy(2 * time.Minute)
+	policy.settle = 30 * time.Second
+	notEnforced := failure("deterministic", "EXTERNAL_ID_NOT_ENFORCED")
+	call, calls := answers(notEnforced, notEnforced, notEnforced)
+	outcome, err := policy.run(t.Context(), call)
+	if err != nil || *calls != 4 || outcome.attempts != 4 {
+		t.Fatalf("got %v after %d calls, want success once AWS propagated the fixed role", err, *calls)
+	}
+}
+
+func TestVerificationStopsOnceADeterministicAnswerHasSettled(t *testing.T) {
+	clock := &fakeClock{now: time.Unix(0, 0)}
+	policy := clock.policy(2 * time.Minute)
+	policy.settle = 30 * time.Second
+	errs := make([]error, 50)
+	for i := range errs {
+		errs[i] = failure("deterministic", "EXTERNAL_ID_NOT_ENFORCED")
+	}
+	call, calls := answers(errs...)
+	outcome, err := policy.run(t.Context(), call)
+	if err == nil || outcome.timedOut {
+		t.Fatalf("got %v, timed out %t", err, outcome.timedOut)
+	}
+	if outcome.elapsed < 30*time.Second || *calls != 5 {
+		t.Fatalf("stopped after %s and %d calls, want the first call at or past 30s", outcome.elapsed, *calls)
+	}
+}
+
+func TestVerificationFailureReadsAsSentences(t *testing.T) {
+	notEnforced := &verificationFailure{verificationDetails: verificationDetails{
+		RetryClass:     retryClassDeterministic,
+		CloudErrorCode: "EXTERNAL_ID_NOT_ENFORCED",
+		Hint:           "Require the external ID with a StringEquals condition on sts:ExternalId",
+	}}
+	settled := verificationOutcome{attempts: 2}
+	tests := []struct {
+		action string
+		want   string
+	}{
+		{action: createAction, want: "Act could not use the role: EXTERNAL_ID_NOT_ENFORCED. Require the external ID with a StringEquals condition on sts:ExternalId. Act got the same answer 2 times, so this needs a fix on the AWS side. Nothing was stored."},
+		{action: "verify", want: "Act could not use the role: EXTERNAL_ID_NOT_ENFORCED. Require the external ID with a StringEquals condition on sts:ExternalId. Act got the same answer 2 times, so this needs a fix on the AWS side."},
+	}
+	for _, tt := range tests {
+		if got := notEnforced.describe(writeFailure{action: tt.action, outcome: settled}); got != tt.want {
+			t.Errorf("%s:\n got %q\nwant %q", tt.action, got, tt.want)
+		}
+	}
+}
+
 func TestVerificationKeepsGoingWhenTheDeterministicAnswerChanges(t *testing.T) {
 	clock := &fakeClock{now: time.Unix(0, 0)}
 	call, calls := answers(failure("deterministic", "ACCOUNT_ID_MISMATCH"), failure("deterministic", "EXTERNAL_ID_NOT_ENFORCED"))

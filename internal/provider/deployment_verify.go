@@ -20,6 +20,7 @@ const (
 
 type verificationPolicy struct {
 	budget time.Duration
+	settle time.Duration
 	base   time.Duration
 	max    time.Duration
 	factor float64
@@ -30,6 +31,7 @@ type verificationPolicy struct {
 
 var awsVerification = verificationPolicy{
 	budget: 2 * time.Minute,
+	settle: 30 * time.Second,
 	base:   5 * time.Second,
 	max:    30 * time.Second,
 	factor: 1.5,
@@ -51,10 +53,11 @@ type verificationFailure struct {
 }
 
 type verificationOutcome struct {
-	attempts int
-	elapsed  time.Duration
-	last     *verificationFailure
-	timedOut bool
+	attempts  int
+	elapsed   time.Duration
+	last      *verificationFailure
+	lastSince time.Duration
+	timedOut  bool
 }
 
 func asVerificationFailure(err error) (*verificationFailure, bool) {
@@ -88,9 +91,12 @@ func (p verificationPolicy) run(ctx context.Context, call func(ctx context.Conte
 		if !ok {
 			return outcome, err
 		}
-		repeated := failure.RetryClass != retryClassPropagation && failure.sameAs(outcome.last)
+		repeated := failure.sameAs(outcome.last)
+		if !repeated {
+			outcome.lastSince = outcome.elapsed
+		}
 		outcome.last = failure
-		if repeated {
+		if failure.RetryClass != retryClassPropagation && repeated && outcome.elapsed-outcome.lastSince >= p.settle {
 			return outcome, err
 		}
 		wait := p.jitter(delay)
