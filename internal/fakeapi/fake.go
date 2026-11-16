@@ -19,14 +19,15 @@ const (
 )
 
 type Config struct {
-	TenantID             string
-	TenantDisplayName    string
-	Region               string
-	ClientID             string
-	ClientSecret         string
-	PublicAPIUnavailable bool
-	OmitTenantClaim      bool
-	Script               Script
+	TenantID                  string
+	TenantDisplayName         string
+	Region                    string
+	ClientID                  string
+	ClientSecret              string
+	PublicAPIUnavailable      bool
+	NotificationRulesDisabled bool
+	OmitTenantClaim           bool
+	Script                    Script
 }
 
 func DefaultConfig() Config {
@@ -40,15 +41,16 @@ func DefaultConfig() Config {
 }
 
 type Fake struct {
-	cfg          Config
-	stsOrigin    string
-	apiOrigin    string
-	signer       *signer
-	script       *scriptQueue
-	recorder     *Recorder
-	now          func() time.Time
-	integrations *integrationStore
-	deployments  *deploymentStore
+	cfg           Config
+	stsOrigin     string
+	apiOrigin     string
+	signer        *signer
+	script        *scriptQueue
+	recorder      *Recorder
+	now           func() time.Time
+	integrations  *integrationStore
+	notifications *notificationStore
+	deployments   *deploymentStore
 }
 
 func New(cfg Config, stsOrigin, apiOrigin string) (*Fake, error) {
@@ -60,15 +62,16 @@ func New(cfg Config, stsOrigin, apiOrigin string) (*Fake, error) {
 		return nil, err
 	}
 	return &Fake{
-		cfg:          cfg,
-		stsOrigin:    stsOrigin,
-		apiOrigin:    apiOrigin,
-		signer:       s,
-		script:       newScriptQueue(cfg.Script),
-		recorder:     &Recorder{},
-		now:          time.Now,
-		integrations: newIntegrationStore(time.Now().UTC()),
-		deployments:  newDeploymentStore(),
+		cfg:           cfg,
+		stsOrigin:     stsOrigin,
+		apiOrigin:     apiOrigin,
+		signer:        s,
+		script:        newScriptQueue(cfg.Script),
+		recorder:      &Recorder{},
+		now:           time.Now,
+		integrations:  newIntegrationStore(time.Now().UTC()),
+		notifications: newNotificationStore(),
+		deployments:   newDeploymentStore(),
 	}, nil
 }
 

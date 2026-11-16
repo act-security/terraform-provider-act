@@ -1,0 +1,18 @@
+---
+page_title: "{{ .Name }} {{ .Type }} - {{ .ProviderName }}"
+subcategory: ""
+description: |-
+{{ .Description | plainmarkdown | trimspace | prefixlines "  " }}
+---
+
+# {{ .Name }} ({{ .Type }})
+
+{{ .Description | trimspace }}
+
+## Example Usage
+
+{{ tffile .ExampleFile }}
+
+The lookup matches the whole address and never lists or searches, so it finds at most one user. A user who has left the tenant is not found.
+
+{{ .SchemaMarkdown | trimspace }}

@@ -236,7 +236,7 @@ func (m *awsOnboardingModel) fillFrom(values apigen.AwsOnboarding) {
 	}
 	m.ManagedPolicyArns = nil
 	if values.ManagedPolicyArns != nil {
-		m.ManagedPolicyArns = stringValues(*values.ManagedPolicyArns)
+		m.ManagedPolicyArns = typedStrings(*values.ManagedPolicyArns)
 	}
 	m.MemberRoleName = types.StringPointerValue(values.MemberRoleName)
 	m.MemberRolePath = types.StringPointerValue(values.MemberRolePath)
@@ -307,7 +307,7 @@ func summaryModel(item apigen.DeploymentSummary) deploymentSummaryModel {
 		Cloud:              types.StringValue(string(item.Cloud)),
 		Name:               types.StringValue(item.Name),
 		Scope:              types.StringValue(string(item.Scope)),
-		Targets:            stringValues(item.Targets),
+		Targets:            typedStrings(item.Targets),
 		Status:             types.StringValue(string(item.Status)),
 		UpdateAvailable:    types.BoolValue(item.UpdateAvailable),
 		DeletionProtection: types.BoolValue(item.DeletionProtection),
@@ -676,7 +676,7 @@ func (d *deploymentAccountsDataSource) Read(ctx context.Context, req datasource.
 	resp.Diagnostics.Append(resp.State.Set(ctx, &model)...)
 }
 
-func stringValues(values []string) []types.String {
+func typedStrings(values []string) []types.String {
 	out := make([]types.String, 0, len(values))
 	for _, value := range values {
 		out = append(out, types.StringValue(value))

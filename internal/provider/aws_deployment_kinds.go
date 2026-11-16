@@ -350,12 +350,6 @@ func capabilityList(values []string) []apigen.AwsCapability {
 	return capabilities
 }
 
-func stringSet(ctx context.Context, values []string, diags *diag.Diagnostics) types.Set {
-	set, setDiags := types.SetValueFrom(ctx, types.StringType, values)
-	diags.Append(setDiags...)
-	return set
-}
-
 func nullableStringSet(ctx context.Context, values *[]string, diags *diag.Diagnostics) types.Set {
 	if values == nil {
 		return types.SetNull(types.StringType)

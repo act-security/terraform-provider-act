@@ -153,6 +153,8 @@ func (p *actProvider) Resources(context.Context) []func() resource.Resource {
 		NewSplunkIntegrationResource,
 		NewAwsAccountDeploymentResource,
 		NewAwsOrganizationDeploymentResource,
+		NewNotificationRuleResource,
+		NewNotificationRecipientResource,
 	}
 }
 
@@ -166,6 +168,9 @@ func (p *actProvider) DataSources(context.Context) []func() datasource.DataSourc
 		NewDeploymentsDataSource,
 		NewDeploymentCoverageDataSource,
 		NewDeploymentAccountsDataSource,
+		NewUserDataSource,
+		NewSlackChannelDataSource,
+		NewNotificationEventTypesDataSource,
 	}
 }
 

@@ -19,7 +19,8 @@ func (f *Fake) bearer(next http.Handler) http.Handler {
 			writeJSON(w, http.StatusUnauthorized, envelope(gen.ErrorEnvelopeErrorCodeUnauthenticated, "Missing or invalid bearer token."))
 			return
 		}
-		next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), claimsKey{}, claims)))
+		ctx := context.WithValue(r.Context(), claimsKey{}, claims)
+		next.ServeHTTP(w, r.WithContext(context.WithValue(ctx, userAgentKey{}, r.UserAgent())))
 	})
 }
 

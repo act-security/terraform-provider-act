@@ -21,6 +21,14 @@ func TestNewAPIError(t *testing.T) {
 		t.Fatalf("Detail() on %+v", conflict)
 	}
 
+	inUse := newAPIError(http.StatusConflict, []byte(`{"error":{"code":"conflict","message":"in use","requestId":"req_3","retryable":false,"details":{"reason":"notification_recipient_in_use","ruleIds":["r1",2,"r2"]}}}`))
+	if got := inUse.DetailStrings("ruleIds"); !reflect.DeepEqual(got, []string{"r1", "r2"}) {
+		t.Fatalf("DetailStrings(ruleIds) = %v", got)
+	}
+	if inUse.DetailStrings("reason") != nil || inUse.DetailStrings("missing") != nil {
+		t.Fatalf("DetailStrings on a non-list detail returned values")
+	}
+
 	plain := newAPIError(http.StatusBadGateway, []byte("<html>bad gateway</html>"))
 	if plain.Code != "Bad Gateway" || plain.Message != "" {
 		t.Fatalf("newAPIError for a non-envelope body = %+v", plain)

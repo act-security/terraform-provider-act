@@ -1,0 +1,32 @@
+---
+page_title: "{{ .Name }} {{ .Type }} - {{ .ProviderName }}"
+subcategory: ""
+description: |-
+{{ .Description | plainmarkdown | trimspace | prefixlines "  " }}
+---
+
+# {{ .Name }} ({{ .Type }})
+
+{{ .Description | trimspace }}
+
+A recipient has up to 100 members across `user_ids`, `emails` and `slack_channel` blocks, and at least one.
+
+An Act user gets alerts through the receiver they chose in their Act profile, email or Slack. Terraform doesn't manage that choice. When a user leaves the tenant, they stay a member with `in_tenant = false` in `members`, receive nothing, and the provider warns until you remove them from `user_ids`.
+
+## Example Usage
+
+{{ tffile .ExampleFile }}
+
+Reference it from a rule's `recipient_ids` with its `id`, so Terraform deletes the rule's reference before the recipient. Act refuses to delete a recipient while any rule names it, and the error lists those rules.
+
+Act sorts members, so a plan never shows a change for their order. Email addresses must be lowercase.
+
+When Act adds member types this provider version does not know, `min_client_revision` goes above 1. The provider then warns and refuses to update the recipient, so it never drops members it cannot see.
+
+{{ .SchemaMarkdown | trimspace }}
+
+## Import
+
+Import by recipient ID:
+
+{{ codefile "shell" .ImportFile }}

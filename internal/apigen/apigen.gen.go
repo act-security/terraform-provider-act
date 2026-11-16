@@ -510,6 +510,27 @@ func (e NotificationMatchResult) Valid() bool {
 	}
 }
 
+// Defines values for NotificationRecipientMemberType.
+const (
+	NotificationRecipientMemberTypeEmail        NotificationRecipientMemberType = "email"
+	NotificationRecipientMemberTypeSlackChannel NotificationRecipientMemberType = "slack_channel"
+	NotificationRecipientMemberTypeUser         NotificationRecipientMemberType = "user"
+)
+
+// Valid indicates whether the value is a known member of the NotificationRecipientMemberType enum.
+func (e NotificationRecipientMemberType) Valid() bool {
+	switch e {
+	case NotificationRecipientMemberTypeEmail:
+		return true
+	case NotificationRecipientMemberTypeSlackChannel:
+		return true
+	case NotificationRecipientMemberTypeUser:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for PrincipalKind.
 const (
 	PrincipalKindServiceAccount PrincipalKind = "service_account"
@@ -580,6 +601,18 @@ func (e ListNotificationRulesParamsEnabled) Valid() bool {
 	default:
 		return false
 	}
+}
+
+// ActUser defines model for ActUser.
+type ActUser struct {
+	Email string  `json:"email"`
+	ID    string  `json:"id"`
+	Name  *string `json:"name"`
+}
+
+// ActUserList defines model for ActUserList.
+type ActUserList struct {
+	Items []ActUser `json:"items"`
 }
 
 // AuthMethod defines model for AuthMethod.
@@ -1244,8 +1277,13 @@ type NotificationRecipient struct {
 
 	// LastModifiedVia Where a change came from: `ui` is the Act app, `terraform` is the Act Terraform provider, and `api` is any other public API client.
 	LastModifiedVia NotificationChangeSource `json:"lastModifiedVia"`
-	Methods         []NotificationAction     `json:"methods"`
-	Name            string                   `json:"name"`
+
+	// Members Sorted by type (`email`, `slack_channel`, `user`), then by address, by `integrationId` and `channelId`, or by `userId`, by code unit.
+	Members []NotificationRecipientMember `json:"members"`
+
+	// MinClientRevision The oldest client revision that can show and edit this recipient. A recipient with a member type an older client does not know has a higher value; such a client should not replace it.
+	MinClientRevision int    `json:"minClientRevision"`
+	Name              string `json:"name"`
 
 	// Revision Increases on every change. The `ETag` header carries it in quotes.
 	Revision int `json:"revision"`
@@ -1255,16 +1293,80 @@ type NotificationRecipient struct {
 	UpdatedAt time.Time `json:"updatedAt"`
 }
 
+// NotificationRecipientEmailMember defines model for NotificationRecipientEmailMember.
+type NotificationRecipientEmailMember struct {
+	// Address An email address with no ASCII uppercase letter (A-Z) and no surrounding whitespace.
+	Address openapi_types.Email `json:"address"`
+}
+
+// NotificationRecipientMember defines model for NotificationRecipientMember.
+type NotificationRecipientMember struct {
+	Email        *NotificationRecipientEmailMember        `json:"email,omitempty"`
+	SlackChannel *NotificationRecipientSlackChannelMember `json:"slackChannel,omitempty"`
+	Type         NotificationRecipientMemberType          `json:"type"`
+	User         *NotificationRecipientUserMember         `json:"user,omitempty"`
+}
+
+// NotificationRecipientMemberType defines model for NotificationRecipientMemberType.
+type NotificationRecipientMemberType string
+
+// NotificationRecipientMemberWrite One member of a recipient group. `type` names the object that carries it: `user` for an Act user, who is reached through the receiver they chose in their profile; `email` for an address; `slackChannel` for a channel.
+type NotificationRecipientMemberWrite struct {
+	Email        *NotificationRecipientEmailMember             `json:"email,omitempty"`
+	SlackChannel *NotificationRecipientSlackChannelMemberWrite `json:"slackChannel,omitempty"`
+	Type         NotificationRecipientMemberType               `json:"type"`
+	User         *NotificationRecipientUserMemberWrite         `json:"user,omitempty"`
+}
+
 // NotificationRecipientPage defines model for NotificationRecipientPage.
 type NotificationRecipientPage struct {
 	Items         []NotificationRecipient `json:"items"`
 	NextPageToken *string                 `json:"nextPageToken"`
 }
 
-// NotificationRecipientWrite A tenant-wide address-book entry: a name and the addresses it stands for, at most one method per type.
+// NotificationRecipientSlackChannelMember defines model for NotificationRecipientSlackChannelMember.
+type NotificationRecipientSlackChannelMember struct {
+	// ChannelID A Slack channel ID; `GET /integrations/slack/channels` finds a public channel by name.
+	ChannelID   string  `json:"channelId"`
+	ChannelName *string `json:"channelName"`
+
+	// IntegrationID A connected Slack integration, from `GET /integrations?type=slack`.
+	IntegrationID string `json:"integrationId"`
+}
+
+// NotificationRecipientSlackChannelMemberWrite defines model for NotificationRecipientSlackChannelMemberWrite.
+type NotificationRecipientSlackChannelMemberWrite struct {
+	// ChannelID A Slack channel ID; `GET /integrations/slack/channels` finds a public channel by name.
+	ChannelID string `json:"channelId"`
+
+	// IntegrationID A connected Slack integration, from `GET /integrations?type=slack`.
+	IntegrationID string `json:"integrationId"`
+}
+
+// NotificationRecipientUserMember defines model for NotificationRecipientUserMember.
+type NotificationRecipientUserMember struct {
+	// Email The user's email address. Null for a token without `integrations:write`, and for a user who has left the tenant.
+	Email *string `json:"email"`
+
+	// InTenant False once the user has left the tenant. Such a member stays stored, receives nothing, and may be sent back unchanged.
+	InTenant bool    `json:"inTenant"`
+	Name     *string `json:"name"`
+
+	// UserID An Act user of this tenant, from `GET /users?email=`.
+	UserID string `json:"userId"`
+}
+
+// NotificationRecipientUserMemberWrite defines model for NotificationRecipientUserMemberWrite.
+type NotificationRecipientUserMemberWrite struct {
+	// UserID An Act user of this tenant, from `GET /users?email=`.
+	UserID string `json:"userId"`
+}
+
+// NotificationRecipientWrite A tenant-wide recipient group that rules can name: a name and its members.
 type NotificationRecipientWrite struct {
-	Methods []NotificationAction `json:"methods"`
-	Name    string               `json:"name"`
+	// Members Each member is listed once: a user by `userId`, an email by `address`, a Slack channel by `integrationId` and `channelId`. A user member and an email member with the same address are two members. A new user must be in this tenant; a stored user who has left it may be sent back unchanged.
+	Members []NotificationRecipientMemberWrite `json:"members"`
+	Name    string                             `json:"name"`
 }
 
 // NotificationRule defines model for NotificationRule.
@@ -1322,6 +1424,7 @@ type NotificationRuleLimits struct {
 	MaxEnabledRulesPerEventType int `json:"maxEnabledRulesPerEventType"`
 	MaxEventTypesPerRule        int `json:"maxEventTypesPerRule"`
 	MaxNameLength               int `json:"maxNameLength"`
+	MaxRecipientMembers         int `json:"maxRecipientMembers"`
 	MaxRecipientNameLength      int `json:"maxRecipientNameLength"`
 	MaxRecipientsPerRule        int `json:"maxRecipientsPerRule"`
 	MaxSlackChannels            int `json:"maxSlackChannels"`
@@ -1608,6 +1711,11 @@ type GetGcpOnboardingParams struct {
 	OrganizationID          *string `form:"organizationId,omitempty" json:"organizationId,omitempty"`
 	ServiceAccountProjectID *string `form:"serviceAccountProjectId,omitempty" json:"serviceAccountProjectId,omitempty"`
 	Variant                 *string `form:"variant,omitempty" json:"variant,omitempty"`
+}
+
+// ListUsersParams defines parameters for ListUsers.
+type ListUsersParams struct {
+	Email openapi_types.Email `form:"email" json:"email"`
 }
 
 // CreateAwsDeploymentJSONRequestBody defines body for CreateAwsDeployment for application/json ContentType.
@@ -1934,14 +2042,14 @@ type ClientInterface interface {
 	// Corresponds with GET /v1/notification-event-types (the `ListNotificationEventTypes` operationId).
 	ListNotificationEventTypes(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	// ListNotificationRecipients List the address-book recipients rules can name, one page at a time
+	// ListNotificationRecipients List the recipient groups rules can name, one page at a time
 	//
 	// Pass `nextPageToken` back as `pageToken` for the next page.
 	//
 	// Corresponds with GET /v1/notification-recipients (the `ListNotificationRecipients` operationId).
 	ListNotificationRecipients(ctx context.Context, params *ListNotificationRecipientsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	// CreateNotificationRecipientWithBody Create an address-book recipient
+	// CreateNotificationRecipientWithBody Create a recipient group
 	//
 	// Recipient names are unique per tenant. A retry with the same `Idempotency-Key` and body within 24 hours answers with the recipient the first request created.
 	//
@@ -1950,7 +2058,7 @@ type ClientInterface interface {
 	// Corresponds with POST /v1/notification-recipients (the `CreateNotificationRecipient` operationId).
 	CreateNotificationRecipientWithBody(ctx context.Context, params *CreateNotificationRecipientParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	// CreateNotificationRecipient Create an address-book recipient
+	// CreateNotificationRecipient Create a recipient group
 	//
 	// Recipient names are unique per tenant. A retry with the same `Idempotency-Key` and body within 24 hours answers with the recipient the first request created.
 	//
@@ -1959,21 +2067,21 @@ type ClientInterface interface {
 	// Corresponds with POST /v1/notification-recipients (the `CreateNotificationRecipient` operationId).
 	CreateNotificationRecipient(ctx context.Context, params *CreateNotificationRecipientParams, body CreateNotificationRecipientJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	// DeleteNotificationRecipient Delete an address-book recipient. Refused with 409 while a rule names it
+	// DeleteNotificationRecipient Delete a recipient group. Refused with 409 while a rule names it
 	//
 	// The 409 `conflict` carries `reason: notification_recipient_in_use` and the `ruleIds` that name it. With `If-Match`, the recipient is deleted only while it is at that revision; otherwise the answer is 412.
 	//
 	// Corresponds with DELETE /v1/notification-recipients/{id} (the `DeleteNotificationRecipient` operationId).
 	DeleteNotificationRecipient(ctx context.Context, id string, params *DeleteNotificationRecipientParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	// GetNotificationRecipient Return one address-book recipient
+	// GetNotificationRecipient Return one recipient group
 	//
 	// The `ETag` header carries the revision. Send it as `If-Match` to replace or delete this revision.
 	//
 	// Corresponds with GET /v1/notification-recipients/{id} (the `GetNotificationRecipient` operationId).
 	GetNotificationRecipient(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	// ReplaceNotificationRecipientWithBody Replace an address-book recipient; the rules that name it send to its new addresses
+	// ReplaceNotificationRecipientWithBody Replace a recipient group; the rules that name it send to its new members
 	//
 	// `If-Match` must name the current `ETag` (strong comparison) or be `*`; otherwise the answer is 412 with the current `etag`.
 	//
@@ -1982,7 +2090,7 @@ type ClientInterface interface {
 	// Corresponds with PUT /v1/notification-recipients/{id} (the `ReplaceNotificationRecipient` operationId).
 	ReplaceNotificationRecipientWithBody(ctx context.Context, id string, params *ReplaceNotificationRecipientParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	// ReplaceNotificationRecipient Replace an address-book recipient; the rules that name it send to its new addresses
+	// ReplaceNotificationRecipient Replace a recipient group; the rules that name it send to its new members
 	//
 	// `If-Match` must name the current `ETag` (strong comparison) or be `*`; otherwise the answer is 412 with the current `etag`.
 	//
@@ -2087,6 +2195,13 @@ type ClientInterface interface {
 	//
 	// Corresponds with GET /v1/onboarding/gcp (the `GetGcpOnboarding` operationId).
 	GetGcpOnboarding(ctx context.Context, params *GetGcpOnboardingParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ListUsers Find the Act user of the calling tenant with an exact email address
+	//
+	// Matches the whole address, ignoring case, and never lists or searches, so it answers at most one user. A recipient group names users by `id`.
+	//
+	// Corresponds with GET /v1/users (the `ListUsers` operationId).
+	ListUsers(ctx context.Context, params *ListUsersParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetWhoami Return the tenant, region and principal of the calling token
 	//
@@ -2655,7 +2770,7 @@ func (c *Client) ListNotificationEventTypes(ctx context.Context, reqEditors ...R
 	return c.Client.Do(req)
 }
 
-// ListNotificationRecipients List the address-book recipients rules can name, one page at a time
+// ListNotificationRecipients List the recipient groups rules can name, one page at a time
 //
 // Pass `nextPageToken` back as `pageToken` for the next page.
 //
@@ -2672,7 +2787,7 @@ func (c *Client) ListNotificationRecipients(ctx context.Context, params *ListNot
 	return c.Client.Do(req)
 }
 
-// CreateNotificationRecipientWithBody Create an address-book recipient
+// CreateNotificationRecipientWithBody Create a recipient group
 //
 // Recipient names are unique per tenant. A retry with the same `Idempotency-Key` and body within 24 hours answers with the recipient the first request created.
 //
@@ -2691,7 +2806,7 @@ func (c *Client) CreateNotificationRecipientWithBody(ctx context.Context, params
 	return c.Client.Do(req)
 }
 
-// CreateNotificationRecipient Create an address-book recipient
+// CreateNotificationRecipient Create a recipient group
 //
 // Recipient names are unique per tenant. A retry with the same `Idempotency-Key` and body within 24 hours answers with the recipient the first request created.
 //
@@ -2710,7 +2825,7 @@ func (c *Client) CreateNotificationRecipient(ctx context.Context, params *Create
 	return c.Client.Do(req)
 }
 
-// DeleteNotificationRecipient Delete an address-book recipient. Refused with 409 while a rule names it
+// DeleteNotificationRecipient Delete a recipient group. Refused with 409 while a rule names it
 //
 // The 409 `conflict` carries `reason: notification_recipient_in_use` and the `ruleIds` that name it. With `If-Match`, the recipient is deleted only while it is at that revision; otherwise the answer is 412.
 //
@@ -2727,7 +2842,7 @@ func (c *Client) DeleteNotificationRecipient(ctx context.Context, id string, par
 	return c.Client.Do(req)
 }
 
-// GetNotificationRecipient Return one address-book recipient
+// GetNotificationRecipient Return one recipient group
 //
 // The `ETag` header carries the revision. Send it as `If-Match` to replace or delete this revision.
 //
@@ -2744,7 +2859,7 @@ func (c *Client) GetNotificationRecipient(ctx context.Context, id string, reqEdi
 	return c.Client.Do(req)
 }
 
-// ReplaceNotificationRecipientWithBody Replace an address-book recipient; the rules that name it send to its new addresses
+// ReplaceNotificationRecipientWithBody Replace a recipient group; the rules that name it send to its new members
 //
 // `If-Match` must name the current `ETag` (strong comparison) or be `*`; otherwise the answer is 412 with the current `etag`.
 //
@@ -2763,7 +2878,7 @@ func (c *Client) ReplaceNotificationRecipientWithBody(ctx context.Context, id st
 	return c.Client.Do(req)
 }
 
-// ReplaceNotificationRecipient Replace an address-book recipient; the rules that name it send to its new addresses
+// ReplaceNotificationRecipient Replace a recipient group; the rules that name it send to its new members
 //
 // `If-Match` must name the current `ETag` (strong comparison) or be `*`; otherwise the answer is 412 with the current `etag`.
 //
@@ -2999,6 +3114,23 @@ func (c *Client) GetAzureOnboarding(ctx context.Context, params *GetAzureOnboard
 // Corresponds with GET /v1/onboarding/gcp (the `GetGcpOnboarding` operationId).
 func (c *Client) GetGcpOnboarding(ctx context.Context, params *GetGcpOnboardingParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetGcpOnboardingRequest(c.Server, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// ListUsers Find the Act user of the calling tenant with an exact email address
+//
+// Matches the whole address, ignoring case, and never lists or searches, so it answers at most one user. A recipient group names users by `id`.
+//
+// Corresponds with GET /v1/users (the `ListUsers` operationId).
+func (c *Client) ListUsers(ctx context.Context, params *ListUsersParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewListUsersRequest(c.Server, params)
 	if err != nil {
 		return nil, err
 	}
@@ -5368,6 +5500,56 @@ func NewGetGcpOnboardingRequest(server string, params *GetGcpOnboardingParams) (
 	return req, nil
 }
 
+// NewListUsersRequest constructs an http.Request for the ListUsers method
+func NewListUsersRequest(server string, params *ListUsersParams) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/users")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		// queryValues collects non-styled parameters (passthrough, JSON)
+		// that are safe to round-trip through url.Values.Encode().
+		queryValues := queryURL.Query()
+		// rawQueryFragments collects pre-encoded query fragments from
+		// styled parameters, preserving literal commas as delimiters
+		// per the OpenAPI spec (e.g. "color=blue,black,brown").
+		var rawQueryFragments []string
+
+		if queryFrag, err := runtime.StyleParamWithOptions("form", true, "email", params.Email, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: "email"}); err != nil {
+			return nil, err
+		} else {
+			for _, qp := range strings.Split(queryFrag, "&") {
+				rawQueryFragments = append(rawQueryFragments, qp)
+			}
+		}
+
+		if encoded := queryValues.Encode(); encoded != "" {
+			rawQueryFragments = append(rawQueryFragments, encoded)
+		}
+		queryURL.RawQuery = strings.Join(rawQueryFragments, "&")
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
 // NewGetWhoamiRequest constructs an http.Request for the GetWhoami method
 func NewGetWhoamiRequest(server string) (*http.Request, error) {
 	var err error
@@ -5688,7 +5870,7 @@ type ClientWithResponsesInterface interface {
 	// Corresponds with GET /v1/notification-event-types (the `ListNotificationEventTypes` operationId).
 	ListNotificationEventTypesWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*ListNotificationEventTypesResponse, error)
 
-	// ListNotificationRecipientsWithResponse List the address-book recipients rules can name, one page at a time
+	// ListNotificationRecipientsWithResponse List the recipient groups rules can name, one page at a time
 	//
 	// Pass `nextPageToken` back as `pageToken` for the next page.
 	//
@@ -5697,7 +5879,7 @@ type ClientWithResponsesInterface interface {
 	// Corresponds with GET /v1/notification-recipients (the `ListNotificationRecipients` operationId).
 	ListNotificationRecipientsWithResponse(ctx context.Context, params *ListNotificationRecipientsParams, reqEditors ...RequestEditorFn) (*ListNotificationRecipientsResponse, error)
 
-	// CreateNotificationRecipientWithBodyWithResponse Create an address-book recipient
+	// CreateNotificationRecipientWithBodyWithResponse Create a recipient group
 	//
 	// Recipient names are unique per tenant. A retry with the same `Idempotency-Key` and body within 24 hours answers with the recipient the first request created.
 	//
@@ -5706,7 +5888,7 @@ type ClientWithResponsesInterface interface {
 	// Corresponds with POST /v1/notification-recipients (the `CreateNotificationRecipient` operationId).
 	CreateNotificationRecipientWithBodyWithResponse(ctx context.Context, params *CreateNotificationRecipientParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateNotificationRecipientResponse, error)
 
-	// CreateNotificationRecipientWithResponse Create an address-book recipient
+	// CreateNotificationRecipientWithResponse Create a recipient group
 	//
 	// Recipient names are unique per tenant. A retry with the same `Idempotency-Key` and body within 24 hours answers with the recipient the first request created.
 	//
@@ -5715,7 +5897,7 @@ type ClientWithResponsesInterface interface {
 	// Corresponds with POST /v1/notification-recipients (the `CreateNotificationRecipient` operationId).
 	CreateNotificationRecipientWithResponse(ctx context.Context, params *CreateNotificationRecipientParams, body CreateNotificationRecipientJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateNotificationRecipientResponse, error)
 
-	// DeleteNotificationRecipientWithResponse Delete an address-book recipient. Refused with 409 while a rule names it
+	// DeleteNotificationRecipientWithResponse Delete a recipient group. Refused with 409 while a rule names it
 	//
 	// The 409 `conflict` carries `reason: notification_recipient_in_use` and the `ruleIds` that name it. With `If-Match`, the recipient is deleted only while it is at that revision; otherwise the answer is 412.
 	//
@@ -5724,7 +5906,7 @@ type ClientWithResponsesInterface interface {
 	// Corresponds with DELETE /v1/notification-recipients/{id} (the `DeleteNotificationRecipient` operationId).
 	DeleteNotificationRecipientWithResponse(ctx context.Context, id string, params *DeleteNotificationRecipientParams, reqEditors ...RequestEditorFn) (*DeleteNotificationRecipientResponse, error)
 
-	// GetNotificationRecipientWithResponse Return one address-book recipient
+	// GetNotificationRecipientWithResponse Return one recipient group
 	//
 	// The `ETag` header carries the revision. Send it as `If-Match` to replace or delete this revision.
 	//
@@ -5733,7 +5915,7 @@ type ClientWithResponsesInterface interface {
 	// Corresponds with GET /v1/notification-recipients/{id} (the `GetNotificationRecipient` operationId).
 	GetNotificationRecipientWithResponse(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*GetNotificationRecipientResponse, error)
 
-	// ReplaceNotificationRecipientWithBodyWithResponse Replace an address-book recipient; the rules that name it send to its new addresses
+	// ReplaceNotificationRecipientWithBodyWithResponse Replace a recipient group; the rules that name it send to its new members
 	//
 	// `If-Match` must name the current `ETag` (strong comparison) or be `*`; otherwise the answer is 412 with the current `etag`.
 	//
@@ -5742,7 +5924,7 @@ type ClientWithResponsesInterface interface {
 	// Corresponds with PUT /v1/notification-recipients/{id} (the `ReplaceNotificationRecipient` operationId).
 	ReplaceNotificationRecipientWithBodyWithResponse(ctx context.Context, id string, params *ReplaceNotificationRecipientParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*ReplaceNotificationRecipientResponse, error)
 
-	// ReplaceNotificationRecipientWithResponse Replace an address-book recipient; the rules that name it send to its new addresses
+	// ReplaceNotificationRecipientWithResponse Replace a recipient group; the rules that name it send to its new members
 	//
 	// `If-Match` must name the current `ETag` (strong comparison) or be `*`; otherwise the answer is 412 with the current `etag`.
 	//
@@ -5861,6 +6043,15 @@ type ClientWithResponsesInterface interface {
 	//
 	// Corresponds with GET /v1/onboarding/gcp (the `GetGcpOnboarding` operationId).
 	GetGcpOnboardingWithResponse(ctx context.Context, params *GetGcpOnboardingParams, reqEditors ...RequestEditorFn) (*GetGcpOnboardingResponse, error)
+
+	// ListUsersWithResponse Find the Act user of the calling tenant with an exact email address
+	//
+	// Matches the whole address, ignoring case, and never lists or searches, so it answers at most one user. A recipient group names users by `id`.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with GET /v1/users (the `ListUsers` operationId).
+	ListUsersWithResponse(ctx context.Context, params *ListUsersParams, reqEditors ...RequestEditorFn) (*ListUsersResponse, error)
 
 	// GetWhoamiWithResponse Return the tenant, region and principal of the calling token
 	//
@@ -11162,6 +11353,117 @@ func (r GetGcpOnboardingResponse) ContentType() string {
 	return ""
 }
 
+// ListUsersResponse401Headers the declared response headers of an HTTP 401 response for ListUsers
+type ListUsersResponse401Headers struct {
+	WWWAuthenticate *string
+}
+
+// ListUsersResponse403Headers the declared response headers of an HTTP 403 response for ListUsers
+type ListUsersResponse403Headers struct {
+	WWWAuthenticate *string
+}
+
+// ListUsersResponse429Headers the declared response headers of an HTTP 429 response for ListUsers
+type ListUsersResponse429Headers struct {
+	RetryAfter *int
+}
+
+// ListUsersResponse503Headers the declared response headers of an HTTP 503 response for ListUsers
+type ListUsersResponse503Headers struct {
+	RetryAfter *int
+}
+
+type ListUsersResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *ActUserList
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *ErrorEnvelope
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *ErrorEnvelope
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *ErrorEnvelope
+	// JSON429 the response for an HTTP 429 `application/json` response
+	JSON429 *ErrorEnvelope
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *ErrorEnvelope
+	// JSON503 the response for an HTTP 503 `application/json` response
+	JSON503 *ErrorEnvelope
+	// Headers401 the parsed response headers for an HTTP 401 response
+	Headers401 *ListUsersResponse401Headers
+	// Headers403 the parsed response headers for an HTTP 403 response
+	Headers403 *ListUsersResponse403Headers
+	// Headers429 the parsed response headers for an HTTP 429 response
+	Headers429 *ListUsersResponse429Headers
+	// Headers503 the parsed response headers for an HTTP 503 response
+	Headers503 *ListUsersResponse503Headers
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r ListUsersResponse) GetJSON200() *ActUserList {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r ListUsersResponse) GetJSON400() *ErrorEnvelope {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r ListUsersResponse) GetJSON401() *ErrorEnvelope {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r ListUsersResponse) GetJSON403() *ErrorEnvelope {
+	return r.JSON403
+}
+
+// GetJSON429 returns the response for an HTTP 429 `application/json` response
+func (r ListUsersResponse) GetJSON429() *ErrorEnvelope {
+	return r.JSON429
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r ListUsersResponse) GetJSON500() *ErrorEnvelope {
+	return r.JSON500
+}
+
+// GetJSON503 returns the response for an HTTP 503 `application/json` response
+func (r ListUsersResponse) GetJSON503() *ErrorEnvelope {
+	return r.JSON503
+}
+
+// GetBody returns the raw response body bytes
+func (r ListUsersResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r ListUsersResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ListUsersResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r ListUsersResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
 // GetWhoamiResponse401Headers the declared response headers of an HTTP 401 response for GetWhoami
 type GetWhoamiResponse401Headers struct {
 	WWWAuthenticate *string
@@ -11732,7 +12034,7 @@ func (c *ClientWithResponses) ListNotificationEventTypesWithResponse(ctx context
 	return ParseListNotificationEventTypesResponse(rsp)
 }
 
-// ListNotificationRecipientsWithResponse List the address-book recipients rules can name, one page at a time
+// ListNotificationRecipientsWithResponse List the recipient groups rules can name, one page at a time
 //
 // Pass `nextPageToken` back as `pageToken` for the next page.
 //
@@ -11747,7 +12049,7 @@ func (c *ClientWithResponses) ListNotificationRecipientsWithResponse(ctx context
 	return ParseListNotificationRecipientsResponse(rsp)
 }
 
-// CreateNotificationRecipientWithBodyWithResponse Create an address-book recipient
+// CreateNotificationRecipientWithBodyWithResponse Create a recipient group
 //
 // Recipient names are unique per tenant. A retry with the same `Idempotency-Key` and body within 24 hours answers with the recipient the first request created.
 //
@@ -11762,7 +12064,7 @@ func (c *ClientWithResponses) CreateNotificationRecipientWithBodyWithResponse(ct
 	return ParseCreateNotificationRecipientResponse(rsp)
 }
 
-// CreateNotificationRecipientWithResponse Create an address-book recipient
+// CreateNotificationRecipientWithResponse Create a recipient group
 //
 // Recipient names are unique per tenant. A retry with the same `Idempotency-Key` and body within 24 hours answers with the recipient the first request created.
 //
@@ -11777,7 +12079,7 @@ func (c *ClientWithResponses) CreateNotificationRecipientWithResponse(ctx contex
 	return ParseCreateNotificationRecipientResponse(rsp)
 }
 
-// DeleteNotificationRecipientWithResponse Delete an address-book recipient. Refused with 409 while a rule names it
+// DeleteNotificationRecipientWithResponse Delete a recipient group. Refused with 409 while a rule names it
 //
 // The 409 `conflict` carries `reason: notification_recipient_in_use` and the `ruleIds` that name it. With `If-Match`, the recipient is deleted only while it is at that revision; otherwise the answer is 412.
 //
@@ -11792,7 +12094,7 @@ func (c *ClientWithResponses) DeleteNotificationRecipientWithResponse(ctx contex
 	return ParseDeleteNotificationRecipientResponse(rsp)
 }
 
-// GetNotificationRecipientWithResponse Return one address-book recipient
+// GetNotificationRecipientWithResponse Return one recipient group
 //
 // The `ETag` header carries the revision. Send it as `If-Match` to replace or delete this revision.
 //
@@ -11807,7 +12109,7 @@ func (c *ClientWithResponses) GetNotificationRecipientWithResponse(ctx context.C
 	return ParseGetNotificationRecipientResponse(rsp)
 }
 
-// ReplaceNotificationRecipientWithBodyWithResponse Replace an address-book recipient; the rules that name it send to its new addresses
+// ReplaceNotificationRecipientWithBodyWithResponse Replace a recipient group; the rules that name it send to its new members
 //
 // `If-Match` must name the current `ETag` (strong comparison) or be `*`; otherwise the answer is 412 with the current `etag`.
 //
@@ -11822,7 +12124,7 @@ func (c *ClientWithResponses) ReplaceNotificationRecipientWithBodyWithResponse(c
 	return ParseReplaceNotificationRecipientResponse(rsp)
 }
 
-// ReplaceNotificationRecipientWithResponse Replace an address-book recipient; the rules that name it send to its new addresses
+// ReplaceNotificationRecipientWithResponse Replace a recipient group; the rules that name it send to its new members
 //
 // `If-Match` must name the current `ETag` (strong comparison) or be `*`; otherwise the answer is 412 with the current `etag`.
 //
@@ -12024,6 +12326,21 @@ func (c *ClientWithResponses) GetGcpOnboardingWithResponse(ctx context.Context, 
 		return nil, err
 	}
 	return ParseGetGcpOnboardingResponse(rsp)
+}
+
+// ListUsersWithResponse Find the Act user of the calling tenant with an exact email address
+//
+// Matches the whole address, ignoring case, and never lists or searches, so it answers at most one user. A recipient group names users by `id`.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with GET /v1/users (the `ListUsers` operationId).
+func (c *ClientWithResponses) ListUsersWithResponse(ctx context.Context, params *ListUsersParams, reqEditors ...RequestEditorFn) (*ListUsersResponse, error) {
+	rsp, err := c.ListUsers(ctx, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseListUsersResponse(rsp)
 }
 
 // GetWhoamiWithResponse Return the tenant, region and principal of the calling token
@@ -17393,6 +17710,117 @@ func ParseGetGcpOnboardingResponse(rsp *http.Response) (*GetGcpOnboardingRespons
 		response.Headers429 = &headers
 	case rsp.StatusCode == 503:
 		var headers GetGcpOnboardingResponse503Headers
+		if values := rsp.Header.Values("Retry-After"); len(values) > 0 {
+			var value int
+			if err := runtime.BindStyledParameterWithOptions("simple", "Retry-After", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.RetryAfter = &value
+		}
+		response.Headers503 = &headers
+	}
+
+	return response, nil
+}
+
+// ParseListUsersResponse parses an HTTP response from a ListUsersWithResponse call
+func ParseListUsersResponse(rsp *http.Response) (*ListUsersResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ListUsersResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest ActUserList
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON429 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON503 = &dest
+
+	}
+
+	switch {
+	case rsp.StatusCode == 401:
+		var headers ListUsersResponse401Headers
+		if values := rsp.Header.Values("WWW-Authenticate"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "WWW-Authenticate", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.WWWAuthenticate = &value
+		}
+		response.Headers401 = &headers
+	case rsp.StatusCode == 403:
+		var headers ListUsersResponse403Headers
+		if values := rsp.Header.Values("WWW-Authenticate"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "WWW-Authenticate", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.WWWAuthenticate = &value
+		}
+		response.Headers403 = &headers
+	case rsp.StatusCode == 429:
+		var headers ListUsersResponse429Headers
+		if values := rsp.Header.Values("Retry-After"); len(values) > 0 {
+			var value int
+			if err := runtime.BindStyledParameterWithOptions("simple", "Retry-After", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.RetryAfter = &value
+		}
+		response.Headers429 = &headers
+	case rsp.StatusCode == 503:
+		var headers ListUsersResponse503Headers
 		if values := rsp.Header.Values("Retry-After"); len(values) > 0 {
 			var value int
 			if err := runtime.BindStyledParameterWithOptions("simple", "Retry-After", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {
