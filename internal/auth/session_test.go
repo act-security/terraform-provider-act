@@ -152,6 +152,35 @@ func TestSessionRetriesTransientSTSErrors(t *testing.T) {
 	}
 }
 
+func TestSessionWaitsOutAThrottledTokenRequest(t *testing.T) {
+	for _, header := range []string{"Retry-After", "x-retry-after"} {
+		t.Run(header, func(t *testing.T) {
+			s := fakeapi.Start(t, fakeapi.WithScript(fakeapi.Script{
+				"POST /oidc/oauth2/token": {{Status: http.StatusTooManyRequests, Headers: map[string]string{header: "17"}}},
+			}))
+			var waits []time.Duration
+			_, err := newSession(t, s, func(c *auth.Config) {
+				c.Retry = retry.Policy{
+					Sleep: func(_ context.Context, d time.Duration) error {
+						waits = append(waits, d)
+						return nil
+					},
+					Jitter: func(d time.Duration) time.Duration { return d },
+				}
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(waits) != 1 || waits[0] != 17*time.Second {
+				t.Fatalf("waits = %v, want one 17s wait", waits)
+			}
+			if got := requests(s); got[0] != "POST /oidc/oauth2/token 429" || got[1] != "POST /oidc/oauth2/token 200" {
+				t.Fatalf("requests = %v, want a 429 then a 200 token request", got)
+			}
+		})
+	}
+}
+
 func TestSessionDoesNotRetryRejectedCredentials(t *testing.T) {
 	s := fakeapi.Start(t)
 	_, err := newSession(t, s, func(c *auth.Config) {

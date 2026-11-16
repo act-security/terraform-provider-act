@@ -135,6 +135,21 @@ func TestHonorsRetryAfter(t *testing.T) {
 	}
 }
 
+func TestHonorsXRetryAfterWhenRetryAfterIsAbsent(t *testing.T) {
+	rec := &recorder{}
+	srv, calls, _ := serve(t,
+		step{status: http.StatusTooManyRequests, header: map[string]string{"X-Retry-After": "7"}},
+		step{status: http.StatusTooManyRequests, header: map[string]string{"Retry-After": "2", "X-Retry-After": "9"}},
+	)
+	status, _, err := do(t, rec.policy(), http.MethodGet, srv.URL, "")
+	if err != nil || status != http.StatusOK || calls.Load() != 3 {
+		t.Fatalf("got %d %v after %d calls", status, err, calls.Load())
+	}
+	if rec.waits[0] != 7*time.Second || rec.waits[1] != 2*time.Second {
+		t.Fatalf("waits %v, want 7s then 2s", rec.waits)
+	}
+}
+
 func TestGivesUpWhenRetryAfterIsTooLong(t *testing.T) {
 	rec := &recorder{}
 	srv, calls, _ := serve(t, step{status: http.StatusTooManyRequests, header: map[string]string{"Retry-After": "3600"}, body: "slow down"})

@@ -117,7 +117,7 @@ func (p Policy) classify(resp *http.Response, attempt int) (time.Duration, bool)
 		}
 	}
 	wait := p.backoff(attempt)
-	if after, ok := p.retryAfter(resp.Header.Get("Retry-After")); ok {
+	if after, ok := p.retryAfter(retryAfterHeader(resp.Header)); ok {
 		if after > p.MaxRetryAfter {
 			return 0, false
 		}
@@ -134,6 +134,13 @@ func (p Policy) backoff(attempt int) time.Duration {
 		d = p.MaxDelay
 	}
 	return p.Jitter(d)
+}
+
+func retryAfterHeader(h http.Header) string {
+	if v := h.Get("Retry-After"); v != "" {
+		return v
+	}
+	return h.Get("X-Retry-After")
 }
 
 func (p Policy) retryAfter(value string) (time.Duration, bool) {
