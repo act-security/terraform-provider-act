@@ -1,6 +1,6 @@
 # terraform-provider-act
 
-The Terraform provider for [Act Security](https://act.security). It manages Act deployments for AWS, Azure and GCP as code, authenticated with an Act API key.
+The Terraform provider for [Act Security](https://act.security). It manages AWS account and organization deployments, integrations and notification rules in Act as code, authenticated with an Act API key.
 
 Published as [`act-security/act`](https://registry.terraform.io/providers/act-security/act/latest) on the Terraform Registry.
 
