@@ -2,6 +2,7 @@ package fakeapi
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"time"
 
@@ -25,7 +26,7 @@ func (f *Fake) bearer(next http.Handler) http.Handler {
 }
 
 func (f *Fake) apiRoutes() http.Handler {
-	return gen.HandlerWithOptions(gen.NewStrictHandler(&apiServer{fake: f}, nil), gen.StdHTTPServerOptions{
+	return gen.HandlerWithOptions(gen.NewStrictHandlerWithOptions(&apiServer{fake: f}, nil, strictOptions), gen.StdHTTPServerOptions{
 		BaseRouter:  newRouter(),
 		Middlewares: []gen.MiddlewareFunc{captureBody},
 		ErrorHandlerFunc: func(w http.ResponseWriter, _ *http.Request, err error) {
@@ -34,7 +35,10 @@ func (f *Fake) apiRoutes() http.Handler {
 	})
 }
 
+var strictOptions = gen.StrictHTTPServerOptions{ResponseErrorHandlerFunc: answerResponseError}
+
 type apiServer struct {
+	gen.UnimplementedStrictServer
 	fake *Fake
 }
 
@@ -110,6 +114,14 @@ func (s *apiServer) VerifyGcpDeployment(context.Context, gen.VerifyGcpDeployment
 
 func (s *apiServer) DeleteGcpDeployment(context.Context, gen.DeleteGcpDeploymentRequestObject) (gen.DeleteGcpDeploymentResponseObject, error) {
 	return gen.DeleteGcpDeployment403JSONResponse{Body: featureDisabled()}, nil
+}
+
+func answerResponseError(w http.ResponseWriter, _ *http.Request, err error) {
+	if errors.Is(err, gen.ErrNotImplemented) {
+		writeJSON(w, http.StatusNotImplemented, envelope(gen.ErrorEnvelopeErrorCodeInternal, "The fake API does not implement this operation."))
+		return
+	}
+	http.Error(w, err.Error(), http.StatusInternalServerError)
 }
 
 func featureDisabled() gen.ErrorEnvelope {
