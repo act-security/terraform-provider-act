@@ -103,7 +103,7 @@ func TestAwsAccountDeploymentLifecycle(t *testing.T) {
   name                  = "production"
   tags                  = { team = "platform" }
   allowed_regions       = ["us-east-1", "eu-west-1"]
-  disabled_capabilities = ["eks_cluster_access"]
+  disabled_capabilities = ["eks_cluster_access", "cloudtrail_logs", "ai_services"]
 `),
 				ConfigPlanChecks: resource.ConfigPlanChecks{PreApply: []plancheck.PlanCheck{
 					plancheck.ExpectResourceAction(accountAddress, plancheck.ResourceActionUpdate),
@@ -111,7 +111,11 @@ func TestAwsAccountDeploymentLifecycle(t *testing.T) {
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue(accountAddress, tfjsonpath.New("name"), knownvalue.StringExact("production")),
 					statecheck.ExpectKnownValue(accountAddress, tfjsonpath.New("allowed_regions"), knownvalue.SetSizeExact(2)),
-					statecheck.ExpectKnownValue(accountAddress, tfjsonpath.New("disabled_capabilities"), knownvalue.SetExact([]knownvalue.Check{knownvalue.StringExact("eks_cluster_access")})),
+					statecheck.ExpectKnownValue(accountAddress, tfjsonpath.New("disabled_capabilities"), knownvalue.SetExact([]knownvalue.Check{
+						knownvalue.StringExact("eks_cluster_access"),
+						knownvalue.StringExact("cloudtrail_logs"),
+						knownvalue.StringExact("ai_services"),
+					})),
 				},
 			},
 			{

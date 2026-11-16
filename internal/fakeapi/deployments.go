@@ -340,6 +340,7 @@ func onboardingValues(in onboardingInput) gen.GetAwsOnboarding200JSONResponse {
 		TargetExternalID:          derivedExternalID(in.id),
 		RoleName:                  roleName,
 		AssumeRolePolicyJSON:      assumeRolePolicy(in.externalID),
+		ManagedPolicyArns:         []string{"arn:aws:iam::aws:policy/SecurityAudit", "arn:aws:iam::aws:policy/job-function/ViewOnlyAccess"},
 		CloudformationTemplateURL: ConsoleOrigin + "/templates/aws/" + ModuleVersion + "/role.yaml",
 		DeploymentVersion:         "2026.11",
 	}
@@ -367,7 +368,7 @@ func addPublishedModule(values *gen.GetAwsOnboarding200JSONResponse) {
 	templateDigest, moduleDigest, permissions := fakeDigest("a"), fakeDigest("b"), fakeDigest("c")
 	versions := []gen.ModuleVersion{{Version: ModuleVersion, Sha256: moduleDigest, PermissionsHash: permissions, DeploymentVersion: values.DeploymentVersion}}
 	values.CustomPolicyDocuments = &documents
-	values.ManagedPolicyArns = &managed
+	values.ManagedPolicyArns = managed
 	values.CloudformationTemplateSha256 = &templateDigest
 	values.ModuleSource, values.ModuleVersion = &source, &version
 	values.ModuleSha256, values.PermissionsHash = &moduleDigest, &permissions

@@ -154,7 +154,7 @@ func (d *awsOnboardingDataSource) Schema(_ context.Context, _ datasource.SchemaR
 			"role_arn":                       computedString("The role's ARN. Known at plan time for an account, null for an organization."),
 			"assume_role_policy_json":        computedString("The role's trust policy as JSON, for configurations that do not use the Act module."),
 			"custom_policy_documents":        schema.MapAttribute{MarkdownDescription: "Policy documents to attach to the role, by policy name, for configurations that do not use the Act module. Null until Act publishes versioned modules and templates.", ElementType: types.StringType, Computed: true},
-			"managed_policy_arns":            computedStrings("AWS managed policies to attach to the role, for configurations that do not use the Act module. Null until Act publishes versioned modules and templates."),
+			"managed_policy_arns":            computedStrings("AWS managed policies Act expects on the role. Attach them when you do not use the Act module."),
 			"member_role_name":               computedString("The role name for member accounts of an organization. Null for an account."),
 			"member_role_path":               computedString("The IAM path for member roles. Null for an account."),
 			"cloudformation_template_url":    computedString("A versioned CloudFormation template for the member roles. It never changes after release."),
@@ -234,10 +234,7 @@ func (m *awsOnboardingModel) fillFrom(values apigen.AwsOnboarding) {
 			m.CustomPolicyDocuments[name] = types.StringValue(document)
 		}
 	}
-	m.ManagedPolicyArns = nil
-	if values.ManagedPolicyArns != nil {
-		m.ManagedPolicyArns = typedStrings(*values.ManagedPolicyArns)
-	}
+	m.ManagedPolicyArns = typedStrings(values.ManagedPolicyArns)
 	m.MemberRoleName = types.StringPointerValue(values.MemberRoleName)
 	m.MemberRolePath = types.StringPointerValue(values.MemberRolePath)
 	m.CloudformationTemplateURL = types.StringValue(values.CloudformationTemplateURL)

@@ -54,7 +54,7 @@ During an Act principal rotation, `deprecated_principal_arns` lists the principa
 - `external_id` (String) The external ID the role's trust policy must require. Not a secret.
 - `external_id_key_version` (Number) The key version of the external ID. Pass it to `external_id_key_version` of the deployment resource. Null for a legacy external ID.
 - `external_id_source` (String) `derived` or `legacy`.
-- `managed_policy_arns` (List of String) AWS managed policies to attach to the role, for configurations that do not use the Act module. Null until Act publishes versioned modules and templates.
+- `managed_policy_arns` (List of String) AWS managed policies Act expects on the role. Attach them when you do not use the Act module.
 - `member_role_name` (String) The role name for member accounts of an organization. Null for an account.
 - `member_role_path` (String) The IAM path for member roles. Null for an account.
 - `module_sha256` (String) The SHA-256 of the recommended module release. Null until Act publishes versioned modules and templates.

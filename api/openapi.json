@@ -1398,6 +1398,16 @@
               }
             }
           },
+          "415": {
+            "description": "Error envelope. Codes: unsupported_media_type",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
           "422": {
             "description": "Error envelope. Codes: verification_failed, connection_check_failed, integration_not_connected, limit_exceeded, target_not_allowed, idempotency_mismatch",
             "content": {
@@ -1740,6 +1750,16 @@
               }
             }
           },
+          "415": {
+            "description": "Error envelope. Codes: unsupported_media_type",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
           "422": {
             "description": "Error envelope. Codes: verification_failed, connection_check_failed, integration_not_connected, limit_exceeded, target_not_allowed, idempotency_mismatch",
             "content": {
@@ -1921,6 +1941,16 @@
               }
             }
           },
+          "415": {
+            "description": "Error envelope. Codes: unsupported_media_type",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
           "422": {
             "description": "Error envelope. Codes: verification_failed, connection_check_failed, integration_not_connected, limit_exceeded, target_not_allowed, idempotency_mismatch",
             "content": {
@@ -2094,6 +2124,16 @@
           },
           "412": {
             "description": "Error envelope. Codes: precondition_failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Error envelope. Codes: unsupported_media_type",
             "content": {
               "application/json": {
                 "schema": {
@@ -2433,6 +2473,16 @@
           },
           "412": {
             "description": "Error envelope. Codes: precondition_failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Error envelope. Codes: unsupported_media_type",
             "content": {
               "application/json": {
                 "schema": {
@@ -2783,6 +2833,16 @@
               }
             }
           },
+          "415": {
+            "description": "Error envelope. Codes: unsupported_media_type",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
           "422": {
             "description": "Error envelope. Codes: verification_failed, connection_check_failed, integration_not_connected, limit_exceeded, target_not_allowed, idempotency_mismatch",
             "content": {
@@ -2956,6 +3016,16 @@
           },
           "412": {
             "description": "Error envelope. Codes: precondition_failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Error envelope. Codes: unsupported_media_type",
             "content": {
               "application/json": {
                 "schema": {
@@ -3295,6 +3365,16 @@
           },
           "412": {
             "description": "Error envelope. Codes: precondition_failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Error envelope. Codes: unsupported_media_type",
             "content": {
               "application/json": {
                 "schema": {
@@ -3645,6 +3725,16 @@
               }
             }
           },
+          "415": {
+            "description": "Error envelope. Codes: unsupported_media_type",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
           "422": {
             "description": "Error envelope. Codes: verification_failed, connection_check_failed, integration_not_connected, limit_exceeded, target_not_allowed, idempotency_mismatch",
             "content": {
@@ -3818,6 +3908,16 @@
           },
           "412": {
             "description": "Error envelope. Codes: precondition_failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Error envelope. Codes: unsupported_media_type",
             "content": {
               "application/json": {
                 "schema": {
@@ -4276,6 +4376,16 @@
               }
             }
           },
+          "415": {
+            "description": "Error envelope. Codes: unsupported_media_type",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
           "422": {
             "description": "Error envelope. Codes: verification_failed, connection_check_failed, integration_not_connected, limit_exceeded, target_not_allowed, idempotency_mismatch",
             "content": {
@@ -4605,6 +4715,16 @@
           },
           "412": {
             "description": "Error envelope. Codes: precondition_failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Error envelope. Codes: unsupported_media_type",
             "content": {
               "application/json": {
                 "schema": {
@@ -5513,6 +5633,16 @@
               }
             }
           },
+          "415": {
+            "description": "Error envelope. Codes: unsupported_media_type",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
           "422": {
             "description": "Error envelope. Codes: verification_failed, connection_check_failed, integration_not_connected, limit_exceeded, target_not_allowed, idempotency_mismatch",
             "content": {
@@ -5658,6 +5788,16 @@
           },
           "404": {
             "description": "Error envelope. Codes: not_found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Error envelope. Codes: unsupported_media_type",
             "content": {
               "application/json": {
                 "schema": {
@@ -5999,6 +6139,16 @@
           },
           "412": {
             "description": "Error envelope. Codes: precondition_failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Error envelope. Codes: unsupported_media_type",
             "content": {
               "application/json": {
                 "schema": {
@@ -6622,6 +6772,16 @@
               }
             }
           },
+          "415": {
+            "description": "Error envelope. Codes: unsupported_media_type",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
           "422": {
             "description": "Error envelope. Codes: verification_failed, connection_check_failed, integration_not_connected, limit_exceeded, target_not_allowed, idempotency_mismatch",
             "content": {
@@ -6973,6 +7133,16 @@
               }
             }
           },
+          "415": {
+            "description": "Error envelope. Codes: unsupported_media_type",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
           "422": {
             "description": "Error envelope. Codes: verification_failed, connection_check_failed, integration_not_connected, limit_exceeded, target_not_allowed, idempotency_mismatch",
             "content": {
@@ -7250,6 +7420,7 @@
                   "limit_exceeded",
                   "target_not_allowed",
                   "idempotency_mismatch",
+                  "unsupported_media_type",
                   "rate_limited",
                   "internal",
                   "unavailable"
@@ -7498,7 +7669,9 @@
       },
       "AwsCapability": {
         "enum": [
-          "eks_cluster_access"
+          "eks_cluster_access",
+          "cloudtrail_logs",
+          "ai_services"
         ],
         "type": "string"
       },
@@ -7677,18 +7850,11 @@
             "type": "string"
           },
           "managedPolicyArns": {
-            "anyOf": [
-              {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                }
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Null until Act publishes versioned modules and templates"
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "AWS managed policies the role check expects on the role"
           },
           "customPolicyDocuments": {
             "anyOf": [

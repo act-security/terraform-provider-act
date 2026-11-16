@@ -218,7 +218,10 @@ data "act_aws_onboarding_parameters" "this" {
 			ConfigStateChecks: []statecheck.StateCheck{
 				statecheck.ExpectKnownValue(address, tfjsonpath.New("deployment_id"), knownvalue.StringExact(s.AwsAccountDeploymentID(testAccount))),
 				statecheck.ExpectKnownValue(address, tfjsonpath.New("external_id_key_version"), knownvalue.Int64Exact(fakeapi.ExternalIDKeyVersion)),
-				statecheck.ExpectKnownValue(address, tfjsonpath.New("managed_policy_arns"), knownvalue.Null()),
+				statecheck.ExpectKnownValue(address, tfjsonpath.New("managed_policy_arns"), knownvalue.ListExact([]knownvalue.Check{
+					knownvalue.StringExact("arn:aws:iam::aws:policy/SecurityAudit"),
+					knownvalue.StringExact("arn:aws:iam::aws:policy/job-function/ViewOnlyAccess"),
+				})),
 				statecheck.ExpectKnownValue(address, tfjsonpath.New("custom_policy_documents"), knownvalue.Null()),
 				statecheck.ExpectKnownValue(address, tfjsonpath.New("cloudformation_template_sha256"), knownvalue.Null()),
 				statecheck.ExpectKnownValue(address, tfjsonpath.New("module_source"), knownvalue.Null()),

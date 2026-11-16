@@ -38,12 +38,18 @@ func (e AuthMethod) Valid() bool {
 
 // Defines values for AwsCapability.
 const (
+	AwsCapabilityAiServices       AwsCapability = "ai_services"
+	AwsCapabilityCloudtrailLogs   AwsCapability = "cloudtrail_logs"
 	AwsCapabilityEksClusterAccess AwsCapability = "eks_cluster_access"
 )
 
 // Valid indicates whether the value is a known member of the AwsCapability enum.
 func (e AwsCapability) Valid() bool {
 	switch e {
+	case AwsCapabilityAiServices:
+		return true
+	case AwsCapabilityCloudtrailLogs:
+		return true
 	case AwsCapabilityEksClusterAccess:
 		return true
 	default:
@@ -217,6 +223,7 @@ const (
 	ErrorEnvelopeErrorCodeTargetNotAllowed        ErrorEnvelopeErrorCode = "target_not_allowed"
 	ErrorEnvelopeErrorCodeUnauthenticated         ErrorEnvelopeErrorCode = "unauthenticated"
 	ErrorEnvelopeErrorCodeUnavailable             ErrorEnvelopeErrorCode = "unavailable"
+	ErrorEnvelopeErrorCodeUnsupportedMediaType    ErrorEnvelopeErrorCode = "unsupported_media_type"
 	ErrorEnvelopeErrorCodeVerificationFailed      ErrorEnvelopeErrorCode = "verification_failed"
 )
 
@@ -256,6 +263,8 @@ func (e ErrorEnvelopeErrorCode) Valid() bool {
 	case ErrorEnvelopeErrorCodeUnauthenticated:
 		return true
 	case ErrorEnvelopeErrorCodeUnavailable:
+		return true
+	case ErrorEnvelopeErrorCodeUnsupportedMediaType:
 		return true
 	case ErrorEnvelopeErrorCodeVerificationFailed:
 		return true
@@ -706,8 +715,8 @@ type AwsOnboarding struct {
 	ExternalIDKeyVersion *int             `json:"externalIdKeyVersion"`
 	ExternalIDSource     ExternalIDSource `json:"externalIdSource"`
 
-	// ManagedPolicyArns Null until Act publishes versioned modules and templates
-	ManagedPolicyArns *[]string `json:"managedPolicyArns"`
+	// ManagedPolicyArns AWS managed policies the role check expects on the role
+	ManagedPolicyArns []string `json:"managedPolicyArns"`
 
 	// MemberRoleName Role the StackSet creates in each member account; null for an account
 	MemberRoleName *string `json:"memberRoleName"`
@@ -4365,6 +4374,20 @@ func (response CreateAwsDeployment409JSONResponse) VisitCreateAwsDeploymentRespo
 	return err
 }
 
+type CreateAwsDeployment415JSONResponse ErrorEnvelope
+
+func (response CreateAwsDeployment415JSONResponse) VisitCreateAwsDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(415)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type CreateAwsDeployment422JSONResponse ErrorEnvelope
 
 func (response CreateAwsDeployment422JSONResponse) VisitCreateAwsDeploymentResponse(w http.ResponseWriter) error {
@@ -4920,6 +4943,20 @@ func (response UpdateAwsDeployment412JSONResponse) VisitUpdateAwsDeploymentRespo
 	return err
 }
 
+type UpdateAwsDeployment415JSONResponse ErrorEnvelope
+
+func (response UpdateAwsDeployment415JSONResponse) VisitUpdateAwsDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(415)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type UpdateAwsDeployment422JSONResponse ErrorEnvelope
 
 func (response UpdateAwsDeployment422JSONResponse) VisitUpdateAwsDeploymentResponse(w http.ResponseWriter) error {
@@ -5113,6 +5150,20 @@ func (response RotateAwsExternalID412JSONResponse) VisitRotateAwsExternalIDRespo
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(412)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RotateAwsExternalID415JSONResponse ErrorEnvelope
+
+func (response RotateAwsExternalID415JSONResponse) VisitRotateAwsExternalIDResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(415)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -5314,6 +5365,20 @@ func (response VerifyAwsDeployment412JSONResponse) VisitVerifyAwsDeploymentRespo
 	return err
 }
 
+type VerifyAwsDeployment415JSONResponse ErrorEnvelope
+
+func (response VerifyAwsDeployment415JSONResponse) VisitVerifyAwsDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(415)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type VerifyAwsDeployment422JSONResponse ErrorEnvelope
 
 func (response VerifyAwsDeployment422JSONResponse) VisitVerifyAwsDeploymentResponse(w http.ResponseWriter) error {
@@ -5493,6 +5558,20 @@ func (response CreateAzureDeployment409JSONResponse) VisitCreateAzureDeploymentR
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateAzureDeployment415JSONResponse ErrorEnvelope
+
+func (response CreateAzureDeployment415JSONResponse) VisitCreateAzureDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(415)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -6052,6 +6131,20 @@ func (response UpdateAzureDeployment412JSONResponse) VisitUpdateAzureDeploymentR
 	return err
 }
 
+type UpdateAzureDeployment415JSONResponse ErrorEnvelope
+
+func (response UpdateAzureDeployment415JSONResponse) VisitUpdateAzureDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(415)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type UpdateAzureDeployment422JSONResponse ErrorEnvelope
 
 func (response UpdateAzureDeployment422JSONResponse) VisitUpdateAzureDeploymentResponse(w http.ResponseWriter) error {
@@ -6249,6 +6342,20 @@ func (response VerifyAzureDeployment412JSONResponse) VisitVerifyAzureDeploymentR
 	return err
 }
 
+type VerifyAzureDeployment415JSONResponse ErrorEnvelope
+
+func (response VerifyAzureDeployment415JSONResponse) VisitVerifyAzureDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(415)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type VerifyAzureDeployment422JSONResponse ErrorEnvelope
 
 func (response VerifyAzureDeployment422JSONResponse) VisitVerifyAzureDeploymentResponse(w http.ResponseWriter) error {
@@ -6428,6 +6535,20 @@ func (response CreateGcpDeployment409JSONResponse) VisitCreateGcpDeploymentRespo
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateGcpDeployment415JSONResponse ErrorEnvelope
+
+func (response CreateGcpDeployment415JSONResponse) VisitCreateGcpDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(415)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -6987,6 +7108,20 @@ func (response UpdateGcpDeployment412JSONResponse) VisitUpdateGcpDeploymentRespo
 	return err
 }
 
+type UpdateGcpDeployment415JSONResponse ErrorEnvelope
+
+func (response UpdateGcpDeployment415JSONResponse) VisitUpdateGcpDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(415)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type UpdateGcpDeployment422JSONResponse ErrorEnvelope
 
 func (response UpdateGcpDeployment422JSONResponse) VisitUpdateGcpDeploymentResponse(w http.ResponseWriter) error {
@@ -7180,6 +7315,20 @@ func (response VerifyGcpDeployment412JSONResponse) VisitVerifyGcpDeploymentRespo
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(412)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type VerifyGcpDeployment415JSONResponse ErrorEnvelope
+
+func (response VerifyGcpDeployment415JSONResponse) VisitVerifyGcpDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(415)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -7993,6 +8142,20 @@ func (response CreateIntegration409JSONResponse) VisitCreateIntegrationResponse(
 	return err
 }
 
+type CreateIntegration415JSONResponse ErrorEnvelope
+
+func (response CreateIntegration415JSONResponse) VisitCreateIntegrationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(415)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type CreateIntegration422JSONResponse ErrorEnvelope
 
 func (response CreateIntegration422JSONResponse) VisitCreateIntegrationResponse(w http.ResponseWriter) error {
@@ -8688,6 +8851,20 @@ func (response UpdateIntegration412JSONResponse) VisitUpdateIntegrationResponse(
 	return err
 }
 
+type UpdateIntegration415JSONResponse ErrorEnvelope
+
+func (response UpdateIntegration415JSONResponse) VisitUpdateIntegrationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(415)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type UpdateIntegration422JSONResponse ErrorEnvelope
 
 func (response UpdateIntegration422JSONResponse) VisitUpdateIntegrationResponse(w http.ResponseWriter) error {
@@ -9158,6 +9335,20 @@ func (response CreateNotificationRecipient409JSONResponse) VisitCreateNotificati
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateNotificationRecipient415JSONResponse ErrorEnvelope
+
+func (response CreateNotificationRecipient415JSONResponse) VisitCreateNotificationRecipientResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(415)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -9725,6 +9916,20 @@ func (response ReplaceNotificationRecipient412JSONResponse) VisitReplaceNotifica
 	return err
 }
 
+type ReplaceNotificationRecipient415JSONResponse ErrorEnvelope
+
+func (response ReplaceNotificationRecipient415JSONResponse) VisitReplaceNotificationRecipientResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(415)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type ReplaceNotificationRecipient422JSONResponse ErrorEnvelope
 
 func (response ReplaceNotificationRecipient422JSONResponse) VisitReplaceNotificationRecipientResponse(w http.ResponseWriter) error {
@@ -10054,6 +10259,20 @@ func (response CreateNotificationRule409JSONResponse) VisitCreateNotificationRul
 	return err
 }
 
+type CreateNotificationRule415JSONResponse ErrorEnvelope
+
+func (response CreateNotificationRule415JSONResponse) VisitCreateNotificationRuleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(415)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type CreateNotificationRule422JSONResponse ErrorEnvelope
 
 func (response CreateNotificationRule422JSONResponse) VisitCreateNotificationRuleResponse(w http.ResponseWriter) error {
@@ -10224,6 +10443,20 @@ func (response ValidateNotificationRule404JSONResponse) VisitValidateNotificatio
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ValidateNotificationRule415JSONResponse ErrorEnvelope
+
+func (response ValidateNotificationRule415JSONResponse) VisitValidateNotificationRuleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(415)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -10759,6 +10992,20 @@ func (response ReplaceNotificationRule412JSONResponse) VisitReplaceNotificationR
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(412)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReplaceNotificationRule415JSONResponse ErrorEnvelope
+
+func (response ReplaceNotificationRule415JSONResponse) VisitReplaceNotificationRuleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(415)
 	_, err := buf.WriteTo(w)
 	return err
 }
