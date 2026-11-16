@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"regexp"
+	"strconv"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
@@ -37,8 +38,9 @@ type providerModel struct {
 }
 
 type ProviderData struct {
-	Client *client.Client
-	Whoami *apigen.Whoami
+	Client   *client.Client
+	Whoami   *apigen.Whoami
+	PlanOnly bool
 }
 
 func New(version string) func() provider.Provider {
@@ -95,6 +97,7 @@ func (p *actProvider) Configure(ctx context.Context, req provider.ConfigureReque
 	if tenantID != "" && !tenantIDPattern.MatchString(tenantID) {
 		resp.Diagnostics.AddAttributeError(path.Root("tenant_id"), "Invalid tenant_id", "tenant_id must be a lowercase UUID.")
 	}
+	planOnly := planOnlyFromEnv(resp)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -140,7 +143,7 @@ func (p *actProvider) Configure(ctx context.Context, req provider.ConfigureReque
 		return
 	}
 
-	data := &ProviderData{Client: apiClient, Whoami: whoami}
+	data := &ProviderData{Client: apiClient, Whoami: whoami, PlanOnly: planOnly}
 	resp.DataSourceData = data
 	resp.ResourceData = data
 }
@@ -179,6 +182,18 @@ func valueOrEnv(v types.String, env string) string {
 		return v.ValueString()
 	}
 	return os.Getenv(env)
+}
+
+func planOnlyFromEnv(resp *provider.ConfigureResponse) bool {
+	raw := os.Getenv(planOnlyEnv)
+	if raw == "" {
+		return false
+	}
+	planOnly, err := strconv.ParseBool(raw)
+	if err != nil {
+		resp.Diagnostics.AddError("Invalid "+planOnlyEnv, fmt.Sprintf("%s must be true or false, not %q.", planOnlyEnv, raw))
+	}
+	return planOnly
 }
 
 func requireValue(resp *provider.ConfigureResponse, attr, env, value string) {

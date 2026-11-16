@@ -53,9 +53,9 @@ func (d *currentIdentityDataSource) Schema(_ context.Context, _ datasource.Schem
 			"principal_id":        computed("The service account's client ID."),
 			"principal_name":      computed("The service account's name."),
 			"principal_role":      computed("The service account's role, when it has one."),
-			"token_scope":         computed("The scope of the current token, `act:read` or `act:write`."),
+			"token_scope":         computed("The API key's access, `act:read` for Read or `act:write` for Read and write."),
 			"scopes": schema.ListAttribute{
-				MarkdownDescription: "Every scope the current token carries.",
+				MarkdownDescription: "The scopes the API key holds, such as `deployments:read` and `deployments:write`: its role narrowed by its access. A change to a resource needs that resource's write scope.",
 				ElementType:         types.StringType,
 				Computed:            true,
 			},

@@ -34,8 +34,8 @@ output "act_tenant" {
 - `principal_name` (String) The service account's name.
 - `principal_role` (String) The service account's role, when it has one.
 - `region` (String) The Act region serving the tenant, such as `us1`. Null in local development stacks.
-- `scopes` (List of String) Every scope the current token carries.
+- `scopes` (List of String) The scopes the API key holds, such as `deployments:read` and `deployments:write`: its role narrowed by its access. A change to a resource needs that resource's write scope.
 - `tenant_display_name` (String) The tenant's display name.
 - `tenant_id` (String) The Act tenant ID.
 - `token_expires_at` (String) When the current token expires, in RFC 3339.
-- `token_scope` (String) The scope of the current token, `act:read` or `act:write`.
+- `token_scope` (String) The API key's access, `act:read` for Read or `act:write` for Read and write.

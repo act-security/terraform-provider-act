@@ -195,6 +195,7 @@ func (r *notificationRecipientResource) Configure(_ context.Context, req resourc
 
 func (r *notificationRecipientResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
 	keepStateWhenOnlyComputedDiffer(ctx, req, resp, "revision", "min_client_revision", "rule_ids", "members", "last_modified_via")
+	requireWriteScope(plannedWrite{data: r.data, scope: integrationsWriteScope, req: req, resp: resp})
 }
 
 func (r *notificationRecipientResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {

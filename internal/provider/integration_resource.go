@@ -357,6 +357,7 @@ func healthNote(item apigen.Integration) string {
 }
 
 func (r *integrationResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
+	defer requireWriteScope(plannedWrite{data: r.data, scope: integrationsWriteScope, req: req, resp: resp})
 	if req.State.Raw.IsNull() || req.Plan.Raw.IsNull() {
 		return
 	}

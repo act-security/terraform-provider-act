@@ -3,7 +3,10 @@ package fakeapi
 import (
 	"fmt"
 	"net/http"
+	"sync/atomic"
 	"time"
+
+	"github.com/act-security/terraform-provider-act/internal/fakeapi/gen"
 )
 
 const (
@@ -27,8 +30,23 @@ type Config struct {
 	PublicAPIUnavailable      bool
 	NotificationRulesDisabled bool
 	OmitTenantClaim           bool
+	Key                       Key
 	Script                    Script
 }
+
+type Key struct {
+	TokenScope gen.TokenScope
+	Scopes     []string
+}
+
+var (
+	ReadAndWriteKey = Key{
+		TokenScope: gen.TokenScopeActWrite,
+		Scopes:     []string{"deployments:read", "deployments:write", "integrations:read", "integrations:write"},
+	}
+	TerraformDeploymentsPlanKey  = Key{TokenScope: gen.TokenScopeActRead, Scopes: []string{"deployments:read"}}
+	TerraformDeploymentsApplyKey = Key{TokenScope: gen.TokenScopeActWrite, Scopes: []string{"deployments:read", "deployments:write"}}
+)
 
 func DefaultConfig() Config {
 	return Config{
@@ -37,6 +55,7 @@ func DefaultConfig() Config {
 		Region:            DefaultRegion,
 		ClientID:          DefaultClientID,
 		ClientSecret:      DefaultClientSecret,
+		Key:               ReadAndWriteKey,
 	}
 }
 
@@ -51,6 +70,7 @@ type Fake struct {
 	integrations  *integrationStore
 	notifications *notificationStore
 	deployments   *deploymentStore
+	key           atomic.Pointer[Key]
 }
 
 func New(cfg Config, stsOrigin, apiOrigin string) (*Fake, error) {
@@ -61,7 +81,7 @@ func New(cfg Config, stsOrigin, apiOrigin string) (*Fake, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Fake{
+	f := &Fake{
 		cfg:           cfg,
 		stsOrigin:     stsOrigin,
 		apiOrigin:     apiOrigin,
@@ -72,8 +92,12 @@ func New(cfg Config, stsOrigin, apiOrigin string) (*Fake, error) {
 		integrations:  newIntegrationStore(time.Now().UTC()),
 		notifications: newNotificationStore(),
 		deployments:   newDeploymentStore(),
-	}, nil
+	}
+	f.UseKey(cfg.Key)
+	return f, nil
 }
+
+func (f *Fake) UseKey(key Key) { f.key.Store(&key) }
 
 func (f *Fake) STSOrigin() string { return f.stsOrigin }
 

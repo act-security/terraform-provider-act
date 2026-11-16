@@ -271,6 +271,7 @@ func (r *awsDeploymentResource[M, P]) ModifyPlan(ctx context.Context, req resour
 	default:
 		r.planUpdate(ctx, req, resp)
 	}
+	requireWriteScope(plannedWrite{data: r.data, scope: deploymentsWriteScope, req: req, resp: resp})
 }
 
 func (r *awsDeploymentResource[M, P]) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {

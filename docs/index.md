@@ -62,6 +62,48 @@ provider "act" {
 }
 ```
 
+### API keys for plan and apply
+
+Every API key has a role and an access level, both picked when you create it:
+
+| Role | What the key reaches |
+|---|---|
+| All API areas | Deployments, integrations and notification rules |
+| Terraform deployments | Deployments only |
+
+| Access | What the key can do |
+|---|---|
+| Read | Read only |
+| Read and write | Read, create, change and delete |
+
+For deployments, create two API keys with the role **Terraform deployments**: a **Read** key for `terraform plan`, for example on pull requests, and a **Read and write** key for `terraform apply`. Only the apply job then holds a key that can change anything in Act.
+
+The provider checks the key at plan time. When the plan creates, changes or destroys a resource that the key cannot write, the plan fails with *The Act API key cannot apply this change*, so an apply run with the wrong key stops before it changes anything. In a job that only plans, set `ACT_PLAN_ONLY=true` and the check warns instead:
+
+The plan job runs with the Read key:
+
+```shell
+export ACT_CLIENT_ID="<read key client id>"
+export ACT_CLIENT_SECRET="<read key client secret>"
+export ACT_PLAN_ONLY=true
+terraform plan
+```
+
+The apply job runs with the Read and write key and leaves `ACT_PLAN_ONLY` unset:
+
+```shell
+export ACT_CLIENT_ID="<read and write key client id>"
+export ACT_CLIENT_SECRET="<read and write key client secret>"
+terraform apply
+```
+
+| Resources | Scope a change needs |
+|---|---|
+| `act_aws_account_deployment`, `act_aws_organization_deployment` | `deployments:write` |
+| `act_slack_integration`, `act_jira_integration`, `act_wiz_integration`, `act_splunk_integration`, `act_notification_rule`, `act_notification_recipient` | `integrations:write` |
+
+The [`act_current_identity`](https://registry.terraform.io/providers/act-security/act/latest/docs/data-sources/current_identity) data source lists the scopes the key holds.
+
 ### How the provider connects
 
 The provider exchanges the API key at the Act STS (`auth.act.security`) for a short-lived token. The STS also tells it which regional API serves the tenant, such as `api.us1.act.security`, and the provider then talks only to that API. Tokens are renewed automatically, so long runs don't expire.
