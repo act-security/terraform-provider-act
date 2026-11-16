@@ -195,10 +195,17 @@ func (r *notificationRecipientResource) Configure(_ context.Context, req resourc
 
 func (r *notificationRecipientResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
 	keepStateWhenOnlyComputedDiffer(ctx, req, resp, "revision", "min_client_revision", "rule_ids", "members", "last_modified_via")
-	requireWriteScope(plannedWrite{data: r.data, scope: integrationsWriteScope, req: req, resp: resp})
+	r.writeAccess().warnAtPlan(r.data, req, resp)
+}
+
+func (r *notificationRecipientResource) writeAccess() writeAccess {
+	return writeAccess{scope: integrationsWriteScope, typeName: "act_notification_recipient"}
 }
 
 func (r *notificationRecipientResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
+	if r.writeAccess().refuseAtApply(r.data, "creates", &resp.Diagnostics) {
+		return
+	}
 	var plan notificationRecipientModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
 	if resp.Diagnostics.HasError() {
@@ -241,6 +248,9 @@ func (r *notificationRecipientResource) Read(ctx context.Context, req resource.R
 }
 
 func (r *notificationRecipientResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+	if r.writeAccess().refuseAtApply(r.data, "changes", &resp.Diagnostics) {
+		return
+	}
 	var plan, prior notificationRecipientModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
 	resp.Diagnostics.Append(req.State.Get(ctx, &prior)...)
@@ -268,6 +278,9 @@ func (r *notificationRecipientResource) Update(ctx context.Context, req resource
 }
 
 func (r *notificationRecipientResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
+	if r.writeAccess().refuseAtApply(r.data, "destroys", &resp.Diagnostics) {
+		return
+	}
 	var prior notificationRecipientModel
 	resp.Diagnostics.Append(req.State.Get(ctx, &prior)...)
 	if resp.Diagnostics.HasError() {

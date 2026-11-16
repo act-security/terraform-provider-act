@@ -78,18 +78,22 @@ Every API key has a role and an access level, both picked when you create it:
 
 For deployments, create two API keys with the role **Terraform deployments**: a **Read** key for `terraform plan`, for example on pull requests, and a **Read and write** key for `terraform apply`. Only the apply job then holds a key that can change anything in Act.
 
-The provider checks the key at plan time. When the plan creates, changes or destroys a resource that the key cannot write, the plan fails with *The Act API key cannot apply this change*, so an apply run with the wrong key stops before it changes anything. In a job that only plans, set `ACT_PLAN_ONLY=true` and the check warns instead:
+The provider checks the key against the plan:
+
+- **At plan**, when the plan creates, changes or destroys a resource that the key cannot write, the plan succeeds with the warning *The Act API key cannot apply this change*. It names the resource and the scope it needs, so a pull request plan with the Read key shows the full diff and tells you the apply needs the other key.
+- **At apply**, the same check runs before the provider calls the Act API. With the wrong key the apply fails with that message and sends nothing to Act, instead of stopping halfway on a `403`.
+
+The plan only warns because a provider cannot tell a `terraform plan` run from the plan step of a `terraform apply`, and the Read key is meant for plans.
 
 The plan job runs with the Read key:
 
 ```shell
 export ACT_CLIENT_ID="<read key client id>"
 export ACT_CLIENT_SECRET="<read key client secret>"
-export ACT_PLAN_ONLY=true
 terraform plan
 ```
 
-The apply job runs with the Read and write key and leaves `ACT_PLAN_ONLY` unset:
+The apply job runs with the Read and write key:
 
 ```shell
 export ACT_CLIENT_ID="<read and write key client id>"

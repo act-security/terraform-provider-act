@@ -300,7 +300,14 @@ func (r *integrationResource) secretAppliedAt(item apigen.Integration) string {
 	return ""
 }
 
+func (r *integrationResource) writeAccess() writeAccess {
+	return writeAccess{scope: integrationsWriteScope, typeName: "act_" + r.kind.name + "_integration"}
+}
+
 func (r *integrationResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
+	if r.writeAccess().refuseAtApply(r.data, "creates", &resp.Diagnostics) {
+		return
+	}
 	diags := &resp.Diagnostics
 	values := r.configValues(ctx, req.Plan, diags)
 	secret := r.secretValue(ctx, req.Config, req.Plan, diags)
@@ -357,7 +364,7 @@ func healthNote(item apigen.Integration) string {
 }
 
 func (r *integrationResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
-	defer requireWriteScope(plannedWrite{data: r.data, scope: integrationsWriteScope, req: req, resp: resp})
+	defer r.writeAccess().warnAtPlan(r.data, req, resp)
 	if req.State.Raw.IsNull() || req.Plan.Raw.IsNull() {
 		return
 	}
@@ -375,6 +382,9 @@ func (r *integrationResource) ModifyPlan(ctx context.Context, req resource.Modif
 }
 
 func (r *integrationResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+	if r.writeAccess().refuseAtApply(r.data, "changes", &resp.Diagnostics) {
+		return
+	}
 	diags := &resp.Diagnostics
 	id := stringAt(ctx, req.State, "id", diags)
 	planned := r.configValues(ctx, req.Plan, diags)
@@ -408,6 +418,9 @@ func (r *integrationResource) Update(ctx context.Context, req resource.UpdateReq
 }
 
 func (r *integrationResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
+	if r.writeAccess().refuseAtApply(r.data, "destroys", &resp.Diagnostics) {
+		return
+	}
 	id := stringAt(ctx, req.State, "id", &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return

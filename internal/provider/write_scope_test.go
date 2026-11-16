@@ -3,6 +3,7 @@
 package provider_test
 
 import (
+	"net/http"
 	"regexp"
 	"testing"
 
@@ -13,58 +14,46 @@ import (
 	"github.com/act-security/terraform-provider-act/internal/provider"
 )
 
-func TestAReadOnlyKeyFailsAPendingCreateAtPlan(t *testing.T) {
-	s := fakeapi.Start(t, fakeapi.WithKey(fakeapi.TerraformDeploymentsPlanKey))
-	s.Setenv(t)
-
-	resource.UnitTest(t, resource.TestCase{
-		ProtoV6ProviderFactories: factories(),
-		Steps: []resource.TestStep{{
-			Config:      accountConfig(""),
-			PlanOnly:    true,
-			ExpectError: regexp.MustCompile(`(?s)creates the resource, which needs the deployments:write scope.*holds\s+deployments:read`),
-		}},
-	})
-
-	if n := countRequests(s, "POST", "/v1/deployments/aws"); n != 0 {
-		t.Fatalf("the provider sent %d create requests, want none", n)
+func publicAPIWrites(s *fakeapi.Servers) int {
+	n := 0
+	for _, r := range s.Recorder().Requests() {
+		if r.Origin == fakeapi.OriginAPI && r.Method != http.MethodGet {
+			n++
+		}
 	}
+	return n
 }
 
-func TestPlanOnlyTurnsTheMissingWriteScopeIntoAWarning(t *testing.T) {
+func TestAReadOnlyKeyPlansAPendingCreateAndTheApplyStopsBeforeCallingAct(t *testing.T) {
 	s := fakeapi.Start(t, fakeapi.WithKey(fakeapi.TerraformDeploymentsPlanKey))
 	s.Setenv(t)
-	t.Setenv("ACT_PLAN_ONLY", "true")
 
 	resource.UnitTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: factories(),
-		Steps: []resource.TestStep{{
-			Config:             accountConfig(""),
-			PlanOnly:           true,
-			ExpectNonEmptyPlan: true,
-		}},
+		Steps: []resource.TestStep{
+			{
+				Config:             accountConfig(""),
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: true,
+			},
+			{
+				Config:      accountConfig(""),
+				ExpectError: regexp.MustCompile(`(?s)This apply creates act_aws_account_deployment, which needs the\s+deployments:write\s+scope.*holds\s+deployments:read.*Nothing was sent to Act`),
+			},
+		},
 	})
-}
 
-func TestARejectedPlanOnlyValueStopsTheProvider(t *testing.T) {
-	s := fakeapi.Start(t)
-	s.Setenv(t)
-	t.Setenv("ACT_PLAN_ONLY", "sometimes")
-
-	resource.UnitTest(t, resource.TestCase{
-		ProtoV6ProviderFactories: factories(),
-		Steps: []resource.TestStep{{
-			Config:      accountConfig(""),
-			PlanOnly:    true,
-			ExpectError: regexp.MustCompile(`ACT_PLAN_ONLY must be true or false`),
-		}},
-	})
+	if n := publicAPIWrites(s); n != 0 {
+		t.Fatalf("the provider sent %d write requests with a read-only key, want none", n)
+	}
 }
 
 func TestTheTerraformDeploymentsKeysPlanWithReadAndApplyWithWrite(t *testing.T) {
 	s := fakeapi.Start(t, fakeapi.WithKey(fakeapi.TerraformDeploymentsApplyKey))
 	s.Setenv(t)
 	provider.FastVerification(t)
+	tagged := accountConfig(`  tags = { team = "platform" }`)
+	noResources := requiredProviders + "\nprovider \"act\" {}\n"
 
 	resource.UnitTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: factories(),
@@ -78,32 +67,35 @@ func TestTheTerraformDeploymentsKeysPlanWithReadAndApplyWithWrite(t *testing.T) 
 				PlanOnly:  true,
 			},
 			{
-				Config:      accountConfig(`  tags = { team = "platform" }`),
-				PlanOnly:    true,
-				ExpectError: regexp.MustCompile(`changes the resource, which needs the deployments:write scope`),
+				Config:             tagged,
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: true,
+			},
+			{
+				Config:      tagged,
+				ExpectError: regexp.MustCompile(`This apply changes act_aws_account_deployment`),
 			},
 			{
 				PreConfig: func() { s.UseKey(fakeapi.TerraformDeploymentsApplyKey) },
-				Config:    accountConfig(`  tags = { team = "platform" }`),
+				Config:    tagged,
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{plancheck.ExpectResourceAction(accountAddress, plancheck.ResourceActionUpdate)},
 				},
 			},
 			{
 				PreConfig:   func() { s.UseKey(fakeapi.TerraformDeploymentsPlanKey) },
-				Config:      requiredProviders + "\nprovider \"act\" {}\n",
-				PlanOnly:    true,
-				ExpectError: regexp.MustCompile(`destroys the resource, which needs the deployments:write scope`),
+				Config:      noResources,
+				ExpectError: regexp.MustCompile(`This apply destroys act_aws_account_deployment`),
 			},
 			{
 				PreConfig: func() { s.UseKey(fakeapi.TerraformDeploymentsApplyKey) },
-				Config:    requiredProviders + "\nprovider \"act\" {}\n",
+				Config:    noResources,
 			},
 		},
 	})
 }
 
-func TestADeploymentsKeyCannotPlanAnIntegration(t *testing.T) {
+func TestADeploymentsKeyCannotApplyAnIntegration(t *testing.T) {
 	s := fakeapi.Start(t, fakeapi.WithKey(fakeapi.TerraformDeploymentsApplyKey))
 	s.Setenv(t)
 
@@ -111,8 +103,11 @@ func TestADeploymentsKeyCannotPlanAnIntegration(t *testing.T) {
 		ProtoV6ProviderFactories: factories(),
 		Steps: []resource.TestStep{{
 			Config:      slackWriteOnly("xoxb-not-a-real-token", 1),
-			PlanOnly:    true,
-			ExpectError: regexp.MustCompile(`creates the resource, which needs the integrations:write scope`),
+			ExpectError: regexp.MustCompile(`(?s)This apply creates act_slack_integration, which needs the\s+integrations:write\s+scope.*whose role grants\s+integrations:write`),
 		}},
 	})
+
+	if n := publicAPIWrites(s); n != 0 {
+		t.Fatalf("the provider sent %d write requests without integrations:write, want none", n)
+	}
 }

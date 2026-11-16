@@ -5,40 +5,57 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 )
 
 const (
 	deploymentsWriteScope  = "deployments:write"
 	integrationsWriteScope = "integrations:write"
-	planOnlyEnv            = "ACT_PLAN_ONLY"
+	missingWriteScopeTitle = "The Act API key cannot apply this change"
 )
 
-type plannedWrite struct {
-	data  *ProviderData
-	scope string
-	req   resource.ModifyPlanRequest
-	resp  *resource.ModifyPlanResponse
+type writeAccess struct {
+	scope    string
+	typeName string
 }
 
-func requireWriteScope(w plannedWrite) {
-	if w.data == nil || w.data.Whoami == nil || slices.Contains(w.data.Whoami.Scopes, w.scope) {
+func (w writeAccess) warnAtPlan(data *ProviderData, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
+	action, writes := plannedAction(req, resp)
+	if !writes || w.held(data) {
 		return
 	}
-	action, writes := plannedAction(w.req, w.resp)
-	if !writes {
-		return
-	}
-	summary := "The Act API key cannot apply this change"
-	detail := fmt.Sprintf(
-		"This plan %s the resource, which needs the %s scope. The API key %q holds %s. Run the apply with an API key whose access is Read and write. To plan with a read-only key on purpose, set %s=true and this stays a warning.",
-		action, w.scope, w.data.Whoami.Principal.Name, heldScopes(w.data.Whoami.Scopes), planOnlyEnv,
+	resp.Diagnostics.AddWarning(
+		missingWriteScopeTitle,
+		fmt.Sprintf("This plan %s, which %s. The apply stops before it calls the Act API unless it runs with %s.", w.change(action), w.lack(data), w.keyThatCan()),
 	)
-	if w.data.PlanOnly {
-		w.resp.Diagnostics.AddWarning(summary, detail)
-		return
+}
+
+func (w writeAccess) refuseAtApply(data *ProviderData, action string, diags *diag.Diagnostics) bool {
+	if w.held(data) {
+		return false
 	}
-	w.resp.Diagnostics.AddError(summary, detail)
+	diags.AddError(
+		missingWriteScopeTitle,
+		fmt.Sprintf("This apply %s, which %s. Nothing was sent to Act. Apply with %s.", w.change(action), w.lack(data), w.keyThatCan()),
+	)
+	return true
+}
+
+func (w writeAccess) held(data *ProviderData) bool {
+	return data == nil || data.Whoami == nil || slices.Contains(data.Whoami.Scopes, w.scope)
+}
+
+func (w writeAccess) change(action string) string {
+	return fmt.Sprintf("%s %s", action, w.typeName)
+}
+
+func (w writeAccess) keyThatCan() string {
+	return fmt.Sprintf("a Read and write API key whose role grants %s", w.scope)
+}
+
+func (w writeAccess) lack(data *ProviderData) string {
+	return fmt.Sprintf("needs the %s scope. The API key %q holds %s", w.scope, data.Whoami.Principal.Name, heldScopes(data.Whoami.Scopes))
 }
 
 func plannedAction(req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) (string, bool) {
