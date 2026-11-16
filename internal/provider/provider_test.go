@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"regexp"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
@@ -119,7 +120,17 @@ func TestProviderConfigurationErrors(t *testing.T) {
 		{
 			name: "missing secret",
 			env:  map[string]string{"ACT_CLIENT_SECRET": ""},
-			want: `Missing client_secret`,
+			want: `ACT_CLIENT_SECRET, or authenticate with an OIDC token`,
+		},
+		{
+			name: "secret and OIDC token together",
+			env:  map[string]string{"ACT_OIDC_TOKEN": "a.b.c"},
+			want: `not both`,
+		},
+		{
+			name: "use_oidc outside a CI job",
+			env:  map[string]string{"ACT_CLIENT_SECRET": "", "ACT_USE_OIDC": "true"},
+			want: `has no OIDC token`,
 		},
 	}
 	for _, tt := range tests {
@@ -137,11 +148,44 @@ func TestProviderConfigurationErrors(t *testing.T) {
 				ProtoV6ProviderFactories: factories(),
 				Steps: []resource.TestStep{{
 					Config:      identityConfig(providerBlock + "\n"),
-					ExpectError: regexp.MustCompile(regexp.QuoteMeta(tt.want)),
+					ExpectError: regexp.MustCompile(strings.ReplaceAll(regexp.QuoteMeta(tt.want), " ", `\s+`)),
 				}},
 			})
 		})
 	}
+}
+
+func TestCurrentIdentityWithACIToken(t *testing.T) {
+	s := fakeapi.Start(t)
+	s.Setenv(t)
+	t.Setenv("ACT_CLIENT_SECRET", "")
+	t.Setenv("ACT_USE_OIDC", "true")
+	t.Setenv("TFC_WORKLOAD_IDENTITY_TOKEN_ACT", fakeapi.CIToken(t, s.STSOrigin(), map[string]any{"terraform_run_phase": "plan"}))
+
+	resource.UnitTest(t, resource.TestCase{
+		ProtoV6ProviderFactories: factories(),
+		Steps: []resource.TestStep{{
+			Config: identityConfig(`provider "act" {}` + "\n"),
+			ConfigStateChecks: []statecheck.StateCheck{
+				statecheck.ExpectKnownValue("data.act_current_identity.this", tfjsonpath.New("tenant_id"), knownvalue.StringExact(fakeapi.DefaultTenantID)),
+			},
+		}},
+	})
+}
+
+func TestProviderRefusesACITokenTheTrustPolicyRejects(t *testing.T) {
+	s := fakeapi.Start(t)
+	s.Setenv(t)
+	t.Setenv("ACT_CLIENT_SECRET", "")
+	t.Setenv("ACT_OIDC_TOKEN", fakeapi.CIToken(t, s.STSOrigin(), map[string]any{"iss": "https://untrusted.example"}))
+
+	resource.UnitTest(t, resource.TestCase{
+		ProtoV6ProviderFactories: factories(),
+		Steps: []resource.TestStep{{
+			Config:      identityConfig(`provider "act" {}` + "\n"),
+			ExpectError: regexp.MustCompile(`trust\s+policy`),
+		}},
+	})
 }
 
 func whoamiCalls(s *fakeapi.Servers) (int, int) {

@@ -1,6 +1,8 @@
 package fakeapi
 
 import (
+	"encoding/base64"
+	"encoding/json"
 	"net/http/httptest"
 	"testing"
 )
@@ -66,4 +68,21 @@ func (s *Servers) Setenv(t testing.TB) {
 	t.Setenv("ACT_TENANT_ID", s.Config.TenantID)
 	t.Setenv("ACT_CLIENT_ID", s.Config.ClientID)
 	t.Setenv("ACT_CLIENT_SECRET", s.Config.ClientSecret)
+}
+
+func CIToken(t testing.TB, audience any, claims map[string]any) string {
+	t.Helper()
+	payload := map[string]any{"iss": CIIssuer, "aud": audience, "sub": "repo:example/infra:ref:refs/heads/main"}
+	for k, v := range claims {
+		payload[k] = v
+	}
+	header, err := json.Marshal(map[string]string{"alg": "none", "typ": "JWT"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, err := json.Marshal(payload)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return base64.RawURLEncoding.EncodeToString(header) + "." + base64.RawURLEncoding.EncodeToString(body) + ".unsigned"
 }

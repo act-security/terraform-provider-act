@@ -6,7 +6,7 @@ description: |-
 
 # Act Provider
 
-The Act provider connects Terraform to [Act Security](https://act.security). It signs in with an Act API key and finds the tenant and the regional API on its own, so the client ID and secret are all it needs.
+The Act provider connects Terraform to [Act Security](https://act.security). It signs in with an Act API key, or with the CI job's OIDC token instead of the key's secret, and finds the tenant and the regional API on its own.
 
 ## Getting started
 
@@ -42,10 +42,13 @@ To check the setup, read the [`act_current_identity`](https://registry.terraform
 | Argument | Environment variable | Required | Description |
 |---|---|---|---|
 | `client_id` | `ACT_CLIENT_ID` | Yes | The API key's client ID. |
-| `client_secret` | `ACT_CLIENT_SECRET` | Yes | The API key's client secret. |
+| `client_secret` | `ACT_CLIENT_SECRET` | Unless OIDC | The API key's client secret. |
+| `use_oidc` | `ACT_USE_OIDC` | No | Sign in with the CI job's OIDC token instead of the secret. See [OIDC workload identity](#oidc-workload-identity). |
+| `oidc_token` | `ACT_OIDC_TOKEN` | No | An OIDC token for the Act STS audience, for CI systems `use_oidc` does not detect. |
+| `oidc_token_file_path` | `ACT_OIDC_TOKEN_FILE_PATH` | No | A file holding that token, read again every time the provider renews its Act token. |
 | `tenant_id` | `ACT_TENANT_ID` | No | The tenant you expect. The run fails if the key belongs to a different tenant. |
 
-A value in the `provider` block wins over the environment variable. The schema below lists `client_id` and `client_secret` as optional only because either one can come from its environment variable instead.
+A value in the `provider` block wins over the environment variable. The schema below lists `client_id` and `client_secret` as optional only because either one can come from its environment variable instead, and the secret is not needed with OIDC. Set either the client secret or an OIDC source, never both: the provider refuses to start when it finds both.
 
 Keep the client secret out of your configuration files. The environment variable is the simplest way. If you pass it in Terraform, use a sensitive variable:
 
@@ -61,6 +64,82 @@ provider "act" {
   tenant_id     = "<tenant id>"
 }
 ```
+
+### OIDC workload identity
+
+A CI job can sign in with the OIDC token its CI system issues, so the pipeline holds no Act secret. A tenant admin adds a **trust policy** to the API key in **Settings → API keys**. The policy names the CI system, the repository or workspace it trusts, and the conditions under which a job may write. Every other job the policy matches gets a read-only token, so a plan can never write. A key created with read access never writes, whatever the policy says.
+
+Request the token for the audience `https://auth.act.security`, the Act STS origin. The provider refuses to send a token minted for any other audience, so a token meant for another cloud is never replayed to Act. The provider asks for a new Act token whenever its current one is about to expire, and reads the OIDC token again each time.
+
+With `use_oidc = true` the provider looks for a token in this order:
+
+1. `TFC_WORKLOAD_IDENTITY_TOKEN_ACT`, then `TFC_WORKLOAD_IDENTITY_TOKEN` (HCP Terraform).
+2. `ACTIONS_ID_TOKEN_REQUEST_URL` and `ACTIONS_ID_TOKEN_REQUEST_TOKEN` (GitHub Actions): the provider requests a fresh token for the Act audience every time it signs in.
+
+`oidc_token` and `oidc_token_file_path` take a token from any other CI system that issues one Act trusts; set one of them, not both.
+
+#### GitHub Actions
+
+Trust policy for the API key:
+
+| Field | Value |
+|---|---|
+| Issuer | GitHub Actions |
+| `repository_id` | the numeric ID of the repository, from `gh api repos/<owner>/<repo> --jq .id` |
+| Write conditions | `ref` = `refs/heads/main` and `event_name` = `push`, or a protected `environment` such as `production` |
+
+The repository ID survives renames and cannot be claimed by another repository. Use an environment with required reviewers and a deployment branch policy when the apply job should wait for approval.
+
+```yaml
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  ACT_CLIENT_ID: ${{ vars.ACT_CLIENT_ID }}
+  ACT_USE_OIDC: "true"
+
+jobs:
+  plan:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+      - run: terraform init && terraform plan
+
+  apply:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+      - run: terraform init && terraform apply -auto-approve
+```
+
+The plan job runs on `pull_request`, matches only the repository, and gets a read-only token. The apply job runs on a push to `main`, matches the write conditions, and gets a token that can write.
+
+#### HCP Terraform
+
+Trust policy for the API key:
+
+| Field | Value |
+|---|---|
+| Issuer | HCP Terraform |
+| `terraform_workspace_id` | the workspace ID, such as `ws-…` |
+| Write conditions | `terraform_run_phase` = `apply` |
+
+Set these workspace variables (category **env**):
+
+| Variable | Value |
+|---|---|
+| `TFC_WORKLOAD_IDENTITY_AUDIENCE_ACT` | `https://auth.act.security` |
+| `ACT_CLIENT_ID` | the API key's client ID |
+| `ACT_USE_OIDC` | `true` |
+
+HCP Terraform injects the token as `TFC_WORKLOAD_IDENTITY_TOKEN_ACT` for each plan and apply. The plan phase gets a read-only Act token and the apply phase can write. If Act is the only audience you need, `TFC_WORKLOAD_IDENTITY_AUDIENCE` works too.
+
+If the STS refuses the token, the provider says so: check that a trust policy of the API key matches the job's claims and that the token was requested for `https://auth.act.security`.
 
 ### How the provider connects
 
@@ -84,5 +163,8 @@ Every release is signed with the Act provider signing key, and every archive car
 ### Optional
 
 - `client_id` (String) The API key's client ID, from Settings → API keys in the Act console. Required, here or in `ACT_CLIENT_ID`.
-- `client_secret` (String, Sensitive) The API key's client secret. Required, here or in `ACT_CLIENT_SECRET`, which keeps it out of the configuration.
+- `client_secret` (String, Sensitive) The API key's client secret, here or in `ACT_CLIENT_SECRET`, which keeps it out of the configuration. Required unless the provider signs in with an OIDC token; never set both.
+- `oidc_token` (String, Sensitive) An OIDC token issued to the CI job for the Act STS audience, here or in `ACT_OIDC_TOKEN`. Use it with a CI system the provider does not detect with `use_oidc`.
+- `oidc_token_file_path` (String) A file holding the CI job's OIDC token, here or in `ACT_OIDC_TOKEN_FILE_PATH`. The provider reads it again every time it renews its Act token, so a token the CI system refreshes keeps working.
 - `tenant_id` (String) The Act tenant ID, a lowercase UUID, here or in `ACT_TENANT_ID`. Not needed: the provider reads the tenant from the API key. When set, the provider fails if the key belongs to another tenant.
+- `use_oidc` (Boolean) Sign in with the OIDC token of the CI job instead of `client_secret`, here or in `ACT_USE_OIDC`. The provider reads `TFC_WORKLOAD_IDENTITY_TOKEN_ACT`, then `TFC_WORKLOAD_IDENTITY_TOKEN` (HCP Terraform), then requests a token from GitHub Actions for the Act STS audience. The API key needs a trust policy for the job.
