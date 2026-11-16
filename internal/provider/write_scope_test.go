@@ -102,8 +102,8 @@ func TestADeploymentsKeyCannotApplyAnIntegration(t *testing.T) {
 	resource.UnitTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: factories(),
 		Steps: []resource.TestStep{{
-			Config:      slackWriteOnly("xoxb-not-a-real-token", 1),
-			ExpectError: regexp.MustCompile(`(?s)This apply creates act_slack_integration, which needs the\s+integrations:write\s+scope.*whose role grants\s+integrations:write`),
+			Config:      jiraPlaintext("bot@example.com", "not-a-real-token"),
+			ExpectError: regexp.MustCompile(`(?s)This apply creates act_jira_integration, which needs the\s+integrations:write\s+scope.*whose role grants\s+integrations:write`),
 		}},
 	})
 
