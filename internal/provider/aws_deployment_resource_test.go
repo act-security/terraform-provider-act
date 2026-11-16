@@ -330,6 +330,20 @@ func TestAwsAccountDeploymentReplacesItWhenTheDeploymentMethodChanges(t *testing
 	})
 }
 
+func TestAwsAccountDeploymentRejectsAnUnknownCapability(t *testing.T) {
+	s := fakeapi.Start(t)
+	s.Setenv(t)
+
+	resource.UnitTest(t, resource.TestCase{
+		ProtoV6ProviderFactories: factories(),
+		Steps: []resource.TestStep{{
+			Config:      accountConfig(`  disabled_capabilities = ["ai_service"]`),
+			PlanOnly:    true,
+			ExpectError: regexp.MustCompile(`value must be one of`),
+		}},
+	})
+}
+
 func TestAwsAccountDeploymentRejectsARoleInAnotherAccount(t *testing.T) {
 	s := fakeapi.Start(t)
 	s.Setenv(t)
@@ -510,9 +524,10 @@ func TestAwsOrganizationDeploymentLifecycle(t *testing.T) {
 				ExpectError: regexp.MustCompile(`This change replaces`),
 			},
 			{
-				Config: orgConfig(ous, "  deletion_protection = false"),
+				Config: orgConfig(ous, "  deletion_protection = false\n  disabled_capabilities = [\"cloudtrail_logs\"]"),
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue(orgAddress, tfjsonpath.New("deletion_protection"), knownvalue.Bool(false)),
+					statecheck.ExpectKnownValue(orgAddress, tfjsonpath.New("disabled_capabilities"), knownvalue.SetExact([]knownvalue.Check{knownvalue.StringExact("cloudtrail_logs")})),
 				},
 			},
 		},
