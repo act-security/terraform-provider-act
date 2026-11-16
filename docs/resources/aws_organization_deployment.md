@@ -56,6 +56,40 @@ Set `root_id` to cover the whole organization, or `organizational_unit_ids` to c
 
 A StackSet accepts at most 850 characters of target IDs. When the units do not fit, the plan fails and suggests `root_id` with `excluded_account_ids`.
 
+## Permission groups
+
+Act's role has a core set of permissions plus three optional permission groups, all on by default. When the role leaves a group out, list its capability in `disabled_capabilities` so Act does not expect those permissions. Changing the list updates the deployment in place.
+
+| Capability | Permission group | Without it, Act cannot read |
+|---|---|---|
+| `eks_cluster_access` | `kubernetes` | Kubernetes objects inside EKS clusters |
+| `cloudtrail_logs` | `cloudtrail_logs` | CloudTrail log files in S3 and log events in CloudWatch Logs |
+| `ai_services` | `ai_services` | Bedrock, Bedrock AgentCore, OpenSearch Serverless and SageMaker model package group details |
+
+The Act module for AWS, `act-security/act/aws//modules/organization`, takes the groups as `permission_groups` and outputs the list to pass:
+
+```terraform
+module "act" {
+  source = "act-security/act/aws//modules/organization"
+
+  deployment_id     = data.act_aws_onboarding_parameters.this.deployment_id
+  role_name         = data.act_aws_onboarding_parameters.this.role_name
+  external_id       = data.act_aws_onboarding_parameters.this.external_id
+  act_principal_arn = data.act_aws_onboarding_parameters.this.act_principal_arn
+  permission_groups = { kubernetes = {}, cloudtrail_logs = {} }
+}
+
+resource "act_aws_organization_deployment" "this" {
+  deployment_id           = data.act_aws_onboarding_parameters.this.deployment_id
+  organization_id         = module.act.organization_id
+  root_id                 = module.act.root_id
+  organizational_unit_ids = module.act.organizational_unit_ids
+  role_arn                = module.act.role_arn
+  external_id_key_version = data.act_aws_onboarding_parameters.this.external_id_key_version
+  disabled_capabilities   = module.act.disabled_capabilities
+}
+```
+
 ## Verification
 
 Act assumes the role, checks that its account belongs to the organization and is the management or delegated administrator account, and checks the external ID, before it stores anything. While AWS answers `AccessDenied` for a new role, the provider asks again for up to 2 minutes. A failure that cannot fix itself stops once the same answer has come back for 30 seconds, which gives AWS time to propagate a trust policy fixed in the same apply, and a failed create stores nothing. Use `timeouts` to cap the operation; the defaults are 5 minutes for create and update.
@@ -78,7 +112,7 @@ Act assumes the role, checks that its account belongs to the organization and is
 - `allowed_regions` (Set of String) The AWS regions Act scans, such as `us-east-1`. Leave it out to scan every region.
 - `deletion_protection` (Boolean) When true, Act refuses to delete the deployment and a plan that destroys it fails. Defaults to `true`.
 - `deployment_method` (String) How the role was deployed: `terraform` (default) or `cloudformation`. Act cannot change it in place, so changing it replaces the deployment: on a protected deployment, set `deletion_protection = false` and apply that first, or the plan fails. When you import a deployment set up with CloudFormation, set `cloudformation`.
-- `disabled_capabilities` (Set of String) Act capabilities to turn off for this deployment. The only one today is `eks_cluster_access`.
+- `disabled_capabilities` (Set of String) Act capabilities the role was deployed without, so Act does not expect their permissions: `eks_cluster_access` (Kubernetes inside EKS clusters), `cloudtrail_logs` (CloudTrail log files and log events) and `ai_services` (Bedrock, Bedrock AgentCore, OpenSearch Serverless and SageMaker details). Leave it out when the role has every permission group.
 - `excluded_account_ids` (Set of String) Member accounts Act leaves out, as 12-digit IDs.
 - `external_id_key_version` (Number) The key version of the external ID, from `data.act_aws_onboarding_parameters`. Passing it pins the external ID the role trusts, so a key rotation between plan and apply cannot change it. It only changes when `external_id_source` moves from `legacy` to `derived`. Null for a legacy external ID.
 - `external_id_source` (String) `derived` for an external ID Act derives from the deployment, or `legacy` for one stored by an older onboarding. Changing `legacy` to `derived` rotates it: Act checks that the role trusts the derived value first. `derived` cannot go back to `legacy`.

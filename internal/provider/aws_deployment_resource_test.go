@@ -103,7 +103,7 @@ func TestAwsAccountDeploymentLifecycle(t *testing.T) {
   name                  = "production"
   tags                  = { team = "platform" }
   allowed_regions       = ["us-east-1", "eu-west-1"]
-  disabled_capabilities = ["eks_cluster_access"]
+  disabled_capabilities = ["eks_cluster_access", "cloudtrail_logs", "ai_services"]
 `),
 				ConfigPlanChecks: resource.ConfigPlanChecks{PreApply: []plancheck.PlanCheck{
 					plancheck.ExpectResourceAction(accountAddress, plancheck.ResourceActionUpdate),
@@ -111,7 +111,11 @@ func TestAwsAccountDeploymentLifecycle(t *testing.T) {
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue(accountAddress, tfjsonpath.New("name"), knownvalue.StringExact("production")),
 					statecheck.ExpectKnownValue(accountAddress, tfjsonpath.New("allowed_regions"), knownvalue.SetSizeExact(2)),
-					statecheck.ExpectKnownValue(accountAddress, tfjsonpath.New("disabled_capabilities"), knownvalue.SetExact([]knownvalue.Check{knownvalue.StringExact("eks_cluster_access")})),
+					statecheck.ExpectKnownValue(accountAddress, tfjsonpath.New("disabled_capabilities"), knownvalue.SetExact([]knownvalue.Check{
+						knownvalue.StringExact("eks_cluster_access"),
+						knownvalue.StringExact("cloudtrail_logs"),
+						knownvalue.StringExact("ai_services"),
+					})),
 				},
 			},
 			{
@@ -326,6 +330,20 @@ func TestAwsAccountDeploymentReplacesItWhenTheDeploymentMethodChanges(t *testing
 	})
 }
 
+func TestAwsAccountDeploymentRejectsAnUnknownCapability(t *testing.T) {
+	s := fakeapi.Start(t)
+	s.Setenv(t)
+
+	resource.UnitTest(t, resource.TestCase{
+		ProtoV6ProviderFactories: factories(),
+		Steps: []resource.TestStep{{
+			Config:      accountConfig(`  disabled_capabilities = ["ai_service"]`),
+			PlanOnly:    true,
+			ExpectError: regexp.MustCompile(`value must be one of`),
+		}},
+	})
+}
+
 func TestAwsAccountDeploymentRejectsARoleInAnotherAccount(t *testing.T) {
 	s := fakeapi.Start(t)
 	s.Setenv(t)
@@ -506,9 +524,10 @@ func TestAwsOrganizationDeploymentLifecycle(t *testing.T) {
 				ExpectError: regexp.MustCompile(`This change replaces`),
 			},
 			{
-				Config: orgConfig(ous, "  deletion_protection = false"),
+				Config: orgConfig(ous, "  deletion_protection = false\n  disabled_capabilities = [\"cloudtrail_logs\"]"),
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue(orgAddress, tfjsonpath.New("deletion_protection"), knownvalue.Bool(false)),
+					statecheck.ExpectKnownValue(orgAddress, tfjsonpath.New("disabled_capabilities"), knownvalue.SetExact([]knownvalue.Check{knownvalue.StringExact("cloudtrail_logs")})),
 				},
 			},
 		},

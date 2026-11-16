@@ -38,12 +38,18 @@ func (e AuthMethod) Valid() bool {
 
 // Defines values for AwsCapability.
 const (
+	AwsCapabilityAiServices       AwsCapability = "ai_services"
+	AwsCapabilityCloudtrailLogs   AwsCapability = "cloudtrail_logs"
 	AwsCapabilityEksClusterAccess AwsCapability = "eks_cluster_access"
 )
 
 // Valid indicates whether the value is a known member of the AwsCapability enum.
 func (e AwsCapability) Valid() bool {
 	switch e {
+	case AwsCapabilityAiServices:
+		return true
+	case AwsCapabilityCloudtrailLogs:
+		return true
 	case AwsCapabilityEksClusterAccess:
 		return true
 	default:
@@ -217,6 +223,7 @@ const (
 	ErrorEnvelopeErrorCodeTargetNotAllowed        ErrorEnvelopeErrorCode = "target_not_allowed"
 	ErrorEnvelopeErrorCodeUnauthenticated         ErrorEnvelopeErrorCode = "unauthenticated"
 	ErrorEnvelopeErrorCodeUnavailable             ErrorEnvelopeErrorCode = "unavailable"
+	ErrorEnvelopeErrorCodeUnsupportedMediaType    ErrorEnvelopeErrorCode = "unsupported_media_type"
 	ErrorEnvelopeErrorCodeVerificationFailed      ErrorEnvelopeErrorCode = "verification_failed"
 )
 
@@ -256,6 +263,8 @@ func (e ErrorEnvelopeErrorCode) Valid() bool {
 	case ErrorEnvelopeErrorCodeUnauthenticated:
 		return true
 	case ErrorEnvelopeErrorCodeUnavailable:
+		return true
+	case ErrorEnvelopeErrorCodeUnsupportedMediaType:
 		return true
 	case ErrorEnvelopeErrorCodeVerificationFailed:
 		return true
@@ -706,8 +715,8 @@ type AwsOnboarding struct {
 	ExternalIDKeyVersion *int             `json:"externalIdKeyVersion"`
 	ExternalIDSource     ExternalIDSource `json:"externalIdSource"`
 
-	// ManagedPolicyArns Null until Act publishes versioned modules and templates
-	ManagedPolicyArns *[]string `json:"managedPolicyArns"`
+	// ManagedPolicyArns AWS managed policies the role check expects on the role
+	ManagedPolicyArns []string `json:"managedPolicyArns"`
 
 	// MemberRoleName Role the StackSet creates in each member account; null for an account
 	MemberRoleName *string `json:"memberRoleName"`
@@ -6210,6 +6219,8 @@ type CreateAwsDeploymentResponse struct {
 	JSON403 *ErrorEnvelope
 	// JSON409 the response for an HTTP 409 `application/json` response
 	JSON409 *ErrorEnvelope
+	// JSON415 the response for an HTTP 415 `application/json` response
+	JSON415 *ErrorEnvelope
 	// JSON422 the response for an HTTP 422 `application/json` response
 	JSON422 *ErrorEnvelope
 	// JSON429 the response for an HTTP 429 `application/json` response
@@ -6253,6 +6264,11 @@ func (r CreateAwsDeploymentResponse) GetJSON403() *ErrorEnvelope {
 // GetJSON409 returns the response for an HTTP 409 `application/json` response
 func (r CreateAwsDeploymentResponse) GetJSON409() *ErrorEnvelope {
 	return r.JSON409
+}
+
+// GetJSON415 returns the response for an HTTP 415 `application/json` response
+func (r CreateAwsDeploymentResponse) GetJSON415() *ErrorEnvelope {
+	return r.JSON415
 }
 
 // GetJSON422 returns the response for an HTTP 422 `application/json` response
@@ -6601,6 +6617,8 @@ type UpdateAwsDeploymentResponse struct {
 	JSON404 *ErrorEnvelope
 	// JSON412 the response for an HTTP 412 `application/json` response
 	JSON412 *ErrorEnvelope
+	// JSON415 the response for an HTTP 415 `application/json` response
+	JSON415 *ErrorEnvelope
 	// JSON422 the response for an HTTP 422 `application/json` response
 	JSON422 *ErrorEnvelope
 	// JSON429 the response for an HTTP 429 `application/json` response
@@ -6649,6 +6667,11 @@ func (r UpdateAwsDeploymentResponse) GetJSON404() *ErrorEnvelope {
 // GetJSON412 returns the response for an HTTP 412 `application/json` response
 func (r UpdateAwsDeploymentResponse) GetJSON412() *ErrorEnvelope {
 	return r.JSON412
+}
+
+// GetJSON415 returns the response for an HTTP 415 `application/json` response
+func (r UpdateAwsDeploymentResponse) GetJSON415() *ErrorEnvelope {
+	return r.JSON415
 }
 
 // GetJSON422 returns the response for an HTTP 422 `application/json` response
@@ -6740,6 +6763,8 @@ type RotateAwsExternalIDResponse struct {
 	JSON404 *ErrorEnvelope
 	// JSON412 the response for an HTTP 412 `application/json` response
 	JSON412 *ErrorEnvelope
+	// JSON415 the response for an HTTP 415 `application/json` response
+	JSON415 *ErrorEnvelope
 	// JSON422 the response for an HTTP 422 `application/json` response
 	JSON422 *ErrorEnvelope
 	// JSON429 the response for an HTTP 429 `application/json` response
@@ -6788,6 +6813,11 @@ func (r RotateAwsExternalIDResponse) GetJSON404() *ErrorEnvelope {
 // GetJSON412 returns the response for an HTTP 412 `application/json` response
 func (r RotateAwsExternalIDResponse) GetJSON412() *ErrorEnvelope {
 	return r.JSON412
+}
+
+// GetJSON415 returns the response for an HTTP 415 `application/json` response
+func (r RotateAwsExternalIDResponse) GetJSON415() *ErrorEnvelope {
+	return r.JSON415
 }
 
 // GetJSON422 returns the response for an HTTP 422 `application/json` response
@@ -6879,6 +6909,8 @@ type VerifyAwsDeploymentResponse struct {
 	JSON404 *ErrorEnvelope
 	// JSON412 the response for an HTTP 412 `application/json` response
 	JSON412 *ErrorEnvelope
+	// JSON415 the response for an HTTP 415 `application/json` response
+	JSON415 *ErrorEnvelope
 	// JSON422 the response for an HTTP 422 `application/json` response
 	JSON422 *ErrorEnvelope
 	// JSON429 the response for an HTTP 429 `application/json` response
@@ -6927,6 +6959,11 @@ func (r VerifyAwsDeploymentResponse) GetJSON404() *ErrorEnvelope {
 // GetJSON412 returns the response for an HTTP 412 `application/json` response
 func (r VerifyAwsDeploymentResponse) GetJSON412() *ErrorEnvelope {
 	return r.JSON412
+}
+
+// GetJSON415 returns the response for an HTTP 415 `application/json` response
+func (r VerifyAwsDeploymentResponse) GetJSON415() *ErrorEnvelope {
+	return r.JSON415
 }
 
 // GetJSON422 returns the response for an HTTP 422 `application/json` response
@@ -7016,6 +7053,8 @@ type CreateAzureDeploymentResponse struct {
 	JSON403 *ErrorEnvelope
 	// JSON409 the response for an HTTP 409 `application/json` response
 	JSON409 *ErrorEnvelope
+	// JSON415 the response for an HTTP 415 `application/json` response
+	JSON415 *ErrorEnvelope
 	// JSON422 the response for an HTTP 422 `application/json` response
 	JSON422 *ErrorEnvelope
 	// JSON429 the response for an HTTP 429 `application/json` response
@@ -7059,6 +7098,11 @@ func (r CreateAzureDeploymentResponse) GetJSON403() *ErrorEnvelope {
 // GetJSON409 returns the response for an HTTP 409 `application/json` response
 func (r CreateAzureDeploymentResponse) GetJSON409() *ErrorEnvelope {
 	return r.JSON409
+}
+
+// GetJSON415 returns the response for an HTTP 415 `application/json` response
+func (r CreateAzureDeploymentResponse) GetJSON415() *ErrorEnvelope {
+	return r.JSON415
 }
 
 // GetJSON422 returns the response for an HTTP 422 `application/json` response
@@ -7407,6 +7451,8 @@ type UpdateAzureDeploymentResponse struct {
 	JSON404 *ErrorEnvelope
 	// JSON412 the response for an HTTP 412 `application/json` response
 	JSON412 *ErrorEnvelope
+	// JSON415 the response for an HTTP 415 `application/json` response
+	JSON415 *ErrorEnvelope
 	// JSON422 the response for an HTTP 422 `application/json` response
 	JSON422 *ErrorEnvelope
 	// JSON429 the response for an HTTP 429 `application/json` response
@@ -7455,6 +7501,11 @@ func (r UpdateAzureDeploymentResponse) GetJSON404() *ErrorEnvelope {
 // GetJSON412 returns the response for an HTTP 412 `application/json` response
 func (r UpdateAzureDeploymentResponse) GetJSON412() *ErrorEnvelope {
 	return r.JSON412
+}
+
+// GetJSON415 returns the response for an HTTP 415 `application/json` response
+func (r UpdateAzureDeploymentResponse) GetJSON415() *ErrorEnvelope {
+	return r.JSON415
 }
 
 // GetJSON422 returns the response for an HTTP 422 `application/json` response
@@ -7546,6 +7597,8 @@ type VerifyAzureDeploymentResponse struct {
 	JSON404 *ErrorEnvelope
 	// JSON412 the response for an HTTP 412 `application/json` response
 	JSON412 *ErrorEnvelope
+	// JSON415 the response for an HTTP 415 `application/json` response
+	JSON415 *ErrorEnvelope
 	// JSON422 the response for an HTTP 422 `application/json` response
 	JSON422 *ErrorEnvelope
 	// JSON429 the response for an HTTP 429 `application/json` response
@@ -7594,6 +7647,11 @@ func (r VerifyAzureDeploymentResponse) GetJSON404() *ErrorEnvelope {
 // GetJSON412 returns the response for an HTTP 412 `application/json` response
 func (r VerifyAzureDeploymentResponse) GetJSON412() *ErrorEnvelope {
 	return r.JSON412
+}
+
+// GetJSON415 returns the response for an HTTP 415 `application/json` response
+func (r VerifyAzureDeploymentResponse) GetJSON415() *ErrorEnvelope {
+	return r.JSON415
 }
 
 // GetJSON422 returns the response for an HTTP 422 `application/json` response
@@ -7683,6 +7741,8 @@ type CreateGcpDeploymentResponse struct {
 	JSON403 *ErrorEnvelope
 	// JSON409 the response for an HTTP 409 `application/json` response
 	JSON409 *ErrorEnvelope
+	// JSON415 the response for an HTTP 415 `application/json` response
+	JSON415 *ErrorEnvelope
 	// JSON422 the response for an HTTP 422 `application/json` response
 	JSON422 *ErrorEnvelope
 	// JSON429 the response for an HTTP 429 `application/json` response
@@ -7726,6 +7786,11 @@ func (r CreateGcpDeploymentResponse) GetJSON403() *ErrorEnvelope {
 // GetJSON409 returns the response for an HTTP 409 `application/json` response
 func (r CreateGcpDeploymentResponse) GetJSON409() *ErrorEnvelope {
 	return r.JSON409
+}
+
+// GetJSON415 returns the response for an HTTP 415 `application/json` response
+func (r CreateGcpDeploymentResponse) GetJSON415() *ErrorEnvelope {
+	return r.JSON415
 }
 
 // GetJSON422 returns the response for an HTTP 422 `application/json` response
@@ -8074,6 +8139,8 @@ type UpdateGcpDeploymentResponse struct {
 	JSON404 *ErrorEnvelope
 	// JSON412 the response for an HTTP 412 `application/json` response
 	JSON412 *ErrorEnvelope
+	// JSON415 the response for an HTTP 415 `application/json` response
+	JSON415 *ErrorEnvelope
 	// JSON422 the response for an HTTP 422 `application/json` response
 	JSON422 *ErrorEnvelope
 	// JSON429 the response for an HTTP 429 `application/json` response
@@ -8122,6 +8189,11 @@ func (r UpdateGcpDeploymentResponse) GetJSON404() *ErrorEnvelope {
 // GetJSON412 returns the response for an HTTP 412 `application/json` response
 func (r UpdateGcpDeploymentResponse) GetJSON412() *ErrorEnvelope {
 	return r.JSON412
+}
+
+// GetJSON415 returns the response for an HTTP 415 `application/json` response
+func (r UpdateGcpDeploymentResponse) GetJSON415() *ErrorEnvelope {
+	return r.JSON415
 }
 
 // GetJSON422 returns the response for an HTTP 422 `application/json` response
@@ -8213,6 +8285,8 @@ type VerifyGcpDeploymentResponse struct {
 	JSON404 *ErrorEnvelope
 	// JSON412 the response for an HTTP 412 `application/json` response
 	JSON412 *ErrorEnvelope
+	// JSON415 the response for an HTTP 415 `application/json` response
+	JSON415 *ErrorEnvelope
 	// JSON422 the response for an HTTP 422 `application/json` response
 	JSON422 *ErrorEnvelope
 	// JSON429 the response for an HTTP 429 `application/json` response
@@ -8261,6 +8335,11 @@ func (r VerifyGcpDeploymentResponse) GetJSON404() *ErrorEnvelope {
 // GetJSON412 returns the response for an HTTP 412 `application/json` response
 func (r VerifyGcpDeploymentResponse) GetJSON412() *ErrorEnvelope {
 	return r.JSON412
+}
+
+// GetJSON415 returns the response for an HTTP 415 `application/json` response
+func (r VerifyGcpDeploymentResponse) GetJSON415() *ErrorEnvelope {
+	return r.JSON415
 }
 
 // GetJSON422 returns the response for an HTTP 422 `application/json` response
@@ -8810,6 +8889,8 @@ type CreateIntegrationResponse struct {
 	JSON404 *ErrorEnvelope
 	// JSON409 the response for an HTTP 409 `application/json` response
 	JSON409 *ErrorEnvelope
+	// JSON415 the response for an HTTP 415 `application/json` response
+	JSON415 *ErrorEnvelope
 	// JSON422 the response for an HTTP 422 `application/json` response
 	JSON422 *ErrorEnvelope
 	// JSON429 the response for an HTTP 429 `application/json` response
@@ -8858,6 +8939,11 @@ func (r CreateIntegrationResponse) GetJSON404() *ErrorEnvelope {
 // GetJSON409 returns the response for an HTTP 409 `application/json` response
 func (r CreateIntegrationResponse) GetJSON409() *ErrorEnvelope {
 	return r.JSON409
+}
+
+// GetJSON415 returns the response for an HTTP 415 `application/json` response
+func (r CreateIntegrationResponse) GetJSON415() *ErrorEnvelope {
+	return r.JSON415
 }
 
 // GetJSON422 returns the response for an HTTP 422 `application/json` response
@@ -9310,6 +9396,8 @@ type UpdateIntegrationResponse struct {
 	JSON404 *ErrorEnvelope
 	// JSON412 the response for an HTTP 412 `application/json` response
 	JSON412 *ErrorEnvelope
+	// JSON415 the response for an HTTP 415 `application/json` response
+	JSON415 *ErrorEnvelope
 	// JSON422 the response for an HTTP 422 `application/json` response
 	JSON422 *ErrorEnvelope
 	// JSON429 the response for an HTTP 429 `application/json` response
@@ -9358,6 +9446,11 @@ func (r UpdateIntegrationResponse) GetJSON404() *ErrorEnvelope {
 // GetJSON412 returns the response for an HTTP 412 `application/json` response
 func (r UpdateIntegrationResponse) GetJSON412() *ErrorEnvelope {
 	return r.JSON412
+}
+
+// GetJSON415 returns the response for an HTTP 415 `application/json` response
+func (r UpdateIntegrationResponse) GetJSON415() *ErrorEnvelope {
+	return r.JSON415
 }
 
 // GetJSON422 returns the response for an HTTP 422 `application/json` response
@@ -9669,6 +9762,8 @@ type CreateNotificationRecipientResponse struct {
 	JSON403 *ErrorEnvelope
 	// JSON409 the response for an HTTP 409 `application/json` response
 	JSON409 *ErrorEnvelope
+	// JSON415 the response for an HTTP 415 `application/json` response
+	JSON415 *ErrorEnvelope
 	// JSON422 the response for an HTTP 422 `application/json` response
 	JSON422 *ErrorEnvelope
 	// JSON429 the response for an HTTP 429 `application/json` response
@@ -9712,6 +9807,11 @@ func (r CreateNotificationRecipientResponse) GetJSON403() *ErrorEnvelope {
 // GetJSON409 returns the response for an HTTP 409 `application/json` response
 func (r CreateNotificationRecipientResponse) GetJSON409() *ErrorEnvelope {
 	return r.JSON409
+}
+
+// GetJSON415 returns the response for an HTTP 415 `application/json` response
+func (r CreateNotificationRecipientResponse) GetJSON415() *ErrorEnvelope {
+	return r.JSON415
 }
 
 // GetJSON422 returns the response for an HTTP 422 `application/json` response
@@ -10055,6 +10155,8 @@ type ReplaceNotificationRecipientResponse struct {
 	JSON409 *ErrorEnvelope
 	// JSON412 the response for an HTTP 412 `application/json` response
 	JSON412 *ErrorEnvelope
+	// JSON415 the response for an HTTP 415 `application/json` response
+	JSON415 *ErrorEnvelope
 	// JSON422 the response for an HTTP 422 `application/json` response
 	JSON422 *ErrorEnvelope
 	// JSON429 the response for an HTTP 429 `application/json` response
@@ -10108,6 +10210,11 @@ func (r ReplaceNotificationRecipientResponse) GetJSON409() *ErrorEnvelope {
 // GetJSON412 returns the response for an HTTP 412 `application/json` response
 func (r ReplaceNotificationRecipientResponse) GetJSON412() *ErrorEnvelope {
 	return r.JSON412
+}
+
+// GetJSON415 returns the response for an HTTP 415 `application/json` response
+func (r ReplaceNotificationRecipientResponse) GetJSON415() *ErrorEnvelope {
+	return r.JSON415
 }
 
 // GetJSON422 returns the response for an HTTP 422 `application/json` response
@@ -10308,6 +10415,8 @@ type CreateNotificationRuleResponse struct {
 	JSON403 *ErrorEnvelope
 	// JSON409 the response for an HTTP 409 `application/json` response
 	JSON409 *ErrorEnvelope
+	// JSON415 the response for an HTTP 415 `application/json` response
+	JSON415 *ErrorEnvelope
 	// JSON422 the response for an HTTP 422 `application/json` response
 	JSON422 *ErrorEnvelope
 	// JSON429 the response for an HTTP 429 `application/json` response
@@ -10351,6 +10460,11 @@ func (r CreateNotificationRuleResponse) GetJSON403() *ErrorEnvelope {
 // GetJSON409 returns the response for an HTTP 409 `application/json` response
 func (r CreateNotificationRuleResponse) GetJSON409() *ErrorEnvelope {
 	return r.JSON409
+}
+
+// GetJSON415 returns the response for an HTTP 415 `application/json` response
+func (r CreateNotificationRuleResponse) GetJSON415() *ErrorEnvelope {
+	return r.JSON415
 }
 
 // GetJSON422 returns the response for an HTTP 422 `application/json` response
@@ -10435,6 +10549,8 @@ type ValidateNotificationRuleResponse struct {
 	JSON403 *ErrorEnvelope
 	// JSON404 the response for an HTTP 404 `application/json` response
 	JSON404 *ErrorEnvelope
+	// JSON415 the response for an HTTP 415 `application/json` response
+	JSON415 *ErrorEnvelope
 	// JSON429 the response for an HTTP 429 `application/json` response
 	JSON429 *ErrorEnvelope
 	// JSON500 the response for an HTTP 500 `application/json` response
@@ -10474,6 +10590,11 @@ func (r ValidateNotificationRuleResponse) GetJSON403() *ErrorEnvelope {
 // GetJSON404 returns the response for an HTTP 404 `application/json` response
 func (r ValidateNotificationRuleResponse) GetJSON404() *ErrorEnvelope {
 	return r.JSON404
+}
+
+// GetJSON415 returns the response for an HTTP 415 `application/json` response
+func (r ValidateNotificationRuleResponse) GetJSON415() *ErrorEnvelope {
+	return r.JSON415
 }
 
 // GetJSON429 returns the response for an HTTP 429 `application/json` response
@@ -10805,6 +10926,8 @@ type ReplaceNotificationRuleResponse struct {
 	JSON409 *ErrorEnvelope
 	// JSON412 the response for an HTTP 412 `application/json` response
 	JSON412 *ErrorEnvelope
+	// JSON415 the response for an HTTP 415 `application/json` response
+	JSON415 *ErrorEnvelope
 	// JSON422 the response for an HTTP 422 `application/json` response
 	JSON422 *ErrorEnvelope
 	// JSON429 the response for an HTTP 429 `application/json` response
@@ -10858,6 +10981,11 @@ func (r ReplaceNotificationRuleResponse) GetJSON409() *ErrorEnvelope {
 // GetJSON412 returns the response for an HTTP 412 `application/json` response
 func (r ReplaceNotificationRuleResponse) GetJSON412() *ErrorEnvelope {
 	return r.JSON412
+}
+
+// GetJSON415 returns the response for an HTTP 415 `application/json` response
+func (r ReplaceNotificationRuleResponse) GetJSON415() *ErrorEnvelope {
+	return r.JSON415
 }
 
 // GetJSON422 returns the response for an HTTP 422 `application/json` response
@@ -12516,6 +12644,13 @@ func ParseCreateAwsDeploymentResponse(rsp *http.Response) (*CreateAwsDeploymentR
 		}
 		response.JSON409 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 415:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON415 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 422:
 		var dest ErrorEnvelope
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
@@ -12918,6 +13053,13 @@ func ParseUpdateAwsDeploymentResponse(rsp *http.Response) (*UpdateAwsDeploymentR
 		}
 		response.JSON412 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 415:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON415 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 422:
 		var dest ErrorEnvelope
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
@@ -13059,6 +13201,13 @@ func ParseRotateAwsExternalIDResponse(rsp *http.Response) (*RotateAwsExternalIDR
 			return nil, err
 		}
 		response.JSON412 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 415:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON415 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 422:
 		var dest ErrorEnvelope
@@ -13202,6 +13351,13 @@ func ParseVerifyAwsDeploymentResponse(rsp *http.Response) (*VerifyAwsDeploymentR
 		}
 		response.JSON412 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 415:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON415 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 422:
 		var dest ErrorEnvelope
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
@@ -13336,6 +13492,13 @@ func ParseCreateAzureDeploymentResponse(rsp *http.Response) (*CreateAzureDeploym
 			return nil, err
 		}
 		response.JSON409 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 415:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON415 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 422:
 		var dest ErrorEnvelope
@@ -13739,6 +13902,13 @@ func ParseUpdateAzureDeploymentResponse(rsp *http.Response) (*UpdateAzureDeploym
 		}
 		response.JSON412 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 415:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON415 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 422:
 		var dest ErrorEnvelope
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
@@ -13881,6 +14051,13 @@ func ParseVerifyAzureDeploymentResponse(rsp *http.Response) (*VerifyAzureDeploym
 		}
 		response.JSON412 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 415:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON415 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 422:
 		var dest ErrorEnvelope
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
@@ -14015,6 +14192,13 @@ func ParseCreateGcpDeploymentResponse(rsp *http.Response) (*CreateGcpDeploymentR
 			return nil, err
 		}
 		response.JSON409 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 415:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON415 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 422:
 		var dest ErrorEnvelope
@@ -14418,6 +14602,13 @@ func ParseUpdateGcpDeploymentResponse(rsp *http.Response) (*UpdateGcpDeploymentR
 		}
 		response.JSON412 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 415:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON415 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 422:
 		var dest ErrorEnvelope
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
@@ -14559,6 +14750,13 @@ func ParseVerifyGcpDeploymentResponse(rsp *http.Response) (*VerifyGcpDeploymentR
 			return nil, err
 		}
 		response.JSON412 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 415:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON415 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 422:
 		var dest ErrorEnvelope
@@ -15160,6 +15358,13 @@ func ParseCreateIntegrationResponse(rsp *http.Response) (*CreateIntegrationRespo
 		}
 		response.JSON409 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 415:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON415 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 422:
 		var dest ErrorEnvelope
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
@@ -15669,6 +15874,13 @@ func ParseUpdateIntegrationResponse(rsp *http.Response) (*UpdateIntegrationRespo
 		}
 		response.JSON412 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 415:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON415 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 422:
 		var dest ErrorEnvelope
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
@@ -16025,6 +16237,13 @@ func ParseCreateNotificationRecipientResponse(rsp *http.Response) (*CreateNotifi
 			return nil, err
 		}
 		response.JSON409 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 415:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON415 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 422:
 		var dest ErrorEnvelope
@@ -16431,6 +16650,13 @@ func ParseReplaceNotificationRecipientResponse(rsp *http.Response) (*ReplaceNoti
 		}
 		response.JSON412 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 415:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON415 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 422:
 		var dest ErrorEnvelope
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
@@ -16677,6 +16903,13 @@ func ParseCreateNotificationRuleResponse(rsp *http.Response) (*CreateNotificatio
 		}
 		response.JSON409 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 415:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON415 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 422:
 		var dest ErrorEnvelope
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
@@ -16811,6 +17044,13 @@ func ParseValidateNotificationRuleResponse(rsp *http.Response) (*ValidateNotific
 			return nil, err
 		}
 		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 415:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON415 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
 		var dest ErrorEnvelope
@@ -17192,6 +17432,13 @@ func ParseReplaceNotificationRuleResponse(rsp *http.Response) (*ReplaceNotificat
 			return nil, err
 		}
 		response.JSON412 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 415:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON415 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 422:
 		var dest ErrorEnvelope

@@ -17,6 +17,37 @@ Read the onboarding values first, create the role from them, then connect the ac
 
 `data.act_aws_onboarding_parameters` is a read and creates nothing. Its `deployment_id`, `role_name` and `external_id` are stable, so a plan you run again shows no change.
 
+## Permission groups
+
+Act's role has a core set of permissions plus three optional permission groups, all on by default. When the role leaves a group out, list its capability in `disabled_capabilities` so Act does not expect those permissions. Changing the list updates the deployment in place.
+
+| Capability | Permission group | Without it, Act cannot read |
+|---|---|---|
+| `eks_cluster_access` | `kubernetes` | Kubernetes objects inside EKS clusters |
+| `cloudtrail_logs` | `cloudtrail_logs` | CloudTrail log files in S3 and log events in CloudWatch Logs |
+| `ai_services` | `ai_services` | Bedrock, Bedrock AgentCore, OpenSearch Serverless and SageMaker model package group details |
+
+The Act module for AWS, `act-security/act/aws`, takes the groups as `permission_groups` and outputs the list to pass:
+
+```terraform
+module "act" {
+  source = "act-security/act/aws"
+
+  role_name         = data.act_aws_onboarding_parameters.this.role_name
+  external_id       = data.act_aws_onboarding_parameters.this.external_id
+  act_principal_arn = data.act_aws_onboarding_parameters.this.act_principal_arn
+  permission_groups = { kubernetes = {}, cloudtrail_logs = {} }
+}
+
+resource "act_aws_account_deployment" "this" {
+  deployment_id           = data.act_aws_onboarding_parameters.this.deployment_id
+  account_id              = module.act.account_id
+  role_arn                = module.act.role_arn
+  external_id_key_version = data.act_aws_onboarding_parameters.this.external_id_key_version
+  disabled_capabilities   = module.act.disabled_capabilities
+}
+```
+
 ## Verification
 
 Act assumes the role, checks the account and checks that the trust policy requires the external ID before it stores anything. A new role can take a minute or two to work everywhere in AWS, so while AWS answers `AccessDenied` the provider asks again, backing off up to 30 seconds between attempts, for up to 2 minutes. A failure that cannot fix itself, such as a trust policy without the external ID, stops once the same answer has come back for 30 seconds, which gives AWS time to propagate a trust policy fixed in the same apply. A failed create stores nothing, so the next apply starts clean.

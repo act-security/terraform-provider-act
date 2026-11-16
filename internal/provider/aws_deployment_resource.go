@@ -160,12 +160,16 @@ func (r *awsDeploymentResource[M, P]) Schema(ctx context.Context, _ resource.Sch
 			},
 		},
 		"disabled_capabilities": schema.SetAttribute{
-			MarkdownDescription: "Act capabilities to turn off for this deployment. The only one today is `eks_cluster_access`.",
+			MarkdownDescription: "Act capabilities the role was deployed without, so Act does not expect their permissions: `eks_cluster_access` (Kubernetes inside EKS clusters), `cloudtrail_logs` (CloudTrail log files and log events) and `ai_services` (Bedrock, Bedrock AgentCore, OpenSearch Serverless and SageMaker details). Leave it out when the role has every permission group.",
 			ElementType:         types.StringType,
 			Optional:            true,
 			Computed:            true,
-			Validators:          []validator.Set{setvalidator.ValueStringsAre(stringvalidator.OneOf(string(apigen.AwsCapabilityEksClusterAccess)))},
-			PlanModifiers:       []planmodifier.Set{setplanmodifier.UseStateForUnknown()},
+			Validators: []validator.Set{setvalidator.ValueStringsAre(stringvalidator.OneOf(
+				string(apigen.AwsCapabilityEksClusterAccess),
+				string(apigen.AwsCapabilityCloudtrailLogs),
+				string(apigen.AwsCapabilityAiServices),
+			))},
+			PlanModifiers: []planmodifier.Set{setplanmodifier.UseStateForUnknown()},
 		},
 		"deployment_method": schema.StringAttribute{
 			MarkdownDescription: "How the role was deployed: `terraform` (default) or `cloudformation`. Act cannot change it in place, so changing it replaces the deployment: on a protected deployment, set `deletion_protection = false` and apply that first, or the plan fails. When you import a deployment set up with CloudFormation, set `cloudformation`.",
