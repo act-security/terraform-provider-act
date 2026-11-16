@@ -289,7 +289,7 @@ func (r *awsDeploymentResource[M, P]) Create(ctx context.Context, req resource.C
 	defer cancel()
 	result, outcome, err := r.createVerified(ctx, body)
 	if err != nil {
-		r.addWriteError(diags, writeFailure{action: "create", target: model.targetLabel(), outcome: outcome, err: err})
+		r.addWriteError(diags, writeFailure{action: createAction, target: model.targetLabel(), outcome: outcome, err: err})
 		return
 	}
 	r.store(ctx, storedResult[P]{model: model, result: result, state: &resp.State, private: resp.Private, diags: diags})
@@ -649,7 +649,7 @@ func (w *deploymentWrite[M, P]) run(ctx context.Context, step writeStep) bool {
 	}
 	w.ref.ETag = w.result.ETag
 	if step.announce {
-		w.diags.AddWarning("Act verified the role again", proofOfLife(connectionReport{target: w.next.targetLabel(), deployment: w.result.Deployment, outcome: outcome}))
+		w.diags.AddWarning("Act verified the role again", proofOfLife(connectionReport{target: w.next.targetLabel(), deployment: w.result.Deployment, outcome: outcome, reconnected: true}))
 	}
 	return true
 }
@@ -841,6 +841,8 @@ func (r *awsDeploymentResource[M, P]) buildPatch(ctx context.Context, model, pri
 	return patch
 }
 
+const createAction = "create"
+
 type writeFailure struct {
 	action  string
 	target  string
@@ -889,7 +891,7 @@ func (r *awsDeploymentResource[M, P]) importInstead(apiErr *client.APIError, tar
 
 func addVerificationError(diags *diag.Diagnostics, summary string, failure writeFailure) {
 	verification, _ := asVerificationFailure(failure.err)
-	detail := verification.describe(failure.outcome)
+	detail := verification.describe(failure)
 	if verification.Attribute == "roleArn" || verification.Attribute == "" {
 		diags.AddAttributeError(path.Root("role_arn"), summary, detail)
 		return
@@ -907,29 +909,56 @@ func addInvalidRequestError(diags *diag.Diagnostics, summary string, apiErr *cli
 	diags.AddAttributeError(path.Root(attribute), summary, fmt.Sprintf("Act rejected %s: %s.", attribute, details.Reason))
 }
 
-func (f *verificationFailure) describe(outcome verificationOutcome) string {
+func (f *verificationFailure) describe(failure writeFailure) string {
+	return f.whatActSaw() + f.whyItStopped(failure.outcome) + whatWasKept(failure.action)
+}
+
+func (f *verificationFailure) whatActSaw() string {
 	detail := "Act could not use the role: " + f.CloudErrorCode + "."
-	if f.Hint != "" {
-		detail += " " + f.Hint
+	if f.Hint == "" {
+		return detail
 	}
+	return detail + " " + asSentence(f.Hint)
+}
+
+func (f *verificationFailure) whyItStopped(outcome verificationOutcome) string {
 	switch {
 	case f.RetryClass == retryClassPropagation && outcome.timedOut:
-		return detail + fmt.Sprintf(" Act kept trying for %s (%d attempts) while AWS propagated the role, then gave up. Nothing was stored. Apply again, or raise timeouts if the role takes longer to propagate.", outcome.elapsed.Round(time.Second), outcome.attempts)
+		return fmt.Sprintf(" Act kept trying for %s (%d attempts) while AWS propagated the role, then gave up. Apply again, or raise timeouts if the role takes longer to propagate.", outcome.elapsed.Round(time.Second), outcome.attempts)
 	case outcome.attempts > 1:
-		return detail + fmt.Sprintf(" Act got the same answer %d times, so this needs a fix on the AWS side. Nothing was stored.", outcome.attempts)
+		return fmt.Sprintf(" Act got the same answer %d times, so this needs a fix on the AWS side.", outcome.attempts)
 	default:
-		return detail + " Nothing was stored."
+		return ""
 	}
 }
 
+func whatWasKept(action string) string {
+	if action != createAction {
+		return ""
+	}
+	return " Nothing was stored."
+}
+
+func asSentence(text string) string {
+	trimmed := strings.TrimSpace(text)
+	if trimmed == "" || strings.ContainsAny(trimmed[len(trimmed)-1:], ".!?") {
+		return trimmed
+	}
+	return trimmed + "."
+}
+
 type connectionReport struct {
-	target     string
-	deployment apigen.AwsDeployment
-	outcome    verificationOutcome
+	target      string
+	deployment  apigen.AwsDeployment
+	outcome     verificationOutcome
+	reconnected bool
 }
 
 func proofOfLife(report connectionReport) string {
 	message := "Connected. Act started the first scan of " + report.target + "."
+	if report.reconnected {
+		message = "Connected again. Act can use the role of " + report.target + "."
+	}
 	if report.deployment.ConsoleURL != nil {
 		message += " Open " + *report.deployment.ConsoleURL
 	}

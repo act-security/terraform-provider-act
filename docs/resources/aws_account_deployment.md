@@ -51,7 +51,7 @@ resource "act_aws_account_deployment" "this" {
 
 ## Verification
 
-Act assumes the role, checks the account and checks that the trust policy requires the external ID before it stores anything. A new role can take a minute or two to work everywhere in AWS, so while AWS answers `AccessDenied` the provider asks again, backing off up to 30 seconds between attempts, for up to 2 minutes. A failure that cannot fix itself, such as a trust policy without the external ID, stops after the same answer comes back twice. A failed create stores nothing, so the next apply starts clean.
+Act assumes the role, checks the account and checks that the trust policy requires the external ID before it stores anything. A new role can take a minute or two to work everywhere in AWS, so while AWS answers `AccessDenied` the provider asks again, backing off up to 30 seconds between attempts, for up to 2 minutes. A failure that cannot fix itself, such as a trust policy without the external ID, stops once the same answer has come back for 30 seconds, which gives AWS time to propagate a trust policy fixed in the same apply. A failed create stores nothing, so the next apply starts clean.
 
 Use `timeouts` to cap the whole operation; the defaults are 5 minutes for create and update.
 

@@ -58,7 +58,7 @@ A StackSet accepts at most 850 characters of target IDs. When the units do not f
 
 ## Verification
 
-Act assumes the role, checks that its account belongs to the organization and is the management or delegated administrator account, and checks the external ID, before it stores anything. While AWS answers `AccessDenied` for a new role, the provider asks again for up to 2 minutes. A failure that cannot fix itself stops after the same answer comes back twice, and a failed create stores nothing. Use `timeouts` to cap the operation; the defaults are 5 minutes for create and update.
+Act assumes the role, checks that its account belongs to the organization and is the management or delegated administrator account, and checks the external ID, before it stores anything. While AWS answers `AccessDenied` for a new role, the provider asks again for up to 2 minutes. A failure that cannot fix itself stops once the same answer has come back for 30 seconds, which gives AWS time to propagate a trust policy fixed in the same apply, and a failed create stores nothing. Use `timeouts` to cap the operation; the defaults are 5 minutes for create and update.
 
 ## Deletion protection
 
