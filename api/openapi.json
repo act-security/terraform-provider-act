@@ -7204,6 +7204,29 @@
         ],
         "x-act-scope": "integrations:write"
       }
+    },
+    "/v1/probe": {
+      "get": {
+        "operationId": "getProbe",
+        "summary": "Probe",
+        "responses": {
+          "200": {
+            "description": "ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
