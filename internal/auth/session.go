@@ -18,6 +18,7 @@ type Config struct {
 	TenantID     string
 	ClientID     string
 	ClientSecret string
+	CIToken      CITokenSource
 	HTTPClient   *http.Client
 	UserAgent    string
 	Now          func() time.Time
@@ -35,8 +36,8 @@ type Session struct {
 }
 
 func NewSession(ctx context.Context, cfg Config) (*Session, error) {
-	if cfg.ClientID == "" || cfg.ClientSecret == "" {
-		return nil, errors.New("client_id and client_secret are both required")
+	if err := checkCredentials(cfg); err != nil {
+		return nil, err
 	}
 	now := cfg.Now
 	if now == nil {
@@ -48,6 +49,7 @@ func NewSession(ctx context.Context, cfg Config) (*Session, error) {
 		userAgent:    cfg.UserAgent,
 		clientID:     cfg.ClientID,
 		clientSecret: cfg.ClientSecret,
+		ciToken:      cfg.CIToken,
 		now:          now,
 		retry:        stsRetry(cfg.Retry),
 	}
@@ -91,6 +93,18 @@ func NewSession(ctx context.Context, cfg Config) (*Session, error) {
 		sts:       sts,
 		token:     token,
 	}, nil
+}
+
+func checkCredentials(cfg Config) error {
+	switch {
+	case cfg.ClientID == "":
+		return errors.New("client_id is required")
+	case cfg.ClientSecret != "" && cfg.CIToken != nil:
+		return errors.New("set either client_secret or an OIDC token, not both")
+	case cfg.ClientSecret == "" && cfg.CIToken == nil:
+		return errors.New("client_secret or an OIDC token is required")
+	}
+	return nil
 }
 
 func stsRetry(p retry.Policy) retry.Policy {

@@ -4,7 +4,13 @@ import (
 	"crypto/subtle"
 	"encoding/json"
 	"net/http"
+	"net/url"
 	"strings"
+)
+
+const (
+	FederatedAssertionType = "urn:act:params:oauth:client-assertion-type:federated-identity-jwt"
+	CIIssuer               = "https://ci.example.test"
 )
 
 func (f *Fake) metadata(w http.ResponseWriter, _ *http.Request) {
@@ -35,13 +41,8 @@ func (f *Fake) token(w http.ResponseWriter, r *http.Request) {
 		oauthError(w, http.StatusUnauthorized, "invalid_client", "client registered for client_secret_post cannot use client_secret_basic")
 		return
 	}
-	clientID, clientSecret := r.PostForm.Get("client_id"), r.PostForm.Get("client_secret")
-	if clientID == "" || clientSecret == "" {
-		oauthError(w, http.StatusBadRequest, "invalid_request", "send client_id and client_secret as form fields")
-		return
-	}
-	if !f.validClient(clientID, clientSecret) {
-		oauthError(w, http.StatusUnauthorized, "invalid_client", "client authentication failed")
+	if status, code, description := f.authenticateClient(r.PostForm); code != "" {
+		oauthError(w, status, code, description)
 		return
 	}
 	if r.PostForm.Get("grant_type") != "client_credentials" {
@@ -107,6 +108,45 @@ func (f *Fake) discovery(w http.ResponseWriter, r *http.Request) {
 		"region":       f.cfg.Region,
 		"publicApiUrl": f.apiOrigin,
 	})
+}
+
+func (f *Fake) authenticateClient(form url.Values) (int, string, string) {
+	clientID := form.Get("client_id")
+	if assertionType := form.Get("client_assertion_type"); assertionType != "" {
+		if assertionType != FederatedAssertionType || form.Has("client_secret") {
+			return http.StatusBadRequest, "invalid_request", "send either client_secret or a federated client_assertion"
+		}
+		if !f.trustedCIToken(clientID, form.Get("client_assertion")) {
+			return http.StatusUnauthorized, "invalid_client", "service account does not accept this federated identity"
+		}
+		return 0, "", ""
+	}
+	clientSecret := form.Get("client_secret")
+	if clientID == "" || clientSecret == "" {
+		return http.StatusBadRequest, "invalid_request", "send client_id and client_secret as form fields"
+	}
+	if !f.validClient(clientID, clientSecret) {
+		return http.StatusUnauthorized, "invalid_client", "client authentication failed"
+	}
+	return 0, "", ""
+}
+
+func (f *Fake) trustedCIToken(clientID, assertion string) bool {
+	if subtle.ConstantTimeCompare([]byte(clientID), []byte(f.cfg.ClientID)) != 1 {
+		return false
+	}
+	parts := strings.Split(assertion, ".")
+	if len(parts) != 3 {
+		return false
+	}
+	var claims struct {
+		Issuer   string `json:"iss"`
+		Audience string `json:"aud"`
+	}
+	if err := decodePart(parts[1], &claims); err != nil {
+		return false
+	}
+	return claims.Issuer == CIIssuer && claims.Audience == f.stsOrigin
 }
 
 func (f *Fake) validClient(id, secret string) bool {

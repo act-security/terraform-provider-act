@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"regexp"
+	"strconv"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
@@ -31,9 +32,12 @@ type actProvider struct {
 }
 
 type providerModel struct {
-	TenantID     types.String `tfsdk:"tenant_id"`
-	ClientID     types.String `tfsdk:"client_id"`
-	ClientSecret types.String `tfsdk:"client_secret"`
+	TenantID          types.String `tfsdk:"tenant_id"`
+	ClientID          types.String `tfsdk:"client_id"`
+	ClientSecret      types.String `tfsdk:"client_secret"`
+	UseOIDC           types.Bool   `tfsdk:"use_oidc"`
+	OIDCToken         types.String `tfsdk:"oidc_token"`
+	OIDCTokenFilePath types.String `tfsdk:"oidc_token_file_path"`
 }
 
 type ProviderData struct {
@@ -54,7 +58,7 @@ func (p *actProvider) Metadata(_ context.Context, _ provider.MetadataRequest, re
 
 func (p *actProvider) Schema(_ context.Context, _ provider.SchemaRequest, resp *provider.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "The Act provider connects Terraform to [Act Security](https://act.security). It signs in with an Act API key and finds the tenant and the regional API on its own, so the client ID and secret are all it needs.",
+		MarkdownDescription: "The Act provider connects Terraform to [Act Security](https://act.security). It signs in with an Act API key, or with the CI job's OIDC token instead of the key's secret, and finds the tenant and the regional API on its own.",
 		Attributes: map[string]schema.Attribute{
 			"tenant_id": schema.StringAttribute{
 				MarkdownDescription: "The Act tenant ID, a lowercase UUID, here or in `ACT_TENANT_ID`. Not needed: the provider reads the tenant from the API key. When set, the provider fails if the key belongs to another tenant.",
@@ -66,9 +70,22 @@ func (p *actProvider) Schema(_ context.Context, _ provider.SchemaRequest, resp *
 				Optional:            true,
 			},
 			"client_secret": schema.StringAttribute{
-				MarkdownDescription: "The API key's client secret. Required, here or in `ACT_CLIENT_SECRET`, which keeps it out of the configuration.",
+				MarkdownDescription: "The API key's client secret, here or in `ACT_CLIENT_SECRET`, which keeps it out of the configuration. Required unless the provider signs in with an OIDC token; never set both.",
 				Optional:            true,
 				Sensitive:           true,
+			},
+			"use_oidc": schema.BoolAttribute{
+				MarkdownDescription: "Sign in with the OIDC token of the CI job instead of `client_secret`, here or in `ACT_USE_OIDC`. The provider reads `TFC_WORKLOAD_IDENTITY_TOKEN_ACT`, then `TFC_WORKLOAD_IDENTITY_TOKEN` (HCP Terraform), then requests a token from GitHub Actions for the Act STS audience. The API key needs a trust policy for the job.",
+				Optional:            true,
+			},
+			"oidc_token": schema.StringAttribute{
+				MarkdownDescription: "An OIDC token issued to the CI job for the Act STS audience, here or in `ACT_OIDC_TOKEN`. Use it with a CI system the provider does not detect with `use_oidc`.",
+				Optional:            true,
+				Sensitive:           true,
+			},
+			"oidc_token_file_path": schema.StringAttribute{
+				MarkdownDescription: "A file holding the CI job's OIDC token, here or in `ACT_OIDC_TOKEN_FILE_PATH`. The provider reads it again every time it renews its Act token, so a token the CI system refreshes keeps working.",
+				Optional:            true,
 			},
 		},
 	}
@@ -80,18 +97,29 @@ func (p *actProvider) Configure(ctx context.Context, req provider.ConfigureReque
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	for _, v := range []types.String{cfg.TenantID, cfg.ClientID, cfg.ClientSecret} {
+	for _, v := range []types.String{cfg.TenantID, cfg.ClientID, cfg.ClientSecret, cfg.OIDCToken, cfg.OIDCTokenFilePath} {
 		if v.IsUnknown() {
 			return
 		}
 	}
+	if cfg.UseOIDC.IsUnknown() {
+		return
+	}
 
 	tenantID := valueOrEnv(cfg.TenantID, "ACT_TENANT_ID")
 	clientID := valueOrEnv(cfg.ClientID, "ACT_CLIENT_ID")
-	clientSecret := valueOrEnv(cfg.ClientSecret, "ACT_CLIENT_SECRET")
+	httpClient := client.NewHTTPClient()
+	credential, credentialErr := resolveCredential(credentialInputs{
+		clientSecret:  valueOrEnv(cfg.ClientSecret, "ACT_CLIENT_SECRET"),
+		oidcToken:     valueOrEnv(cfg.OIDCToken, "ACT_OIDC_TOKEN"),
+		oidcTokenFile: valueOrEnv(cfg.OIDCTokenFilePath, "ACT_OIDC_TOKEN_FILE_PATH"),
+		useOIDC:       boolOrEnv(cfg.UseOIDC, "ACT_USE_OIDC"),
+	}, ciEnvironment{getenv: os.Getenv, httpClient: httpClient, retry: retry.Default()})
 
 	requireValue(resp, "client_id", "ACT_CLIENT_ID", clientID)
-	requireValue(resp, "client_secret", "ACT_CLIENT_SECRET", clientSecret)
+	if credentialErr != nil {
+		resp.Diagnostics.AddAttributeError(path.Root("client_secret"), "Missing or conflicting Act credentials", credentialErr.Error())
+	}
 	if tenantID != "" && !tenantIDPattern.MatchString(tenantID) {
 		resp.Diagnostics.AddAttributeError(path.Root("tenant_id"), "Invalid tenant_id", "tenant_id must be a lowercase UUID.")
 	}
@@ -108,13 +136,13 @@ func (p *actProvider) Configure(ctx context.Context, req provider.ConfigureReque
 		resp.Diagnostics.AddWarning("Unsafe Act endpoint", fmt.Sprintf("The provider talks to the loopback STS %s. Use this only for local development.", endpoint.Origin))
 	}
 
-	httpClient := client.NewHTTPClient()
 	userAgent := fmt.Sprintf("terraform-provider-act/%s terraform/%s", p.version, req.TerraformVersion)
 	session, err := auth.NewSession(ctx, auth.Config{
 		Endpoint:     endpoint,
 		TenantID:     tenantID,
 		ClientID:     clientID,
-		ClientSecret: clientSecret,
+		ClientSecret: credential.clientSecret,
+		CIToken:      credential.ciToken,
 		HTTPClient:   httpClient,
 		UserAgent:    userAgent,
 		Retry:        retry.Default(),
@@ -185,4 +213,11 @@ func requireValue(resp *provider.ConfigureResponse, attr, env, value string) {
 	if value == "" {
 		resp.Diagnostics.AddAttributeError(path.Root(attr), "Missing "+attr, fmt.Sprintf("Set %s in the provider block or the %s environment variable.", attr, env))
 	}
+}
+
+func boolOrEnv(v types.Bool, env string) string {
+	if !v.IsNull() {
+		return strconv.FormatBool(v.ValueBool())
+	}
+	return os.Getenv(env)
 }

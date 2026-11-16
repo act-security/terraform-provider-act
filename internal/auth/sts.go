@@ -49,15 +49,14 @@ type stsClient struct {
 	userAgent    string
 	clientID     string
 	clientSecret string
+	ciToken      CITokenSource
 	now          func() time.Time
 }
 
 func (s *stsClient) mint(ctx context.Context, resource string) (Token, error) {
-	form := url.Values{
-		"grant_type":    {"client_credentials"},
-		"resource":      {resource},
-		"client_id":     {s.clientID},
-		"client_secret": {s.clientSecret},
+	form, err := s.tokenForm(ctx, resource)
+	if err != nil {
+		return Token{}, err
 	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, s.endpoint.Origin+"/oidc/oauth2/token", strings.NewReader(form.Encode()))
 	if err != nil {
@@ -72,7 +71,7 @@ func (s *stsClient) mint(ctx context.Context, resource string) (Token, error) {
 		return Token{}, err
 	}
 	if status != http.StatusOK {
-		return Token{}, oauthError(status, body)
+		return Token{}, s.refusal(status, body)
 	}
 	var tr struct {
 		AccessToken string `json:"access_token"`
@@ -85,6 +84,36 @@ func (s *stsClient) mint(ctx context.Context, resource string) (Token, error) {
 		return Token{}, fmt.Errorf("the STS returned token_type %q without a bearer token", tr.TokenType)
 	}
 	return checkToken(tr.AccessToken, s.endpoint.Origin, resource, s.now())
+}
+
+func (s *stsClient) tokenForm(ctx context.Context, resource string) (url.Values, error) {
+	form := url.Values{
+		"grant_type": {"client_credentials"},
+		"resource":   {resource},
+		"client_id":  {s.clientID},
+	}
+	if s.ciToken == nil {
+		form.Set("client_secret", s.clientSecret)
+		return form, nil
+	}
+	assertion, err := s.ciToken.Token(ctx, s.endpoint.Origin)
+	if err != nil {
+		return nil, fmt.Errorf("getting the CI token from %s: %w", s.ciToken.Describe(), err)
+	}
+	if err := checkCITokenAudience(assertion, s.endpoint.Origin); err != nil {
+		return nil, fmt.Errorf("%s: %w", s.ciToken.Describe(), err)
+	}
+	form.Set("client_assertion_type", FederatedAssertionType)
+	form.Set("client_assertion", assertion)
+	return form, nil
+}
+
+func (s *stsClient) refusal(status int, body []byte) error {
+	err := oauthError(status, body)
+	if s.ciToken != nil && errors.Is(err, ErrInvalidClient) {
+		return ErrFederationRefused
+	}
+	return err
 }
 
 func (s *stsClient) discover(ctx context.Context, token Token, tenantID string) (Discovery, error) {
