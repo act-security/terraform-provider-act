@@ -13,6 +13,7 @@
     "integration-type:jira",
     "integration-type:slack",
     "integration-type:splunk",
+    "integration-type:wiz",
     "notification-action:email",
     "notification-action:slack",
     "operation:createAwsDeployment",
