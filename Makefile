@@ -13,6 +13,7 @@ GENERATED := internal/apigen internal/fakeapi/gen
 CONTRACT := api/openapi.json
 CONTRACT_LOCK := api/openapi.lock
 CONTRACT_URL ?=
+CONTRACT_FILE ?=
 PROVIDER_ADDRESS ?= registry.terraform.io/act-security/act
 TARGET ?= fake
 TF ?= terraform
@@ -87,6 +88,11 @@ tidy-check:
 generate:
 	oapi-codegen -config internal/apigen/oapi-codegen.yaml $(CONTRACT)
 	oapi-codegen -config internal/fakeapi/gen/oapi-codegen.yaml $(CONTRACT)
+	go run ./internal/fakeapi/cmd/unimplemented
+
+.PHONY: support
+support:
+	UPDATE_SUPPORT=1 go test ./internal/provider -run '^TestSupportManifest$$' -count=1
 
 .PHONY: lock-check
 lock-check:
@@ -102,8 +108,9 @@ generate-check: lock-check generate
 
 .PHONY: contract-sync
 contract-sync:
-	@test -n '$(CONTRACT_URL)' || { echo 'Set CONTRACT_URL to the public API origin followed by /v1/openapi.json'; exit 1; }
-	curl -fsS --proto =https --max-time 30 $(CONTRACT_URL) | jq --indent 2 . > $(CONTRACT).tmp
+	@test -n '$(CONTRACT_URL)$(CONTRACT_FILE)' || { echo 'Set CONTRACT_URL to the public API origin followed by /v1/openapi.json, or CONTRACT_FILE to a local copy of that document'; exit 1; }
+	@test -z '$(CONTRACT_URL)' || test -z '$(CONTRACT_FILE)' || { echo 'Set CONTRACT_URL or CONTRACT_FILE, not both'; exit 1; }
+	if [ -n '$(CONTRACT_FILE)' ]; then cat '$(CONTRACT_FILE)'; else curl -fsS --proto =https --max-time 30 $(CONTRACT_URL); fi | jq --indent 2 . > $(CONTRACT).tmp
 	mv $(CONTRACT).tmp $(CONTRACT)
 	printf 'version: %s\nsha256: %s\n' "$$(jq -r .info.version $(CONTRACT))" "$$(shasum -a 256 $(CONTRACT) | cut -d' ' -f1)" > $(CONTRACT_LOCK)
 	$(MAKE) generate
@@ -189,7 +196,8 @@ help:
 	  'test             unit and fake API tests with -race, release tags then actinternal' \
 	  'sec              gosec and govulncheck' \
 	  'generate         oapi-codegen client and fake server from api/openapi.json' \
-	  'contract-sync    refresh api/openapi.json and its lock from CONTRACT_URL, then generate' \
+	  'contract-sync    refresh api/openapi.json and its lock from CONTRACT_URL or CONTRACT_FILE, then generate' \
+	  'support          regenerate api/support.json from the kinds, actions and operations the provider covers' \
 	  'build            release-identical binary, no actinternal tag' \
 	  'docs             regenerate docs/ with tfplugindocs' \
 	  'docs-rule        fail when a resource or data source lacks its example, template or generated doc' \
