@@ -19,6 +19,10 @@ func WithPublicAPIUnavailable() Option {
 	return func(c *Config) { c.PublicAPIUnavailable = true }
 }
 
+func WithNotificationRulesDisabled() Option {
+	return func(c *Config) { c.NotificationRulesDisabled = true }
+}
+
 func WithoutTenantClaim() Option {
 	return func(c *Config) { c.OmitTenantClaim = true }
 }

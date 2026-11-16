@@ -190,6 +190,36 @@ func TestPostIsRetriedOnlyWhenAllowed(t *testing.T) {
 	}
 }
 
+func TestPostWithAnIdempotencyKeyIsRetriedWithTheSameKey(t *testing.T) {
+	rec := &recorder{}
+	var keys []string
+	var calls atomic.Int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		keys = append(keys, r.Header.Get("Idempotency-Key"))
+		if calls.Add(1) == 1 {
+			w.WriteHeader(http.StatusServiceUnavailable)
+			return
+		}
+		w.WriteHeader(http.StatusCreated)
+	}))
+	t.Cleanup(srv.Close)
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, srv.URL, strings.NewReader(`{"name":"a"}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("Idempotency-Key", "tf-key")
+	resp, err := retry.Do(http.DefaultClient, req, rec.policy())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if closeErr := resp.Body.Close(); closeErr != nil {
+		t.Error(closeErr)
+	}
+	if resp.StatusCode != http.StatusCreated || len(keys) != 2 || keys[0] != "tf-key" || keys[1] != "tf-key" {
+		t.Fatalf("got %d with keys %q", resp.StatusCode, keys)
+	}
+}
+
 func TestRetriesConnectionErrors(t *testing.T) {
 	rec := &recorder{}
 	srv, calls, _ := serve(t)

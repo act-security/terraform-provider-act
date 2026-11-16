@@ -24,6 +24,20 @@ func (e *APIError) Detail(key string) string {
 	return ""
 }
 
+func (e *APIError) DetailStrings(key string) []string {
+	raw, ok := e.Details[key].([]any)
+	if !ok {
+		return nil
+	}
+	values := make([]string, 0, len(raw))
+	for _, item := range raw {
+		if value, ok := item.(string); ok {
+			values = append(values, value)
+		}
+	}
+	return values
+}
+
 func (e *APIError) Error() string {
 	msg := fmt.Sprintf("Act API returned %d %s", e.Status, e.Code)
 	if e.Message != "" {
