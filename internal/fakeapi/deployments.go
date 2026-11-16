@@ -594,6 +594,9 @@ type patchedDeployment struct {
 
 func applyDeploymentPatch(ctx context.Context, current gen.AwsDeployment, body gen.AwsDeploymentPatch) (patchedDeployment, gen.UpdateAwsDeploymentResponseObject) {
 	patched := patchedDeployment{item: current}
+	if body.DeploymentMethod != nil && *body.DeploymentMethod != derefMethod(current.DeploymentMethod) {
+		return patched, gen.UpdateAwsDeployment400JSONResponse(invalid("deploymentMethod", "immutable"))
+	}
 	if body.RoleArn != nil && *body.RoleArn != deref(current.RoleArn) {
 		if !roleInAccount(*body.RoleArn, current.AccountID) {
 			return patched, gen.UpdateAwsDeployment422JSONResponse(verificationFailed(accountMismatch))
@@ -605,11 +608,36 @@ func applyDeploymentPatch(ctx context.Context, current gen.AwsDeployment, body g
 		return patched, nil
 	}
 	if current.Organization == nil {
-		return patched, gen.UpdateAwsDeployment400JSONResponse(invalid("organization", "not_an_organization"))
+		return patched, gen.UpdateAwsDeployment400JSONResponse(invalid("organization", "account_deployment"))
+	}
+	if rejection := rejectRetarget(*current.Organization, *body.Organization); rejection != nil {
+		return patched, rejection
 	}
 	org, retargeted := applyOrganizationPatch(ctx, *current.Organization, *body.Organization)
 	patched.item.Organization, patched.reverify = &org, patched.reverify || retargeted
 	return patched, nil
+}
+
+func rejectRetarget(org gen.AwsOrganization, patch gen.AwsOrganizationPatch) gen.UpdateAwsDeploymentResponseObject {
+	switch {
+	case patch.RootID != nil && patch.OrganizationalUnitIds != nil:
+		return gen.UpdateAwsDeployment400JSONResponse(invalid("organization.rootId", "set at most one of rootId, organizationalUnitIds"))
+	case org.OrganizationID != nil:
+		return nil
+	case patch.RootID != nil:
+		return gen.UpdateAwsDeployment400JSONResponse(invalid("organization.rootId", "targets_fixed_before_organization_keying"))
+	case patch.OrganizationalUnitIds != nil:
+		return gen.UpdateAwsDeployment400JSONResponse(invalid("organization.organizationalUnitIds", "targets_fixed_before_organization_keying"))
+	default:
+		return nil
+	}
+}
+
+func derefMethod(value *gen.AwsDeploymentMethod) gen.AwsDeploymentMethod {
+	if value == nil {
+		return ""
+	}
+	return *value
 }
 
 var accountMismatch = VerificationFailure{RetryClass: RetryClassDetermined, CloudErrorCode: "ACCOUNT_ID_MISMATCH", Hint: "The role is in another account."}
@@ -634,9 +662,6 @@ func applySettingsPatch(ctx context.Context, item *gen.AwsDeployment, body gen.A
 	}
 	if body.DisabledCapabilities != nil {
 		item.DisabledCapabilities = *body.DisabledCapabilities
-	}
-	if body.DeploymentMethod != nil {
-		item.DeploymentMethod = body.DeploymentMethod
 	}
 	if body.DeletionProtection != nil {
 		item.DeletionProtection = *body.DeletionProtection

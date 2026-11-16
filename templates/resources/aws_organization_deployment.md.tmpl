@@ -19,7 +19,7 @@ Member accounts need a role too. Deploy `cloudformation_template_url` from the o
 
 ## Scope
 
-Set `root_id` to cover the whole organization, or `organizational_unit_ids` to cover some units. To leave a unit out, list the others. `excluded_account_ids` leaves single accounts out. Changing the scope updates the deployment in place, and Act verifies it again.
+Set `root_id` to cover the whole organization, or `organizational_unit_ids` to cover some units. To leave a unit out, list the others. `excluded_account_ids` leaves single accounts out. Changing the scope updates the deployment in place: update the StackSet targets first, then Act checks that the StackSet covers the new scope before it stores it. A deployment created before Act keyed organizations on their ID keeps the scope it was created with; replace it to change the scope.
 
 A StackSet accepts at most 850 characters of target IDs. When the units do not fit, the plan fails and suggests `root_id` with `excluded_account_ids`.
 

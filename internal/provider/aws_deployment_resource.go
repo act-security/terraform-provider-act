@@ -134,7 +134,7 @@ func (r *awsDeploymentResource[M, P]) Schema(ctx context.Context, _ resource.Sch
 			Validators:          []validator.String{stringvalidator.RegexMatches(awsRoleArnPattern, "must be an IAM role ARN")},
 		},
 		"name": schema.StringAttribute{
-			MarkdownDescription: "The name Act shows for the deployment, 1 to 64 characters. Act picks one when you leave it out.",
+			MarkdownDescription: "The name Act shows for the deployment, 1 to 64 characters. Act picks one when you leave it out. Changing it updates the deployment in place.",
 			Optional:            true,
 			Computed:            true,
 			Validators:          []validator.String{stringvalidator.LengthBetween(1, maxDeploymentNameLength)},
@@ -168,11 +168,12 @@ func (r *awsDeploymentResource[M, P]) Schema(ctx context.Context, _ resource.Sch
 			PlanModifiers:       []planmodifier.Set{setplanmodifier.UseStateForUnknown()},
 		},
 		"deployment_method": schema.StringAttribute{
-			MarkdownDescription: "How the role was deployed: `terraform` (default) or `cloudformation`.",
+			MarkdownDescription: "How the role was deployed: `terraform` (default) or `cloudformation`. Act cannot change it in place, so changing it replaces the deployment. When you import a deployment set up with CloudFormation, set `cloudformation`.",
 			Optional:            true,
 			Computed:            true,
 			Default:             stringdefault.StaticString(string(apigen.AwsDeploymentMethodTerraform)),
 			Validators:          []validator.String{stringvalidator.OneOf(string(apigen.AwsDeploymentMethodTerraform), string(apigen.AwsDeploymentMethodCloudformation))},
+			PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
 		},
 		"deletion_protection": schema.BoolAttribute{
 			MarkdownDescription: fmt.Sprintf("When true, Act refuses to delete the deployment and a plan that destroys it fails. Defaults to `%t`.", r.kind.protectByDefault),
@@ -830,9 +831,6 @@ func (r *awsDeploymentResource[M, P]) buildPatch(ctx context.Context, model, pri
 			values = *list
 		}
 		patch["disabledCapabilities"] = values
-	}
-	if !next.DeploymentMethod.IsUnknown() && !next.DeploymentMethod.Equal(current.DeploymentMethod) {
-		patch["deploymentMethod"] = next.DeploymentMethod.ValueString()
 	}
 	if !next.DeletionProtection.IsUnknown() && !next.DeletionProtection.Equal(current.DeletionProtection) {
 		patch["deletionProtection"] = next.DeletionProtection.ValueBool()

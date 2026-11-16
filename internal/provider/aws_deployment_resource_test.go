@@ -242,6 +242,70 @@ func TestAwsAccountDeploymentStopsOnARepeatedDeterministicFailure(t *testing.T) 
 	})
 }
 
+func TestAwsAccountDeploymentSwapsTheRoleInPlace(t *testing.T) {
+	s := fakeapi.Start(t)
+	s.Setenv(t)
+	provider.FastVerification(t)
+	id := s.AwsAccountDeploymentID(testAccount)
+	replacement := roleArn(testAccount) + "-v2"
+	refused := roleArn(testAccount) + "-v3"
+	notEnforced := fakeapi.VerificationFailure{RetryClass: fakeapi.RetryClassDetermined, CloudErrorCode: "EXTERNAL_ID_NOT_ENFORCED", Hint: "Require the external ID in the trust policy."}
+	s.QueueVerificationFailures(refused, notEnforced, notEnforced)
+
+	resource.UnitTest(t, resource.TestCase{
+		ProtoV6ProviderFactories: factories(),
+		Steps: []resource.TestStep{
+			{Config: accountConfigWithRole(fmt.Sprintf("%q", roleArn(testAccount)), "")},
+			{
+				Config: accountConfigWithRole(fmt.Sprintf("%q", replacement), ""),
+				ConfigPlanChecks: resource.ConfigPlanChecks{PreApply: []plancheck.PlanCheck{
+					plancheck.ExpectResourceAction(accountAddress, plancheck.ResourceActionUpdate),
+				}},
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownValue(accountAddress, tfjsonpath.New("id"), knownvalue.StringExact(id)),
+					statecheck.ExpectKnownValue(accountAddress, tfjsonpath.New("role_arn"), knownvalue.StringExact(replacement)),
+				},
+			},
+			{
+				Config:      accountConfigWithRole(fmt.Sprintf("%q", refused), ""),
+				ExpectError: regexp.MustCompile(`(?s)EXTERNAL_ID_NOT_ENFORCED.*same answer 2 times`),
+			},
+			{
+				PreConfig: func() {
+					item, ok := s.AwsDeployment(id)
+					if !ok || item.RoleArn == nil || *item.RoleArn != replacement {
+						t.Fatalf("a refused role replaced the verified one: %+v", item.RoleArn)
+					}
+				},
+				Config:   accountConfigWithRole(fmt.Sprintf("%q", replacement), ""),
+				PlanOnly: true,
+			},
+		},
+	})
+}
+
+func TestAwsAccountDeploymentReplacesItWhenTheDeploymentMethodChanges(t *testing.T) {
+	s := fakeapi.Start(t)
+	s.Setenv(t)
+	provider.FastVerification(t)
+
+	resource.UnitTest(t, resource.TestCase{
+		ProtoV6ProviderFactories: factories(),
+		Steps: []resource.TestStep{
+			{Config: accountConfig("")},
+			{
+				Config: accountConfig(`  deployment_method = "cloudformation"`),
+				ConfigPlanChecks: resource.ConfigPlanChecks{PreApply: []plancheck.PlanCheck{
+					plancheck.ExpectResourceAction(accountAddress, plancheck.ResourceActionDestroyBeforeCreate),
+				}},
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownValue(accountAddress, tfjsonpath.New("deployment_method"), knownvalue.StringExact("cloudformation")),
+				},
+			},
+		},
+	})
+}
+
 func TestAwsAccountDeploymentRejectsARoleInAnotherAccount(t *testing.T) {
 	s := fakeapi.Start(t)
 	s.Setenv(t)
@@ -569,6 +633,10 @@ resource "act_aws_organization_deployment" "this" {
 			},
 			{
 				Config: config("false"),
+			},
+			{
+				Config:      strings.Replace(config("false"), fmt.Sprintf("root_id             = %q", testRoot), fmt.Sprintf("organizational_unit_ids = [%q]", testOU), 1),
+				ExpectError: regexp.MustCompile(`(?s)Act rejected organizational_unit_ids:\s+targets_fixed_before_organization_keying`),
 			},
 		},
 	})

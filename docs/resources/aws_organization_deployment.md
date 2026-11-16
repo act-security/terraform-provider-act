@@ -52,7 +52,7 @@ Member accounts need a role too. Deploy `cloudformation_template_url` from the o
 
 ## Scope
 
-Set `root_id` to cover the whole organization, or `organizational_unit_ids` to cover some units. To leave a unit out, list the others. `excluded_account_ids` leaves single accounts out. Changing the scope updates the deployment in place, and Act verifies it again.
+Set `root_id` to cover the whole organization, or `organizational_unit_ids` to cover some units. To leave a unit out, list the others. `excluded_account_ids` leaves single accounts out. Changing the scope updates the deployment in place: update the StackSet targets first, then Act checks that the StackSet covers the new scope before it stores it. A deployment created before Act keyed organizations on their ID keeps the scope it was created with; replace it to change the scope.
 
 A StackSet accepts at most 850 characters of target IDs. When the units do not fit, the plan fails and suggests `root_id` with `excluded_account_ids`.
 
@@ -77,15 +77,15 @@ Act assumes the role, checks that its account belongs to the organization and is
 
 - `allowed_regions` (Set of String) The AWS regions Act scans, such as `us-east-1`. Leave it out to scan every region.
 - `deletion_protection` (Boolean) When true, Act refuses to delete the deployment and a plan that destroys it fails. Defaults to `true`.
-- `deployment_method` (String) How the role was deployed: `terraform` (default) or `cloudformation`.
+- `deployment_method` (String) How the role was deployed: `terraform` (default) or `cloudformation`. Act cannot change it in place, so changing it replaces the deployment. When you import a deployment set up with CloudFormation, set `cloudformation`.
 - `disabled_capabilities` (Set of String) Act capabilities to turn off for this deployment. The only one today is `eks_cluster_access`.
 - `excluded_account_ids` (Set of String) Member accounts Act leaves out, as 12-digit IDs.
 - `external_id_key_version` (Number) The key version of the external ID, from `data.act_aws_onboarding_parameters`. Passing it pins the external ID the role trusts, so a key rotation between plan and apply cannot change it. It only changes when `external_id_source` moves from `legacy` to `derived`. Null for a legacy external ID.
 - `external_id_source` (String) `derived` for an external ID Act derives from the deployment, or `legacy` for one stored by an older onboarding. Changing `legacy` to `derived` rotates it: Act checks that the role trusts the derived value first. `derived` cannot go back to `legacy`.
 - `member_role_name` (String) The name of the role in each member account. Defaults to `ActSecurityRole-<deployment_id>`. Set it when another system, such as Account Factory for Terraform or Control Tower, creates the member roles.
 - `member_role_path` (String) The IAM path of the member roles. Defaults to `/`.
-- `name` (String) The name Act shows for the deployment, 1 to 64 characters. Act picks one when you leave it out.
-- `organizational_unit_ids` (Set of String) The organizational units to cover, `ou-...`. Set this or `root_id`. To leave a sandbox OU out, list the other OUs.
+- `name` (String) The name Act shows for the deployment, 1 to 64 characters. Act picks one when you leave it out. Changing it updates the deployment in place.
+- `organizational_unit_ids` (Set of String) The organizational units to cover, `ou-...`. Set this or `root_id`. To leave a sandbox OU out, list the other OUs. Changing them updates the deployment in place once the StackSet targets them, and Act verifies it again.
 - `reverify_on_failure` (Boolean) When the deployment is `failed`, plan a verification so the next apply makes it active again once the role is fixed. Defaults to `true`. Only the provider uses it.
 - `root_id` (String) The organization root ID, `r-...`, to cover every account. Set this or `organizational_unit_ids`. Changing the scope updates the deployment in place and Act verifies it again.
 - `tags` (Map of String) Act tags for the deployment, at most 50. They are not AWS tags.
