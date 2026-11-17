@@ -13,9 +13,9 @@ description: |-
 
 {{ tffile .ExampleFile }}
 
-Pass `deployment_id` and `azure_tenant_id` to `act_azure_deployment`, and build the custom role and the role assignments from `custom_role_name`, `custom_role_actions`, `binding_marker`, `required_builtin_role_ids` and, for `include_entra_id`, `required_graph_app_role_ids`. The Act module for Azure, `act-security/act/azurerm`, does this for you. None of the values is a secret.
+Pass `deployment_id` and `azure_tenant_id` to `act_azure_deployment`, and build the custom role and the role assignments from `custom_role_name`, `custom_role_actions`, `binding_marker`, `required_builtin_role_ids` and, for `include_entra_id`, `required_graph_app_role_ids`. The Act module for Azure, `act-security/act/azurerm`, does this for you, and its `modules/tenant` submodule takes `act_app_client_id` and `admin_consent_url` to look up Act's service principal. Terraform never creates that service principal: an Entra admin's approval does. None of the values is a secret.
 
-`tenant_consented` is false until an Entra admin of the directory approves Act by opening `admin_consent_url`. A deployment created before that is stored as `pending_consent`; the resource docs explain the approval. `act_service_principal_id` is null until Act's service principal exists in the directory.
+`tenant_consented` is false until an Entra admin of the directory approves Act for your Act organization by opening `admin_consent_url`. `act_service_principal_id` is null until an Entra admin of the directory approves Act for the first time. The `act_azure_deployment` docs explain both cases of the approval.
 
 When `existing_deployment` is set, the target already has a deployment, for example one created in the Act console. Import it rather than creating another; the `act_azure_deployment` docs show the `import` block, and creating another deployment fails with that block in the error.
 

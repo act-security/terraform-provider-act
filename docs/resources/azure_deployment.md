@@ -2,26 +2,33 @@
 page_title: "act_azure_deployment Resource - act"
 subcategory: ""
 description: |-
-  Connects one Azure subscription or management group to Act through Act's multi-tenant app. Act checks the role assignments of its service principal before it stores anything. Until an Entra admin approves Act in the directory, the deployment is stored as pending_consent and the apply succeeds with a warning that carries the approval link.
+  Connects one Azure subscription or management group to Act through Act's multi-tenant app. Act checks the role assignments of its service principal before it stores anything. When Act's service principal is already in the directory but an Entra admin has not approved Act for this Act organization yet, the deployment is stored as pending_consent and the apply succeeds with a warning that carries the approval link.
 ---
 
 # act_azure_deployment (Resource)
 
-Connects one Azure subscription or management group to Act through Act's multi-tenant app. Act checks the role assignments of its service principal before it stores anything. Until an Entra admin approves Act in the directory, the deployment is stored as `pending_consent` and the apply succeeds with a warning that carries the approval link.
+Connects one Azure subscription or management group to Act through Act's multi-tenant app. Act checks the role assignments of its service principal before it stores anything. When Act's service principal is already in the directory but an Entra admin has not approved Act for this Act organization yet, the deployment is stored as `pending_consent` and the apply succeeds with a warning that carries the approval link.
 
 ## Example Usage
 
-Read the onboarding values first, give Act's service principal its roles with the Act module for Azure, then connect the subscription:
+Read the onboarding values first, look up Act's service principal with the tenant submodule, give it its roles with the Act module for Azure, then connect the subscription:
 
 ```terraform
-data "act_azure_onboarding_parameters" "this" {
-  directory_id    = "00000000-0000-0000-0000-000000000000"
-  subscription_id = "11111111-1111-1111-1111-111111111111"
+variable "subscription_id" {
+  type = string
 }
 
-resource "azuread_service_principal" "act" {
-  client_id    = data.act_azure_onboarding_parameters.this.act_app_client_id
-  use_existing = true
+data "act_azure_onboarding_parameters" "this" {
+  directory_id    = "00000000-0000-0000-0000-000000000000"
+  subscription_id = var.subscription_id
+}
+
+module "act_tenant" {
+  source = "act-security/act/azurerm//modules/tenant"
+
+  act_app_client_id = data.act_azure_onboarding_parameters.this.act_app_client_id
+  consent_url       = data.act_azure_onboarding_parameters.this.admin_consent_url
+  include_entra_id  = false
 }
 
 module "act" {
@@ -29,13 +36,13 @@ module "act" {
 
   deployment_id        = data.act_azure_onboarding_parameters.this.deployment_id
   binding_marker       = data.act_azure_onboarding_parameters.this.binding_marker
-  service_principal_id = azuread_service_principal.act.object_id
-  subscription_id      = "11111111-1111-1111-1111-111111111111"
+  service_principal_id = module.act_tenant.service_principal_id
+  subscription_id      = var.subscription_id
 }
 
 resource "act_azure_deployment" "this" {
-  deployment_id        = data.act_azure_onboarding_parameters.this.deployment_id
-  azure_tenant_id      = data.act_azure_onboarding_parameters.this.azure_tenant_id
+  deployment_id        = module.act.deployment_id
+  azure_tenant_id      = module.act.azure_tenant_id
   subscription_id      = module.act.subscription_id
   service_principal_id = module.act.service_principal_id
   tags                 = { team = "platform" }
@@ -44,19 +51,25 @@ resource "act_azure_deployment" "this" {
 
 `data.act_azure_onboarding_parameters` is a read and creates nothing. Its `deployment_id` and `binding_marker` are stable, so a plan you run again shows no change.
 
-`azuread_service_principal` with `use_existing = true` creates Act's service principal in your directory from `act_app_client_id`, or adopts it when it already exists. The Act module for Azure, `act-security/act/azurerm`, creates the custom role, puts `binding_marker` in its description and assigns the custom role and the built-in roles to the service principal at the subscription. Its `service_principal_id` output depends on those role assignments, so passing it to the resource makes Terraform finish them before Act checks them.
+Terraform never creates or owns Act's service principal: an Entra admin's approval of Act creates it in the directory. The tenant submodule, `act-security/act/azurerm//modules/tenant`, only looks it up from `act_app_client_id`. When it is not in the directory yet, the plan fails with the consent link; see [Entra admin approval](#entra-admin-approval). Set `include_entra_id` to the same value on the submodule and on the resource.
 
-To connect a management group, set `management_group_id` instead of `subscription_id` on both the data source and the resource. It covers every subscription under the group, and `deletion_protection` defaults to `true`.
+The Act module for Azure, `act-security/act/azurerm`, creates the custom role, puts `binding_marker` in its description and assigns the custom role and the built-in roles to the service principal at the subscription. Its `deployment_id`, `azure_tenant_id`, `subscription_id` and `service_principal_id` outputs depend on those role resources, so passing them to the resource makes Terraform finish the role assignments before Act checks them.
+
+To connect a management group, set `management_group_id` instead of `subscription_id` on the data source and on the resource, and pass the management group to the module. It covers every subscription under the group, and `deletion_protection` defaults to `true`.
 
 ## Entra admin approval
 
-Act reads Azure through its multi-tenant app, and an Entra admin of the directory approves that app once. The approval covers every later deployment in the same directory.
+Act reads Azure through its multi-tenant app, and an Entra admin of the directory approves that app for your Act organization once. The approval covers every later deployment of your Act organization in the same directory. Without `include_entra_id`, an Application Administrator or a Cloud Application Administrator can approve it. With `include_entra_id = true`, Act also asks for Microsoft Graph app roles, and only a Global Administrator or a Privileged Role Administrator can approve those.
 
-1. The first apply stores the deployment with `status = "pending_consent"` and succeeds. A warning carries `consent_url`, the same link as `admin_consent_url` of the data source.
-2. An Entra admin opens the link and approves Act. Without `include_entra_id`, an Application Administrator or a Cloud Application Administrator can approve it. With `include_entra_id = true`, Act also asks for Microsoft Graph app roles, and only a Global Administrator or a Privileged Role Administrator can approve those.
+The first time Act is used in a directory, its service principal does not exist yet. The tenant submodule then fails the plan with the consent link, the same link as `admin_consent_url` of the data source. An Entra admin opens it and approves Act, which creates the service principal, and the next plan goes through.
+
+When the service principal already exists in the directory, because an Entra admin approved Act for another Act organization, but the approval for your Act organization is missing, the plan goes through and the apply stores the deployment with `status = "pending_consent"`:
+
+1. The apply succeeds with a warning that carries `consent_url`.
+2. An Entra admin opens the link and approves Act for your Act organization.
 3. Act verifies the deployment on its own after the approval. The next refresh shows `status = "active"` and `consent_url = null`, and the plan shows no change.
 
-`tenant_consented` of the data source tells you whether the directory has approved Act already. Turning on `include_entra_id` later can need a new approval for the Graph app roles: the apply then leaves the deployment `pending_consent` again with a new warning.
+`tenant_consented` of the data source tells you whether the directory has approved Act for your Act organization already. Turning on `include_entra_id` later can need a new approval for the Graph app roles: the apply then leaves the deployment `pending_consent` again with a new warning.
 
 ## Verification
 
@@ -76,7 +89,7 @@ Destroying the resource disconnects the target: Act stops scanning and deletes w
 
 ## State
 
-Nothing in this resource is a secret. The state holds IDs, the consent link and the deployment's status. The provider keeps the deployment's ETag in private state and sends it with every change, so a change made in the Act console between plan and apply stops the apply instead of being overwritten.
+Nothing in this resource is a secret. The state holds IDs, the consent link and the deployment's status. Act stores `service_principal_id` only once it verifies the deployment, so while the deployment is `pending_consent`, or right after an import, the provider keeps the value from your configuration instead of planning a change. The provider keeps the deployment's ETag in private state and sends it with every change, so a change made in the Act console between plan and apply stops the apply instead of being overwritten.
 
 <!-- schema generated by tfplugindocs -->
 ## Schema
@@ -85,7 +98,7 @@ Nothing in this resource is a secret. The state holds IDs, the consent link and 
 
 - `azure_tenant_id` (String) The Entra directory (Azure tenant) that owns the target, from `data.act_azure_onboarding_parameters`. Changing it replaces the deployment.
 - `deployment_id` (String) The deployment ID Act issued for this target, from `data.act_azure_onboarding_parameters`. Act rejects any other value. Changing it replaces the deployment.
-- `service_principal_id` (String) The object ID of Act's service principal in the directory. Pass it from the configuration that assigns its roles, such as an output of the Act module, so Terraform creates the role assignments first. Changing it updates the deployment in place and Act verifies it again.
+- `service_principal_id` (String) The object ID of Act's service principal in the directory. Pass `service_principal_id` from the Act module: it depends on the role assignments, so Terraform creates them first. Act stores it only once it verifies the deployment, so while the deployment is `pending_consent` or right after an import the provider keeps the configured value. Changing it updates the deployment in place and Act verifies it again.
 
 ### Optional
 
