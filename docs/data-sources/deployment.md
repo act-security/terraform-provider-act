@@ -34,7 +34,7 @@ A lookup by `target` fails when no deployment or more than one deployment covers
 
 - `cloud` (String) `aws`, `azure` or `gcp`. Set it to narrow a `target` lookup.
 - `id` (String) The deployment ID. Set this or `target`.
-- `target` (String) Find the deployment that covers this target instead, such as a 12-digit AWS account ID or an organization ID. Set this or `id`. Exactly one deployment must match.
+- `target` (String) Find the deployment that covers this target instead, such as a 12-digit AWS account ID, an organization ID or an Azure subscription ID. Set this or `id`. Exactly one deployment must match.
 
 ### Read-Only
 
@@ -44,5 +44,5 @@ A lookup by `target` fails when no deployment or more than one deployment covers
 - `scope` (String) `account`, `organization`, `subscription`, `management_group` or `project`.
 - `status` (String) `active`, `failed` or `pending_consent`.
 - `tags` (Map of String) Act tags.
-- `targets` (List of String) What the deployment covers: an account ID, or an organization ID with its root or organizational unit IDs.
+- `targets` (List of String) What the deployment covers: an AWS account ID, an AWS organization ID with its root or organizational unit IDs, or an Azure subscription or management group ID.
 - `update_available` (Boolean) True when the cloud side is older than the version Act recommends.

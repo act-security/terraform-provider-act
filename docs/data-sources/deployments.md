@@ -30,7 +30,7 @@ output "failing_deployment_ids" {
 - `cloud` (String) Only deployments in this cloud: `aws`, `azure` or `gcp`.
 - `status` (String) Only deployments with this status: `active`, `failed` or `pending_consent`.
 - `tags` (Map of String) Only deployments that carry all of these Act tags.
-- `target` (String) Only deployments that cover this target, such as an AWS account ID.
+- `target` (String) Only deployments that cover this target, such as an AWS account ID or an Azure subscription ID.
 
 ### Read-Only
 
@@ -50,5 +50,5 @@ Read-Only:
 - `scope` (String) `account`, `organization`, `subscription`, `management_group` or `project`.
 - `status` (String) `active`, `failed` or `pending_consent`.
 - `tags` (Map of String) Act tags.
-- `targets` (List of String) What the deployment covers: an account ID, or an organization ID with its root or organizational unit IDs.
+- `targets` (List of String) What the deployment covers: an AWS account ID, an AWS organization ID with its root or organizational unit IDs, or an Azure subscription or management group ID.
 - `update_available` (Boolean) True when the cloud side is older than the version Act recommends.

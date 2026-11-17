@@ -1,0 +1,69 @@
+---
+page_title: "{{ .Name }} {{ .Type }} - {{ .ProviderName }}"
+subcategory: ""
+description: |-
+{{ .Description | plainmarkdown | trimspace | prefixlines "  " }}
+---
+
+# {{ .Name }} ({{ .Type }})
+
+{{ .Description | trimspace }}
+
+## Example Usage
+
+Read the onboarding values first, give Act's service principal its roles with the Act module for Azure, then connect the subscription:
+
+{{ tffile .ExampleFile }}
+
+`data.act_azure_onboarding_parameters` is a read and creates nothing. Its `deployment_id` and `binding_marker` are stable, so a plan you run again shows no change.
+
+`azuread_service_principal` with `use_existing = true` creates Act's service principal in your directory from `act_app_client_id`, or adopts it when it already exists. The Act module for Azure, `act-security/act/azurerm`, creates the custom role, puts `binding_marker` in its description and assigns the custom role and the built-in roles to the service principal at the subscription. Its `service_principal_id` output depends on those role assignments, so passing it to the resource makes Terraform finish them before Act checks them.
+
+To connect a management group, set `management_group_id` instead of `subscription_id` on both the data source and the resource. It covers every subscription under the group, and `deletion_protection` defaults to `true`.
+
+## Entra admin approval
+
+Act reads Azure through its multi-tenant app, and an Entra admin of the directory approves that app once. The approval covers every later deployment in the same directory.
+
+1. The first apply stores the deployment with `status = "pending_consent"` and succeeds. A warning carries `consent_url`, the same link as `admin_consent_url` of the data source.
+2. An Entra admin opens the link and approves Act. Without `include_entra_id`, an Application Administrator or a Cloud Application Administrator can approve it. With `include_entra_id = true`, Act also asks for Microsoft Graph app roles, and only a Global Administrator or a Privileged Role Administrator can approve those.
+3. Act verifies the deployment on its own after the approval. The next refresh shows `status = "active"` and `consent_url = null`, and the plan shows no change.
+
+`tenant_consented` of the data source tells you whether the directory has approved Act already. Turning on `include_entra_id` later can need a new approval for the Graph app roles: the apply then leaves the deployment `pending_consent` again with a new warning.
+
+## Verification
+
+Act checks the service principal's role assignments and the custom role's `binding_marker` before it stores anything. New role assignments can take several minutes to work everywhere in Azure, so while Act reports that they have not propagated yet, the provider asks again, backing off up to 30 seconds between attempts, for up to 10 minutes. A failure that cannot fix itself, such as a missing role assignment, stops once the same answer has come back for 30 seconds. A failed create stores nothing, so the next apply starts clean.
+
+Use `timeouts` to cap the whole operation; the defaults are 12 minutes for create and update.
+
+On success the apply prints a warning with the deployment's console link. It is not an error: it confirms that Act reached the subscription.
+
+## When the role assignments break
+
+If someone removes a role assignment or the custom role, the next refresh reports `status = "failed"` with a warning, and the plan updates the deployment in place. Once the configuration has fixed the assignments, the apply asks Act to verify it again and the deployment is active in the same apply. Set `reverify_on_failure = false` to keep the warning without the extra update. A deployment that is `pending_consent` is never verified by Terraform: it needs the approval, not a new check.
+
+## Destroy
+
+Destroying the resource disconnects the target: Act stops scanning and deletes what it held. The service principal and its role assignments stay in Azure, and the apply lists them in a warning. With `deletion_protection = true`, a plan that destroys or replaces the deployment fails before anything changes; changing `deployment_method`, the target or `azure_tenant_id` replaces it, so turn protection off and apply that first. To stop managing the deployment without disconnecting it, use a `removed` block with `lifecycle { destroy = false }` on Terraform 1.7 and later, or `terraform state rm`.
+
+## State
+
+Nothing in this resource is a secret. The state holds IDs, the consent link and the deployment's status. The provider keeps the deployment's ETag in private state and sends it with every change, so a change made in the Act console between plan and apply stops the apply instead of being overwritten.
+
+{{ .SchemaMarkdown | trimspace }}
+
+## Import
+
+Import by `subscription/<subscription-id>`, `management-group/<management-group-id>` or the deployment ID:
+
+{{ codefile "shell" .ImportFile }}
+
+On Terraform 1.5 and later you can use an `import` block instead. When the onboarding data source returns `existing_deployment`, the target already has a deployment, for example one created in the Act console, and creating another fails with the `import` block to use.
+
+```terraform
+import {
+  to = act_azure_deployment.this
+  id = "management-group/mg-platform"
+}
+```

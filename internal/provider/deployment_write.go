@@ -56,6 +56,7 @@ type deploymentCloud[T any] struct {
 	policy     *verificationPolicy
 	get        func(ctx context.Context, id string) (*client.DeploymentResult[T], error)
 	consoleURL func(item T) *string
+	active     func(item T) bool
 }
 
 type deploymentStep[T any] struct {
@@ -95,7 +96,7 @@ func (w *deploymentWriter[T]) run(ctx context.Context, step deploymentStep[T]) b
 		return false
 	}
 	w.ref.ETag = w.result.ETag
-	if step.announce {
+	if step.announce && w.cloud.active(w.result.Deployment) {
 		w.diags.AddWarning(
 			"Act verified "+w.cloud.errors.wording.credential+" again",
 			proofOfLife(connectionReport{target: w.target, consoleURL: w.cloud.consoleURL(w.result.Deployment), outcome: outcome, reconnected: true, wording: w.cloud.errors.wording}),

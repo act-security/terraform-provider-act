@@ -294,6 +294,7 @@ func (r *awsDeploymentResource[M, P]) cloud() deploymentCloud[apigen.AwsDeployme
 		policy:     &awsVerification,
 		get:        r.data.Client.GetAwsDeployment,
 		consoleURL: func(item apigen.AwsDeployment) *string { return item.ConsoleURL },
+		active:     func(item apigen.AwsDeployment) bool { return item.Status == apigen.DeploymentStatusActive },
 	}
 }
 

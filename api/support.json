@@ -17,15 +17,19 @@
     "notification-action:email",
     "notification-action:slack",
     "operation:createAwsDeployment",
+    "operation:createAzureDeployment",
     "operation:createIntegration",
     "operation:createNotificationRecipient",
     "operation:createNotificationRule",
     "operation:deleteAwsDeployment",
+    "operation:deleteAzureDeployment",
     "operation:deleteIntegration",
     "operation:deleteNotificationRecipient",
     "operation:deleteNotificationRule",
     "operation:getAwsDeployment",
     "operation:getAwsOnboarding",
+    "operation:getAzureDeployment",
+    "operation:getAzureOnboarding",
     "operation:getDeploymentCoverage",
     "operation:getIntegration",
     "operation:getNotificationRecipient",
@@ -42,8 +46,10 @@
     "operation:replaceNotificationRule",
     "operation:rotateAwsExternalId",
     "operation:updateAwsDeployment",
+    "operation:updateAzureDeployment",
     "operation:updateIntegration",
-    "operation:verifyAwsDeployment"
+    "operation:verifyAwsDeployment",
+    "operation:verifyAzureDeployment"
   ],
   "acknowledged": []
 }
