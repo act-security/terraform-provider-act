@@ -31,6 +31,8 @@ Act checks that it can read the Event Hubs before it registers them. New access 
 
 Act does not return `events_subscription_id` when it reads the log source, so Terraform keeps the value from your configuration. After an import the state has none, so the first apply updates the log source in place once to send it. When the log source is removed in Act, or collects no stream anymore, the next plan creates it again.
 
+To move collection to an Event Hub in another subscription, change `events_subscription_id` and remove the old `modules/activity-logs` instance in the same change. Act registers the new Event Hubs, but the old subscription's diagnostic settings keep sending logs until they are removed, and Act keeps reading the old Event Hubs while they exist.
+
 ## Destroy
 
 Destroying the resource stops Act collecting the logs. The diagnostic settings and the Event Hub namespace stay in Azure, and the apply lists them in a warning. The modules that created them remove them when you destroy them.
