@@ -85,7 +85,7 @@ func (r *azureDeploymentResource) typeName() string {
 
 func (r *azureDeploymentResource) Schema(ctx context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "Connects one Azure subscription or management group to Act through Act's multi-tenant app. Act checks the role assignments of its service principal before it stores anything. Until an Entra admin approves Act in the directory, the deployment is stored as `pending_consent` and the apply succeeds with a warning that carries the approval link.",
+		MarkdownDescription: "Connects one Azure subscription or management group to Act through Act's multi-tenant app. Act checks the role assignments of its service principal before it stores anything. When Act's service principal is already in the directory but an Entra admin has not approved Act for this Act organization yet, the deployment is stored as `pending_consent` and the apply succeeds with a warning that carries the approval link.",
 		Attributes:          azureDeploymentAttributes(),
 		Blocks: map[string]schema.Block{
 			"timeouts": timeouts.Block(ctx, timeouts.Opts{Create: true, Update: true}),
@@ -128,7 +128,7 @@ func azureDeploymentAttributes() map[string]schema.Attribute {
 			PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
 		},
 		"service_principal_id": schema.StringAttribute{
-			MarkdownDescription: "The object ID of Act's service principal in the directory. Pass it from the configuration that assigns its roles, such as an output of the Act module, so Terraform creates the role assignments first. Changing it updates the deployment in place and Act verifies it again.",
+			MarkdownDescription: "The object ID of Act's service principal in the directory. Pass `service_principal_id` from the Act module: it depends on the role assignments, so Terraform creates them first. Act stores it only once it verifies the deployment, so while the deployment is `pending_consent` or right after an import the provider keeps the configured value. Changing it updates the deployment in place and Act verifies it again.",
 			Required:            true,
 			Validators:          []validator.String{stringvalidator.RegexMatches(uuidPattern, "must be a lowercase UUID")},
 		},
@@ -595,7 +595,9 @@ func (m *azureDeploymentModel) writeFrom(ctx context.Context, item apigen.AzureD
 	m.SubscriptionID = types.StringPointerValue(item.SubscriptionID)
 	m.ManagementGroupID = types.StringPointerValue(item.ManagementGroupID)
 	m.AzureTenantID = types.StringValue(item.AzureTenantID)
-	m.ServicePrincipalID = types.StringPointerValue(item.ServicePrincipalID)
+	if item.ServicePrincipalID != nil {
+		m.ServicePrincipalID = types.StringValue(*item.ServicePrincipalID)
+	}
 	m.IncludeEntraID = types.BoolValue(item.IncludeEntraID)
 	m.Name = types.StringValue(item.Name)
 	m.Tags = nullableStringMap(ctx, mapWithPrior{values: item.Tags, prior: m.Tags}, diags)

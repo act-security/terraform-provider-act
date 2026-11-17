@@ -208,13 +208,21 @@ func TestAzureDeploymentSucceedsPendingConsentAndTurnsActiveAfterApproval(t *tes
 					statecheck.ExpectKnownValue(azureAddress, tfjsonpath.New("id"), knownvalue.StringExact(id)),
 					statecheck.ExpectKnownValue(azureAddress, tfjsonpath.New("status"), knownvalue.StringExact("pending_consent")),
 					statecheck.ExpectKnownValue(azureAddress, tfjsonpath.New("consent_url"), knownvalue.StringExact(fakeapi.AzureAdminConsentURL(testDirectory))),
+					statecheck.ExpectKnownValue(azureAddress, tfjsonpath.New("service_principal_id"), knownvalue.StringExact(testServicePrincipal)),
 					statecheck.ExpectKnownValue(azureOnboarding, tfjsonpath.New("tenant_consented"), knownvalue.Bool(false)),
 					statecheck.ExpectKnownValue(azureOnboarding, tfjsonpath.New("act_service_principal_id"), knownvalue.Null()),
 				},
+				Check: actStoresNoServicePrincipal(s, id),
 			},
 			{
-				Config:   config,
-				PlanOnly: true,
+				RefreshState: true,
+				Check:        resource.TestCheckResourceAttr(azureAddress, "service_principal_id", testServicePrincipal),
+			},
+			{
+				Config: config,
+				ConfigPlanChecks: resource.ConfigPlanChecks{PreApply: []plancheck.PlanCheck{
+					plancheck.ExpectEmptyPlan(),
+				}},
 			},
 			{
 				PreConfig: func() { s.GrantAzureConsent(testDirectory) },
@@ -232,6 +240,73 @@ func TestAzureDeploymentSucceedsPendingConsentAndTurnsActiveAfterApproval(t *tes
 					requestCount(s, "POST", id+"/verify", 0),
 					requestCount(s, "PATCH", id, 0),
 				),
+			},
+		},
+	})
+}
+
+func actStoresNoServicePrincipal(s *fakeapi.Servers, id string) resource.TestCheckFunc {
+	return func(*terraform.State) error {
+		item, ok := s.AzureDeployment(id)
+		if !ok {
+			return fmt.Errorf("deployment %s is missing from the fake", id)
+		}
+		if item.ServicePrincipalID != nil {
+			return fmt.Errorf("the fake stored service principal %s before consent", *item.ServicePrincipalID)
+		}
+		return nil
+	}
+}
+
+func TestAzureDeploymentImportsAPendingOneWithoutAServicePrincipal(t *testing.T) {
+	s := startAzureFake(t)
+	id := s.SeedPendingAzureSubscriptionDeployment(fakeapi.PendingAzureSubscription{
+		SubscriptionID:     testSubscription,
+		DirectoryID:        testDirectory,
+		ServicePrincipalID: otherServicePrincipal,
+	})
+	imported := azureCase{target: subscriptionTarget, extra: `
+import {
+  to = act_azure_deployment.this
+  id = "subscription/` + testSubscription + `"
+}
+`}.config()
+
+	resource.UnitTest(t, resource.TestCase{
+		ProtoV6ProviderFactories: factories(),
+		Steps: []resource.TestStep{
+			{
+				Config: imported,
+				ConfigPlanChecks: resource.ConfigPlanChecks{PreApply: []plancheck.PlanCheck{
+					plancheck.ExpectResourceAction(azureAddress, plancheck.ResourceActionUpdate),
+					plancheck.ExpectKnownValue(azureAddress, tfjsonpath.New("service_principal_id"), knownvalue.StringExact(testServicePrincipal)),
+				}},
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownValue(azureAddress, tfjsonpath.New("id"), knownvalue.StringExact(id)),
+					statecheck.ExpectKnownValue(azureAddress, tfjsonpath.New("status"), knownvalue.StringExact("pending_consent")),
+					statecheck.ExpectKnownValue(azureAddress, tfjsonpath.New("service_principal_id"), knownvalue.StringExact(testServicePrincipal)),
+				},
+				Check: resource.ComposeTestCheckFunc(
+					actStoresNoServicePrincipal(s, id),
+					requestCount(s, "PATCH", id, 1),
+				),
+			},
+			{
+				Config: imported,
+				ConfigPlanChecks: resource.ConfigPlanChecks{PreApply: []plancheck.PlanCheck{
+					plancheck.ExpectEmptyPlan(),
+				}},
+			},
+			{
+				PreConfig: func() { s.GrantAzureConsent(testDirectory) },
+				Config:    imported,
+				ConfigPlanChecks: resource.ConfigPlanChecks{PreApply: []plancheck.PlanCheck{
+					plancheck.ExpectEmptyPlan(),
+				}},
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownValue(azureAddress, tfjsonpath.New("status"), knownvalue.StringExact("active")),
+					statecheck.ExpectKnownValue(azureAddress, tfjsonpath.New("service_principal_id"), knownvalue.StringExact(testServicePrincipal)),
+				},
 			},
 		},
 	})

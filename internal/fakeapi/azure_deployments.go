@@ -26,8 +26,9 @@ var (
 )
 
 type storedAzureDeployment struct {
-	item    gen.AzureDeployment
-	version int
+	item      gen.AzureDeployment
+	principal string
+	version   int
 }
 
 type idempotentAzureDeployment struct {
@@ -79,6 +80,28 @@ func (f *Fake) GrantAzureConsent(directoryID string) {
 			stored.version++
 		}
 	}
+}
+
+type PendingAzureSubscription struct {
+	SubscriptionID     string
+	DirectoryID        string
+	ServicePrincipalID string
+}
+
+func (f *Fake) SeedPendingAzureSubscriptionDeployment(pending PendingAzureSubscription) string {
+	f.deployments.mu.Lock()
+	defer f.deployments.mu.Unlock()
+	body := gen.AzureDeploymentCreate{
+		DeploymentID:       f.deploymentID(azureSubscriptionTarget(pending.SubscriptionID)),
+		AzureTenantID:      pending.DirectoryID,
+		SubscriptionID:     &pending.SubscriptionID,
+		ServicePrincipalID: pending.ServicePrincipalID,
+	}
+	stored := &storedAzureDeployment{item: f.newAzureDeployment(body), principal: pending.ServicePrincipalID}
+	stored.item.CreatedVia = deploymentSource(gen.DeploymentChangeSourceUI)
+	f.deployments.azure.settle(stored)
+	f.deployments.azure.byID[stored.item.ID] = stored
+	return stored.item.ID
 }
 
 func (f *Fake) ChangeAzureDeploymentBeforeNextPatch(id string, change func(*gen.AzureDeployment)) {
@@ -178,7 +201,7 @@ func (s *apiServer) CreateAzureDeployment(_ context.Context, req gen.CreateAzure
 	if failure, ok := store.nextFailure(body.ServicePrincipalID); ok {
 		return gen.CreateAzureDeployment422JSONResponse(verificationFailed(azurePrincipalCheck, failure)), nil
 	}
-	stored := &storedAzureDeployment{item: s.fake.newAzureDeployment(body)}
+	stored := &storedAzureDeployment{item: s.fake.newAzureDeployment(body), principal: body.ServicePrincipalID}
 	store.azure.settle(stored)
 	store.azure.byID[stored.item.ID] = stored
 	store.azure.idempotency[key] = idempotentAzureDeployment{body: string(raw), response: stored.item, etag: stored.etag()}
@@ -197,7 +220,6 @@ func (f *Fake) newAzureDeployment(body gen.AzureDeploymentCreate) gen.AzureDeplo
 		SubscriptionID:     body.SubscriptionID,
 		ManagementGroupID:  body.ManagementGroupID,
 		AzureTenantID:      body.AzureTenantID,
-		ServicePrincipalID: &body.ServicePrincipalID,
 		IncludeEntraID:     body.IncludeEntraID != nil && *body.IncludeEntraID,
 		DeploymentMethod:   &method,
 		Warnings:           []gen.DeploymentWarning{},
@@ -245,13 +267,13 @@ func (s *apiServer) UpdateAzureDeployment(_ context.Context, req gen.UpdateAzure
 	if patch.DeploymentMethod != nil && (stored.item.DeploymentMethod == nil || *patch.DeploymentMethod != *stored.item.DeploymentMethod) {
 		return gen.UpdateAzureDeployment400JSONResponse(invalid("deploymentMethod", "immutable")), nil
 	}
-	patched, reverify := applyAzurePatch(stored.item, patch)
+	patched, reverify := applyAzurePatch(*stored, patch)
 	if reverify {
-		if failure, ok := store.nextFailure(deref(patched.ServicePrincipalID)); ok {
+		if failure, ok := store.nextFailure(patched.principal); ok {
 			return gen.UpdateAzureDeployment422JSONResponse(verificationFailed(azurePrincipalCheck, failure)), nil
 		}
 	}
-	stored.item = patched
+	stored.item, stored.principal = patched.item, patched.principal
 	if reverify {
 		store.azure.settle(stored)
 	}
@@ -259,10 +281,10 @@ func (s *apiServer) UpdateAzureDeployment(_ context.Context, req gen.UpdateAzure
 	return gen.UpdateAzureDeployment200JSONResponse{Body: stored.item, Headers: gen.UpdateAzureDeployment200ResponseHeaders{ETag: stored.etag()}}, nil
 }
 
-func applyAzurePatch(item gen.AzureDeployment, patch gen.AzureDeploymentPatch) (gen.AzureDeployment, bool) {
-	reverify := false
-	if patch.ServicePrincipalID != nil && *patch.ServicePrincipalID != deref(item.ServicePrincipalID) {
-		item.ServicePrincipalID, reverify = patch.ServicePrincipalID, true
+func applyAzurePatch(stored storedAzureDeployment, patch gen.AzureDeploymentPatch) (storedAzureDeployment, bool) {
+	item, reverify := &stored.item, false
+	if patch.ServicePrincipalID != nil && *patch.ServicePrincipalID != stored.principal {
+		stored.principal, reverify = *patch.ServicePrincipalID, true
 	}
 	if patch.IncludeEntraID != nil && *patch.IncludeEntraID != item.IncludeEntraID {
 		item.IncludeEntraID, reverify = *patch.IncludeEntraID, true
@@ -276,7 +298,7 @@ func applyAzurePatch(item gen.AzureDeployment, patch gen.AzureDeploymentPatch) (
 	if patch.DeletionProtection != nil {
 		item.DeletionProtection = *patch.DeletionProtection
 	}
-	return item, reverify
+	return stored, reverify
 }
 
 func (s *apiServer) VerifyAzureDeployment(_ context.Context, req gen.VerifyAzureDeploymentRequestObject) (gen.VerifyAzureDeploymentResponseObject, error) {
@@ -290,7 +312,7 @@ func (s *apiServer) VerifyAzureDeployment(_ context.Context, req gen.VerifyAzure
 	if req.Params.IfMatch != stored.etag() {
 		return gen.VerifyAzureDeployment412JSONResponse(envelope(gen.ErrorEnvelopeErrorCodePreconditionFailed, "The resource changed since it was read")), nil
 	}
-	if failure, ok := store.nextFailure(deref(stored.item.ServicePrincipalID)); ok {
+	if failure, ok := store.nextFailure(stored.principal); ok {
 		return gen.VerifyAzureDeployment422JSONResponse(verificationFailed(azurePrincipalCheck, failure)), nil
 	}
 	store.azure.settle(stored)
@@ -314,7 +336,7 @@ func (s *apiServer) DeleteAzureDeployment(_ context.Context, req gen.DeleteAzure
 	}
 	delete(store.azure.byID, req.ID)
 	cleanup := []gen.CleanupItem{{
-		Resource:    "service principal " + deref(stored.item.ServicePrincipalID),
+		Resource:    "service principal " + stored.principal,
 		Description: "Its role assignments still grant Act read access. Remove them, or keep them to connect again later.",
 	}}
 	return gen.DeleteAzureDeployment200JSONResponse{ID: req.ID, CleanupRequired: cleanup}, nil
@@ -323,7 +345,8 @@ func (s *apiServer) DeleteAzureDeployment(_ context.Context, req gen.DeleteAzure
 func (a *azureDeployments) settle(stored *storedAzureDeployment) {
 	stored.item.ErrorCode, stored.item.ErrorMessage = nil, nil
 	if a.consented[stored.item.AzureTenantID] {
-		stored.item.Status, stored.item.ConsentURL = gen.DeploymentStatusActive, nil
+		principal := stored.principal
+		stored.item.Status, stored.item.ConsentURL, stored.item.ServicePrincipalID = gen.DeploymentStatusActive, nil, &principal
 		return
 	}
 	consent := AzureAdminConsentURL(stored.item.AzureTenantID)

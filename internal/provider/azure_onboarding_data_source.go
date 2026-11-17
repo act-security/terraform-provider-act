@@ -92,7 +92,7 @@ func (d *azureOnboardingDataSource) Schema(_ context.Context, _ datasource.Schem
 			},
 			"admin_consent_url":           computedString("The link an Entra admin opens once to approve Act in the directory. Reading it changes nothing; only opening it and approving does."),
 			"act_app_client_id":           computedString("The client ID of Act's multi-tenant app."),
-			"act_service_principal_id":    computedString("The object ID of Act's service principal in the directory. Null until an Entra admin approves Act, or until the service principal is created another way."),
+			"act_service_principal_id":    computedString("The object ID of Act's service principal in the directory. Null until an Entra admin of the directory approves Act for the first time."),
 			"custom_role_name":            computedString("The name to give the custom role that holds the actions Act needs."),
 			"custom_role_actions":         computedStrings("The actions of the custom role."),
 			"binding_marker":              computedString("Text to put in the custom role's description. Act checks it to tie the role to this deployment. Not a secret."),
