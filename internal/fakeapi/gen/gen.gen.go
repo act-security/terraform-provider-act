@@ -96,6 +96,24 @@ func (e AzureDeploymentMethod) Valid() bool {
 	}
 }
 
+// Defines values for AzureLogStream.
+const (
+	AzureLogStreamActivityLogs AzureLogStream = "activity_logs"
+	AzureLogStreamEntraIDLogs  AzureLogStream = "entra_id_logs"
+)
+
+// Valid indicates whether the value is a known member of the AzureLogStream enum.
+func (e AzureLogStream) Valid() bool {
+	switch e {
+	case AzureLogStreamActivityLogs:
+		return true
+	case AzureLogStreamEntraIDLogs:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for Cloud.
 const (
 	CloudAws   Cloud = "aws"
@@ -832,6 +850,48 @@ type AzureDeploymentPatch struct {
 	Tags               *map[string]string     `json:"tags,omitempty"`
 }
 
+// AzureLogSource defines model for AzureLogSource.
+type AzureLogSource struct {
+	// ActivityLogs True while Act collects the activity logs from an enabled Event Hub
+	ActivityLogs bool   `json:"activityLogs"`
+	DeploymentID string `json:"deploymentId"`
+
+	// EntraIDLogs True while Act collects the Entra ID logs from an enabled Event Hub
+	EntraIDLogs bool                     `json:"entraIdLogs"`
+	EventHubs   []AzureLogSourceEventHub `json:"eventHubs"`
+}
+
+// AzureLogSourceDeletion defines model for AzureLogSourceDeletion.
+type AzureLogSourceDeletion struct {
+	// CleanupRequired Diagnostic settings and Event Hub namespaces that still stream to Act; remove them
+	CleanupRequired []CleanupItem `json:"cleanupRequired"`
+	DeploymentID    string        `json:"deploymentId"`
+}
+
+// AzureLogSourceEventHub defines model for AzureLogSourceEventHub.
+type AzureLogSourceEventHub struct {
+	DataType AzureLogStream `json:"dataType"`
+
+	// Enabled False once the log source was deleted; Act no longer collects from it
+	Enabled  bool   `json:"enabled"`
+	EventHub string `json:"eventHub"`
+
+	// Namespace Fully qualified host of the Event Hub namespace
+	Namespace string `json:"namespace"`
+}
+
+// AzureLogSourcePut The tenant-wide log streams to collect. Act verifies the Event Hubs before it registers them.
+type AzureLogSourcePut struct {
+	ActivityLogs bool `json:"activityLogs"`
+	EntraIDLogs  bool `json:"entraIdLogs"`
+
+	// EventsSubscriptionID Subscription that holds the Event Hub namespace Act streams the logs to
+	EventsSubscriptionID string `json:"eventsSubscriptionId"`
+}
+
+// AzureLogStream defines model for AzureLogStream.
+type AzureLogStream string
+
 // AzureOnboarding defines model for AzureOnboarding.
 type AzureOnboarding struct {
 	ActAppClientID string `json:"actAppClientId"`
@@ -1354,7 +1414,7 @@ type NotificationRecipientSlackChannelMemberWrite struct {
 
 // NotificationRecipientUserMember defines model for NotificationRecipientUserMember.
 type NotificationRecipientUserMember struct {
-	// Email The user's email address. Null for a token without `integrations:write`, and for a user who has left the tenant.
+	// Email The user's email address. Null for a token without `notifications:write`, and for a user who has left the tenant.
 	Email *string `json:"email"`
 
 	// InTenant False once the user has left the tenant. Such a member stays stored, receives nothing, and may be sent back unchanged.
@@ -1404,6 +1464,7 @@ type NotificationRule struct {
 	// Revision Increases on every change. The `ETag` header carries it in quotes.
 	Revision  int       `json:"revision"`
 	UpdatedAt time.Time `json:"updatedAt"`
+	UserIds   []string  `json:"userIds"`
 
 	// WebURL The rule in the Act app, or null where the app address is not configured.
 	WebURL *string `json:"webUrl"`
@@ -1433,6 +1494,7 @@ type NotificationRuleLimits struct {
 	MaxEnabledRulesPerEventType int `json:"maxEnabledRulesPerEventType"`
 	MaxEventTypesPerRule        int `json:"maxEventTypesPerRule"`
 	MaxNameLength               int `json:"maxNameLength"`
+	MaxPeoplePerRule            int `json:"maxPeoplePerRule"`
 	MaxRecipientMembers         int `json:"maxRecipientMembers"`
 	MaxRecipientNameLength      int `json:"maxRecipientNameLength"`
 	MaxRecipientsPerRule        int `json:"maxRecipientsPerRule"`
@@ -1456,6 +1518,9 @@ type NotificationRuleValidate struct {
 
 	// RecipientIds Address-book recipients the rule also sends to, each listed once.
 	RecipientIds *[]string `json:"recipientIds,omitempty"`
+
+	// UserIds Act users the rule also sends to, each listed once. Each person gets the alert the way they chose in Act: email, or a Slack direct message.
+	UserIds *[]string `json:"userIds,omitempty"`
 }
 
 // NotificationRuleValidation defines model for NotificationRuleValidation.
@@ -1481,6 +1546,9 @@ type NotificationRuleWrite struct {
 
 	// RecipientIds Address-book recipients the rule also sends to, each listed once.
 	RecipientIds *[]string `json:"recipientIds,omitempty"`
+
+	// UserIds Act users the rule also sends to, each listed once. Each person gets the alert the way they chose in Act: email, or a Slack direct message.
+	UserIds *[]string `json:"userIds,omitempty"`
 }
 
 // NotificationSlackAction defines model for NotificationSlackAction.
@@ -1739,6 +1807,9 @@ type CreateAzureDeploymentJSONRequestBody = AzureDeploymentCreate
 // UpdateAzureDeploymentJSONRequestBody defines body for UpdateAzureDeployment for application/json ContentType.
 type UpdateAzureDeploymentJSONRequestBody = AzureDeploymentPatch
 
+// PutAzureLogSourceJSONRequestBody defines body for PutAzureLogSource for application/json ContentType.
+type PutAzureLogSourceJSONRequestBody = AzureLogSourcePut
+
 // CreateGcpDeploymentJSONRequestBody defines body for CreateGcpDeployment for application/json ContentType.
 type CreateGcpDeploymentJSONRequestBody = GcpDeploymentCreate
 
@@ -1801,6 +1872,15 @@ type ServerInterface interface {
 	// UpdateAzureDeployment Change a an Azure subscription or management group deployment in place, keeping its id
 	// (PATCH /v1/deployments/azure/{id})
 	UpdateAzureDeployment(w http.ResponseWriter, r *http.Request, id string, params UpdateAzureDeploymentParams)
+	// DeleteAzureLogSource Stop collecting the activity and Entra ID logs of an Azure deployment, and list what still streams to Act
+	// (DELETE /v1/deployments/azure/{id}/log-source)
+	DeleteAzureLogSource(w http.ResponseWriter, r *http.Request, id string)
+	// GetAzureLogSource Return the activity and Entra ID log streams Act collects through an Azure deployment
+	// (GET /v1/deployments/azure/{id}/log-source)
+	GetAzureLogSource(w http.ResponseWriter, r *http.Request, id string)
+	// PutAzureLogSource Verify the Event Hubs of the activity and Entra ID log streams, then collect them through an Azure deployment
+	// (PUT /v1/deployments/azure/{id}/log-source)
+	PutAzureLogSource(w http.ResponseWriter, r *http.Request, id string)
 	// VerifyAzureDeployment Check that Act can use a an Azure subscription or management group deployment again, after its cloud side was fixed
 	// (POST /v1/deployments/azure/{id}/verify)
 	VerifyAzureDeployment(w http.ResponseWriter, r *http.Request, id string, params VerifyAzureDeploymentParams)
@@ -2458,6 +2538,84 @@ func (siw *ServerInterfaceWrapper) UpdateAzureDeployment(w http.ResponseWriter, 
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UpdateAzureDeployment(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteAzureLogSource operation middleware
+func (siw *ServerInterfaceWrapper) DeleteAzureLogSource(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteAzureLogSource(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetAzureLogSource operation middleware
+func (siw *ServerInterfaceWrapper) GetAzureLogSource(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetAzureLogSource(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PutAzureLogSource operation middleware
+func (siw *ServerInterfaceWrapper) PutAzureLogSource(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PutAzureLogSource(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -4084,6 +4242,9 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/v1/deployments/azure/{id}", wrapper.DeleteAzureDeployment)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/v1/deployments/azure/{id}", wrapper.GetAzureDeployment)
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/v1/deployments/azure/{id}", wrapper.UpdateAzureDeployment)
+	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/v1/deployments/azure/{id}/log-source", wrapper.DeleteAzureLogSource)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/v1/deployments/azure/{id}/log-source", wrapper.GetAzureLogSource)
+	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/v1/deployments/azure/{id}/log-source", wrapper.PutAzureLogSource)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/v1/deployments/azure/{id}/verify", wrapper.VerifyAzureDeployment)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/v1/deployments/gcp", wrapper.CreateGcpDeployment)
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/v1/deployments/gcp/{id}", wrapper.DeleteGcpDeployment)
@@ -6207,6 +6368,529 @@ type UpdateAzureDeployment503JSONResponse struct {
 }
 
 func (response UpdateAzureDeployment503JSONResponse) VisitUpdateAzureDeploymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteAzureLogSourceRequestObject struct {
+	ID string `json:"id"`
+}
+
+type DeleteAzureLogSourceResponseObject interface {
+	VisitDeleteAzureLogSourceResponse(w http.ResponseWriter) error
+}
+
+type DeleteAzureLogSource200JSONResponse AzureLogSourceDeletion
+
+func (response DeleteAzureLogSource200JSONResponse) VisitDeleteAzureLogSourceResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteAzureLogSource400JSONResponse ErrorEnvelope
+
+func (response DeleteAzureLogSource400JSONResponse) VisitDeleteAzureLogSourceResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteAzureLogSource401ResponseHeaders struct {
+	WWWAuthenticate *string
+}
+
+type DeleteAzureLogSource401JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers DeleteAzureLogSource401ResponseHeaders
+}
+
+func (response DeleteAzureLogSource401JSONResponse) VisitDeleteAzureLogSourceResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteAzureLogSource403ResponseHeaders struct {
+	WWWAuthenticate *string
+}
+
+type DeleteAzureLogSource403JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers DeleteAzureLogSource403ResponseHeaders
+}
+
+func (response DeleteAzureLogSource403JSONResponse) VisitDeleteAzureLogSourceResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteAzureLogSource404JSONResponse ErrorEnvelope
+
+func (response DeleteAzureLogSource404JSONResponse) VisitDeleteAzureLogSourceResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteAzureLogSource429ResponseHeaders struct {
+	RetryAfter *int
+}
+
+type DeleteAzureLogSource429JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers DeleteAzureLogSource429ResponseHeaders
+}
+
+func (response DeleteAzureLogSource429JSONResponse) VisitDeleteAzureLogSourceResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	w.WriteHeader(429)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteAzureLogSource500JSONResponse ErrorEnvelope
+
+func (response DeleteAzureLogSource500JSONResponse) VisitDeleteAzureLogSourceResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteAzureLogSource503ResponseHeaders struct {
+	RetryAfter *int
+}
+
+type DeleteAzureLogSource503JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers DeleteAzureLogSource503ResponseHeaders
+}
+
+func (response DeleteAzureLogSource503JSONResponse) VisitDeleteAzureLogSourceResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetAzureLogSourceRequestObject struct {
+	ID string `json:"id"`
+}
+
+type GetAzureLogSourceResponseObject interface {
+	VisitGetAzureLogSourceResponse(w http.ResponseWriter) error
+}
+
+type GetAzureLogSource200JSONResponse AzureLogSource
+
+func (response GetAzureLogSource200JSONResponse) VisitGetAzureLogSourceResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetAzureLogSource400JSONResponse ErrorEnvelope
+
+func (response GetAzureLogSource400JSONResponse) VisitGetAzureLogSourceResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetAzureLogSource401ResponseHeaders struct {
+	WWWAuthenticate *string
+}
+
+type GetAzureLogSource401JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers GetAzureLogSource401ResponseHeaders
+}
+
+func (response GetAzureLogSource401JSONResponse) VisitGetAzureLogSourceResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetAzureLogSource403ResponseHeaders struct {
+	WWWAuthenticate *string
+}
+
+type GetAzureLogSource403JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers GetAzureLogSource403ResponseHeaders
+}
+
+func (response GetAzureLogSource403JSONResponse) VisitGetAzureLogSourceResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetAzureLogSource404JSONResponse ErrorEnvelope
+
+func (response GetAzureLogSource404JSONResponse) VisitGetAzureLogSourceResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetAzureLogSource429ResponseHeaders struct {
+	RetryAfter *int
+}
+
+type GetAzureLogSource429JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers GetAzureLogSource429ResponseHeaders
+}
+
+func (response GetAzureLogSource429JSONResponse) VisitGetAzureLogSourceResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	w.WriteHeader(429)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetAzureLogSource500JSONResponse ErrorEnvelope
+
+func (response GetAzureLogSource500JSONResponse) VisitGetAzureLogSourceResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetAzureLogSource503ResponseHeaders struct {
+	RetryAfter *int
+}
+
+type GetAzureLogSource503JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers GetAzureLogSource503ResponseHeaders
+}
+
+func (response GetAzureLogSource503JSONResponse) VisitGetAzureLogSourceResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PutAzureLogSourceRequestObject struct {
+	ID   string `json:"id"`
+	Body *PutAzureLogSourceJSONRequestBody
+}
+
+type PutAzureLogSourceResponseObject interface {
+	VisitPutAzureLogSourceResponse(w http.ResponseWriter) error
+}
+
+type PutAzureLogSource200JSONResponse AzureLogSource
+
+func (response PutAzureLogSource200JSONResponse) VisitPutAzureLogSourceResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PutAzureLogSource400JSONResponse ErrorEnvelope
+
+func (response PutAzureLogSource400JSONResponse) VisitPutAzureLogSourceResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PutAzureLogSource401ResponseHeaders struct {
+	WWWAuthenticate *string
+}
+
+type PutAzureLogSource401JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers PutAzureLogSource401ResponseHeaders
+}
+
+func (response PutAzureLogSource401JSONResponse) VisitPutAzureLogSourceResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PutAzureLogSource403ResponseHeaders struct {
+	WWWAuthenticate *string
+}
+
+type PutAzureLogSource403JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers PutAzureLogSource403ResponseHeaders
+}
+
+func (response PutAzureLogSource403JSONResponse) VisitPutAzureLogSourceResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PutAzureLogSource404JSONResponse ErrorEnvelope
+
+func (response PutAzureLogSource404JSONResponse) VisitPutAzureLogSourceResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PutAzureLogSource409JSONResponse ErrorEnvelope
+
+func (response PutAzureLogSource409JSONResponse) VisitPutAzureLogSourceResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PutAzureLogSource415JSONResponse ErrorEnvelope
+
+func (response PutAzureLogSource415JSONResponse) VisitPutAzureLogSourceResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(415)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PutAzureLogSource422JSONResponse ErrorEnvelope
+
+func (response PutAzureLogSource422JSONResponse) VisitPutAzureLogSourceResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PutAzureLogSource429ResponseHeaders struct {
+	RetryAfter *int
+}
+
+type PutAzureLogSource429JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers PutAzureLogSource429ResponseHeaders
+}
+
+func (response PutAzureLogSource429JSONResponse) VisitPutAzureLogSourceResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	w.WriteHeader(429)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PutAzureLogSource500JSONResponse ErrorEnvelope
+
+func (response PutAzureLogSource500JSONResponse) VisitPutAzureLogSourceResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PutAzureLogSource503ResponseHeaders struct {
+	RetryAfter *int
+}
+
+type PutAzureLogSource503JSONResponse struct {
+	Body    ErrorEnvelope
+	Headers PutAzureLogSource503ResponseHeaders
+}
+
+func (response PutAzureLogSource503JSONResponse) VisitPutAzureLogSourceResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
@@ -11997,6 +12681,15 @@ type StrictServerInterface interface {
 	// UpdateAzureDeployment Change a an Azure subscription or management group deployment in place, keeping its id
 	// (PATCH /v1/deployments/azure/{id})
 	UpdateAzureDeployment(ctx context.Context, request UpdateAzureDeploymentRequestObject) (UpdateAzureDeploymentResponseObject, error)
+	// DeleteAzureLogSource Stop collecting the activity and Entra ID logs of an Azure deployment, and list what still streams to Act
+	// (DELETE /v1/deployments/azure/{id}/log-source)
+	DeleteAzureLogSource(ctx context.Context, request DeleteAzureLogSourceRequestObject) (DeleteAzureLogSourceResponseObject, error)
+	// GetAzureLogSource Return the activity and Entra ID log streams Act collects through an Azure deployment
+	// (GET /v1/deployments/azure/{id}/log-source)
+	GetAzureLogSource(ctx context.Context, request GetAzureLogSourceRequestObject) (GetAzureLogSourceResponseObject, error)
+	// PutAzureLogSource Verify the Event Hubs of the activity and Entra ID log streams, then collect them through an Azure deployment
+	// (PUT /v1/deployments/azure/{id}/log-source)
+	PutAzureLogSource(ctx context.Context, request PutAzureLogSourceRequestObject) (PutAzureLogSourceResponseObject, error)
 	// VerifyAzureDeployment Check that Act can use a an Azure subscription or management group deployment again, after its cloud side was fixed
 	// (POST /v1/deployments/azure/{id}/verify)
 	VerifyAzureDeployment(ctx context.Context, request VerifyAzureDeploymentRequestObject) (VerifyAzureDeploymentResponseObject, error)
@@ -12450,6 +13143,91 @@ func (sh *strictHandler) UpdateAzureDeployment(w http.ResponseWriter, r *http.Re
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(UpdateAzureDeploymentResponseObject); ok {
 		if err := validResponse.VisitUpdateAzureDeploymentResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeleteAzureLogSource operation middleware
+func (sh *strictHandler) DeleteAzureLogSource(w http.ResponseWriter, r *http.Request, id string) {
+	var request DeleteAzureLogSourceRequestObject
+
+	request.ID = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteAzureLogSource(ctx, request.(DeleteAzureLogSourceRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteAzureLogSource")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteAzureLogSourceResponseObject); ok {
+		if err := validResponse.VisitDeleteAzureLogSourceResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetAzureLogSource operation middleware
+func (sh *strictHandler) GetAzureLogSource(w http.ResponseWriter, r *http.Request, id string) {
+	var request GetAzureLogSourceRequestObject
+
+	request.ID = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetAzureLogSource(ctx, request.(GetAzureLogSourceRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetAzureLogSource")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetAzureLogSourceResponseObject); ok {
+		if err := validResponse.VisitGetAzureLogSourceResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// PutAzureLogSource operation middleware
+func (sh *strictHandler) PutAzureLogSource(w http.ResponseWriter, r *http.Request, id string) {
+	var request PutAzureLogSourceRequestObject
+
+	request.ID = id
+
+	var body PutAzureLogSourceJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.PutAzureLogSource(ctx, request.(PutAzureLogSourceRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PutAzureLogSource")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(PutAzureLogSourceResponseObject); ok {
+		if err := validResponse.VisitPutAzureLogSourceResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
