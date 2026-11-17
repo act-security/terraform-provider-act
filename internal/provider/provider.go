@@ -154,6 +154,7 @@ func (p *actProvider) Resources(context.Context) []func() resource.Resource {
 		NewAwsAccountDeploymentResource,
 		NewAwsOrganizationDeploymentResource,
 		NewAzureDeploymentResource,
+		NewAzureLogSourceResource,
 		NewNotificationRuleResource,
 		NewNotificationRecipientResource,
 	}

@@ -75,6 +75,37 @@ resource "act_azure_deployment" "this" {
 }
 ```
 
+## Logs
+
+To collect the activity logs and the Entra ID logs too, add the log submodules of the Act module for Azure and an `act_azure_log_source` once the deployment is active:
+
+```terraform
+module "act_logs" {
+  source = "act-security/act/azurerm//modules/activity-logs"
+
+  deployment_id        = act_azure_deployment.this.id
+  service_principal_id = act_azure_deployment.this.service_principal_id
+  location             = "westeurope"
+  subscription_ids     = [var.subscription_id]
+}
+
+module "act_entra_logs" {
+  source = "act-security/act/azurerm//modules/entra-logs"
+
+  deployment_id         = act_azure_deployment.this.id
+  eventhub_namespace_id = module.act_logs.namespace_id
+}
+
+resource "act_azure_log_source" "this" {
+  deployment_id          = act_azure_deployment.this.id
+  events_subscription_id = var.subscription_id
+  activity_logs          = true
+  entra_id_logs          = true
+
+  depends_on = [module.act_logs, module.act_entra_logs]
+}
+```
+
 ## Entra admin approval
 
 Act reads Azure through its multi-tenant app, and an Entra admin of the directory approves that app for your Act organization once. The approval covers every later deployment of your Act organization in the same directory. Without `include_entra_id`, an Application Administrator or a Cloud Application Administrator can approve it. With `include_entra_id = true`, Act also asks for Microsoft Graph app roles, and only a Global Administrator or a Privileged Role Administrator can approve those.

@@ -259,7 +259,7 @@ func (r *azureDeploymentResource) Create(ctx context.Context, req resource.Creat
 		r.warnPendingConsent(&model, diags)
 		return
 	}
-	diags.AddWarning("Act verified "+azureWording.credential, proofOfLife(connectionReport{target: model.targetLabel(), consoleURL: result.Deployment.ConsoleURL, outcome: outcome, wording: azureWording}))
+	diags.AddWarning("Act verified "+azureWording.access, proofOfLife(connectionReport{target: model.targetLabel(), consoleURL: result.Deployment.ConsoleURL, outcome: outcome, wording: azureWording}))
 }
 
 func (r *azureDeploymentResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
@@ -329,7 +329,7 @@ func (r *azureDeploymentResource) Delete(ctx context.Context, req resource.Delet
 		r.errors().addDeleteError(ref.ID, err, diags)
 		return
 	}
-	reportCleanup(cleanupReport{target: model.targetLabel(), side: azureWording.side, items: cleanup}, diags)
+	reportCleanup(cleanupReport{summary: "Act disconnected " + model.targetLabel(), done: disconnectedDeployment, side: azureWording.side, items: cleanup}, diags)
 }
 
 func (r *azureDeploymentResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {

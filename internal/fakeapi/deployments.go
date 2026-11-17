@@ -208,6 +208,7 @@ func (f *Fake) DeleteDeploymentOutOfBand(id string) {
 	defer f.deployments.mu.Unlock()
 	delete(f.deployments.byID, id)
 	delete(f.deployments.azure.byID, id)
+	delete(f.deployments.azure.logSources, id)
 }
 
 func (f *Fake) SetMemberAccounts(id string, accounts []gen.MemberAccount) {

@@ -18,7 +18,7 @@ const createAction = "create"
 
 type cloudWording struct {
 	side            string
-	credential      string
+	access          string
 	propagation     string
 	slowPropagation string
 }
@@ -26,15 +26,21 @@ type cloudWording struct {
 var (
 	awsWording = cloudWording{
 		side:            "AWS",
-		credential:      "the role",
+		access:          "the role",
 		propagation:     "AWS propagated the role",
 		slowPropagation: "the role takes longer to propagate",
 	}
 	azureWording = cloudWording{
 		side:            "Azure",
-		credential:      "the service principal",
+		access:          "the service principal",
 		propagation:     "Azure propagated the role assignments",
 		slowPropagation: "the role assignments take longer to propagate",
+	}
+	azureLogsWording = cloudWording{
+		side:            "Azure",
+		access:          "the Event Hubs",
+		propagation:     "Azure propagated the access to the Event Hubs",
+		slowPropagation: "the access to the Event Hubs takes longer to propagate",
 	}
 )
 
@@ -98,7 +104,7 @@ func (w *deploymentWriter[T]) run(ctx context.Context, step deploymentStep[T]) b
 	w.ref.ETag = w.result.ETag
 	if step.announce && w.cloud.active(w.result.Deployment) {
 		w.diags.AddWarning(
-			"Act verified "+w.cloud.errors.wording.credential+" again",
+			"Act verified "+w.cloud.errors.wording.access+" again",
 			proofOfLife(connectionReport{target: w.target, consoleURL: w.cloud.consoleURL(w.result.Deployment), outcome: outcome, reconnected: true, wording: w.cloud.errors.wording}),
 		)
 	}
@@ -256,7 +262,7 @@ func (f *verificationFailure) describe(failure writeFailure, wording cloudWordin
 }
 
 func (f *verificationFailure) whatActSaw(wording cloudWording) string {
-	detail := "Act could not use " + wording.credential + ": " + f.CloudErrorCode + "."
+	detail := "Act could not use " + wording.access + ": " + f.CloudErrorCode + "."
 	if f.Hint == "" {
 		return detail
 	}
@@ -300,7 +306,7 @@ type connectionReport struct {
 func proofOfLife(report connectionReport) string {
 	message := "Connected. Act started the first scan of " + report.target + "."
 	if report.reconnected {
-		message = "Connected again. Act can use " + report.wording.credential + " of " + report.target + "."
+		message = "Connected again. Act can use " + report.wording.access + " of " + report.target + "."
 	}
 	if report.consoleURL != nil {
 		message += " Open " + *report.consoleURL
@@ -317,10 +323,13 @@ func addDeploymentWarnings(diags *diag.Diagnostics, warnings []apigen.Deployment
 	}
 }
 
+const disconnectedDeployment = "Act stopped scanning and deleted the credentials it held."
+
 type cleanupReport struct {
-	target string
-	side   string
-	items  []apigen.CleanupItem
+	summary string
+	done    string
+	side    string
+	items   []apigen.CleanupItem
 }
 
 func reportCleanup(report cleanupReport, diags *diag.Diagnostics) {
@@ -331,7 +340,7 @@ func reportCleanup(report cleanupReport, diags *diag.Diagnostics) {
 	for _, item := range report.items {
 		lines = append(lines, "- "+item.Resource+": "+item.Description)
 	}
-	diags.AddWarning("Act disconnected "+report.target, "Act stopped scanning and deleted the credentials it held. These still exist in "+report.side+":\n\n"+strings.Join(lines, "\n"))
+	diags.AddWarning(report.summary, report.done+" These still exist in "+report.side+":\n\n"+strings.Join(lines, "\n"))
 }
 
 type importLookup struct {

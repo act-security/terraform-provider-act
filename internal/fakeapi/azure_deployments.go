@@ -42,6 +42,7 @@ type azureDeployments struct {
 	idempotency map[string]idempotentAzureDeployment
 	pending     map[string]func(*gen.AzureDeployment)
 	consented   map[string]bool
+	logSources  map[string]gen.AzureLogSource
 }
 
 func newAzureDeployments() azureDeployments {
@@ -50,6 +51,7 @@ func newAzureDeployments() azureDeployments {
 		idempotency: map[string]idempotentAzureDeployment{},
 		pending:     map[string]func(*gen.AzureDeployment){},
 		consented:   map[string]bool{},
+		logSources:  map[string]gen.AzureLogSource{},
 	}
 }
 
@@ -335,6 +337,7 @@ func (s *apiServer) DeleteAzureDeployment(_ context.Context, req gen.DeleteAzure
 		return gen.DeleteAzureDeployment409JSONResponse(envelope(gen.ErrorEnvelopeErrorCodeDeletionProtected, "Deletion protection is on")), nil
 	}
 	delete(store.azure.byID, req.ID)
+	delete(store.azure.logSources, req.ID)
 	cleanup := []gen.CleanupItem{{
 		Resource:    "service principal " + stored.principal,
 		Description: "Its role assignments still grant Act read access. Remove them, or keep them to connect again later.",

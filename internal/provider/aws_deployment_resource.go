@@ -397,7 +397,7 @@ func (r *awsDeploymentResource[M, P]) Delete(ctx context.Context, req resource.D
 		r.errors().addDeleteError(model.common().ID.ValueString(), err, diags)
 		return
 	}
-	reportCleanup(cleanupReport{target: model.targetLabel(), side: awsWording.side, items: cleanup}, diags)
+	reportCleanup(cleanupReport{summary: "Act disconnected " + model.targetLabel(), done: disconnectedDeployment, side: awsWording.side, items: cleanup}, diags)
 }
 
 func (r *awsDeploymentResource[M, P]) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
