@@ -58,6 +58,7 @@ type deploymentStore struct {
 	failures    map[string][]VerificationFailure
 	members     map[string][]gen.MemberAccount
 	pending     map[string]func(*gen.AwsDeployment)
+	azure       azureDeployments
 	unpublished bool
 }
 
@@ -74,11 +75,16 @@ func newDeploymentStore() *deploymentStore {
 		failures:    map[string][]VerificationFailure{},
 		members:     map[string][]gen.MemberAccount{},
 		pending:     map[string]func(*gen.AwsDeployment){},
+		azure:       newAzureDeployments(),
 	}
 }
 
 func (s *storedDeployment) etag() string {
-	return fmt.Sprintf(`"%s-%d"`, s.item.ID, s.version)
+	return versionedETag(s.item.ID, s.version)
+}
+
+func versionedETag(id string, version int) string {
+	return fmt.Sprintf(`"%s-%d"`, id, version)
 }
 
 func (s *storedDeployment) naturalKey() string {
@@ -128,8 +134,12 @@ func (f *Fake) AwsOrganizationDeploymentID(organizationID string) string {
 }
 
 func (f *Fake) deploymentID(target deploymentTarget) string {
+	return derivedUUID(f.cfg.TenantID + "|" + target.naturalKey + "|" + target.variant)
+}
+
+func derivedUUID(key string) string {
 	mac := hmac.New(sha256.New, cellKey)
-	mac.Write([]byte(f.cfg.TenantID + "|" + target.naturalKey + "|" + target.variant))
+	mac.Write([]byte(key))
 	b := mac.Sum(nil)[:16]
 	b[6] = b[6]&0x0f | 0x80
 	b[8] = b[8]&0x3f | 0x80
@@ -142,10 +152,10 @@ func derivedExternalID(id string) string {
 	return hex.EncodeToString(mac.Sum(nil))[:externalIDLength]
 }
 
-func (f *Fake) QueueVerificationFailures(roleArn string, failures ...VerificationFailure) {
+func (f *Fake) QueueVerificationFailures(credential string, failures ...VerificationFailure) {
 	f.deployments.mu.Lock()
 	defer f.deployments.mu.Unlock()
-	f.deployments.failures[roleArn] = append(f.deployments.failures[roleArn], failures...)
+	f.deployments.failures[credential] = append(f.deployments.failures[credential], failures...)
 }
 
 type DeploymentFailure struct {
@@ -157,6 +167,10 @@ type DeploymentFailure struct {
 func (f *Fake) FailDeploymentOutOfBand(failure DeploymentFailure) bool {
 	f.deployments.mu.Lock()
 	defer f.deployments.mu.Unlock()
+	if stored, ok := f.deployments.azure.byID[failure.DeploymentID]; ok {
+		stored.item.Status, stored.item.ErrorCode, stored.item.ErrorMessage, stored.item.ConsentURL = gen.DeploymentStatusFailed, &failure.Code, &failure.Message, nil
+		return true
+	}
 	stored, ok := f.deployments.byID[failure.DeploymentID]
 	if !ok {
 		return false
@@ -193,6 +207,7 @@ func (f *Fake) DeleteDeploymentOutOfBand(id string) {
 	f.deployments.mu.Lock()
 	defer f.deployments.mu.Unlock()
 	delete(f.deployments.byID, id)
+	delete(f.deployments.azure.byID, id)
 }
 
 func (f *Fake) SetMemberAccounts(id string, accounts []gen.MemberAccount) {
@@ -419,10 +434,10 @@ func (s *apiServer) CreateAwsDeployment(_ context.Context, req gen.CreateAwsDepl
 		return gen.CreateAwsDeployment400JSONResponse(invalid("roleArn", "invalid_arn")), nil
 	}
 	if !roleInAccount(body.RoleArn, body.AccountID) {
-		return gen.CreateAwsDeployment422JSONResponse(verificationFailed(accountMismatch)), nil
+		return gen.CreateAwsDeployment422JSONResponse(verificationFailed(awsRoleCheck, accountMismatch)), nil
 	}
 	if failure, ok := store.nextFailure(body.RoleArn); ok {
-		return gen.CreateAwsDeployment422JSONResponse(verificationFailed(failure)), nil
+		return gen.CreateAwsDeployment422JSONResponse(verificationFailed(awsRoleCheck, failure)), nil
 	}
 	item := s.fake.newAwsDeployment(body, roleAccount[1])
 	stored := &storedDeployment{item: item}
@@ -503,12 +518,19 @@ func (s *deploymentStore) nextFailure(roleArn string) (VerificationFailure, bool
 	return queue[0], true
 }
 
-func verificationFailed(failure VerificationFailure) gen.ErrorEnvelope {
-	e := envelope(gen.ErrorEnvelopeErrorCodeVerificationFailed, "Act could not assume the role")
+type credentialCheck struct {
+	attribute string
+	message   string
+}
+
+var awsRoleCheck = credentialCheck{attribute: "roleArn", message: "Act could not assume the role"}
+
+func verificationFailed(check credentialCheck, failure VerificationFailure) gen.ErrorEnvelope {
+	e := envelope(gen.ErrorEnvelopeErrorCodeVerificationFailed, check.message)
 	details := map[string]any{
 		"retryClass":     failure.RetryClass,
 		"cloudErrorCode": failure.CloudErrorCode,
-		"attribute":      "roleArn",
+		"attribute":      check.attribute,
 		"hint":           failure.Hint,
 	}
 	e.Error.Details = &details
@@ -579,7 +601,7 @@ func (s *apiServer) UpdateAwsDeployment(ctx context.Context, req gen.UpdateAwsDe
 	}
 	if patched.reverify {
 		if failure, ok := store.nextFailure(deref(patched.item.RoleArn)); ok {
-			return gen.UpdateAwsDeployment422JSONResponse(verificationFailed(failure)), nil
+			return gen.UpdateAwsDeployment422JSONResponse(verificationFailed(awsRoleCheck, failure)), nil
 		}
 		patched.item.Status, patched.item.ErrorCode, patched.item.ErrorMessage = gen.DeploymentStatusActive, nil, nil
 	}
@@ -600,7 +622,7 @@ func applyDeploymentPatch(ctx context.Context, current gen.AwsDeployment, body g
 	}
 	if body.RoleArn != nil && *body.RoleArn != deref(current.RoleArn) {
 		if !roleInAccount(*body.RoleArn, current.AccountID) {
-			return patched, gen.UpdateAwsDeployment422JSONResponse(verificationFailed(accountMismatch))
+			return patched, gen.UpdateAwsDeployment422JSONResponse(verificationFailed(awsRoleCheck, accountMismatch))
 		}
 		patched.item.RoleArn, patched.reverify = body.RoleArn, true
 	}
@@ -701,7 +723,7 @@ func (s *apiServer) VerifyAwsDeployment(_ context.Context, req gen.VerifyAwsDepl
 		return gen.VerifyAwsDeployment412JSONResponse(envelope(gen.ErrorEnvelopeErrorCodePreconditionFailed, "The resource changed since it was read")), nil
 	}
 	if failure, ok := store.nextFailure(deref(stored.item.RoleArn)); ok {
-		return gen.VerifyAwsDeployment422JSONResponse(verificationFailed(failure)), nil
+		return gen.VerifyAwsDeployment422JSONResponse(verificationFailed(awsRoleCheck, failure)), nil
 	}
 	stored.item.Status, stored.item.ErrorCode, stored.item.ErrorMessage = gen.DeploymentStatusActive, nil, nil
 	stored.version++
@@ -720,7 +742,7 @@ func (s *apiServer) RotateAwsExternalID(_ context.Context, req gen.RotateAwsExte
 		return gen.RotateAwsExternalID412JSONResponse(envelope(gen.ErrorEnvelopeErrorCodePreconditionFailed, "The resource changed since it was read")), nil
 	}
 	if failure, ok := store.nextFailure(deref(stored.item.RoleArn)); ok {
-		return gen.RotateAwsExternalID422JSONResponse(verificationFailed(failure)), nil
+		return gen.RotateAwsExternalID422JSONResponse(verificationFailed(awsRoleCheck, failure)), nil
 	}
 	stored.item.ExternalID = derivedExternalID(stored.item.ID)
 	stored.item.ExternalIDSource = gen.ExternalIDSourceDerived
@@ -755,8 +777,7 @@ func (s *apiServer) ListDeployments(_ context.Context, req gen.ListDeploymentsRe
 	defer store.mu.Unlock()
 	params := req.Params
 	items := []gen.DeploymentSummary{}
-	for _, stored := range store.byID {
-		summary := stored.summary()
+	for _, summary := range store.summaries() {
 		if params.Cloud != nil && *params.Cloud != summary.Cloud {
 			continue
 		}
@@ -791,6 +812,17 @@ func (s *apiServer) ListDeployments(_ context.Context, req gen.ListDeploymentsRe
 		page.NextPageToken = &token
 	}
 	return page, nil
+}
+
+func (s *deploymentStore) summaries() []gen.DeploymentSummary {
+	summaries := make([]gen.DeploymentSummary, 0, len(s.byID)+len(s.azure.byID))
+	for _, stored := range s.byID {
+		summaries = append(summaries, stored.summary())
+	}
+	for _, stored := range s.azure.byID {
+		summaries = append(summaries, stored.summary())
+	}
+	return summaries
 }
 
 func (s *storedDeployment) summary() gen.DeploymentSummary {
