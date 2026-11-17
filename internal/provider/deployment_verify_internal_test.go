@@ -130,16 +130,27 @@ func TestVerificationFailureReadsAsSentences(t *testing.T) {
 	}}
 	settled := verificationOutcome{attempts: 2}
 	tests := []struct {
-		action string
-		want   string
+		action  string
+		wording cloudWording
+		want    string
 	}{
-		{action: createAction, want: "Act could not use the role: EXTERNAL_ID_NOT_ENFORCED. Require the external ID with a StringEquals condition on sts:ExternalId. Act got the same answer 2 times, so this needs a fix on the AWS side. Nothing was stored."},
-		{action: "verify", want: "Act could not use the role: EXTERNAL_ID_NOT_ENFORCED. Require the external ID with a StringEquals condition on sts:ExternalId. Act got the same answer 2 times, so this needs a fix on the AWS side."},
+		{action: createAction, wording: awsWording, want: "Act could not use the role: EXTERNAL_ID_NOT_ENFORCED. Require the external ID with a StringEquals condition on sts:ExternalId. Act got the same answer 2 times, so this needs a fix on the AWS side. Nothing was stored."},
+		{action: "verify", wording: awsWording, want: "Act could not use the role: EXTERNAL_ID_NOT_ENFORCED. Require the external ID with a StringEquals condition on sts:ExternalId. Act got the same answer 2 times, so this needs a fix on the AWS side."},
+		{action: "verify", wording: azureWording, want: "Act could not use the service principal: EXTERNAL_ID_NOT_ENFORCED. Require the external ID with a StringEquals condition on sts:ExternalId. Act got the same answer 2 times, so this needs a fix on the Azure side."},
 	}
 	for _, tt := range tests {
-		if got := notEnforced.describe(writeFailure{action: tt.action, outcome: settled}); got != tt.want {
+		if got := notEnforced.describe(writeFailure{action: tt.action, outcome: settled}, tt.wording); got != tt.want {
 			t.Errorf("%s:\n got %q\nwant %q", tt.action, got, tt.want)
 		}
+	}
+}
+
+func TestAzureVerificationFailureNamesTheRoleAssignments(t *testing.T) {
+	propagating := &verificationFailure{verificationDetails: verificationDetails{RetryClass: retryClassPropagation, CloudErrorCode: "AuthorizationFailed"}}
+	gaveUp := verificationOutcome{attempts: 21, elapsed: 10 * time.Minute, timedOut: true}
+	want := "Act could not use the service principal: AuthorizationFailed. Act kept trying for 10m0s (21 attempts) while Azure propagated the role assignments, then gave up. Apply again, or raise timeouts if the role assignments take longer to propagate. Nothing was stored."
+	if got := propagating.describe(writeFailure{action: createAction, outcome: gaveUp}, azureWording); got != want {
+		t.Errorf("\n got %q\nwant %q", got, want)
 	}
 }
 

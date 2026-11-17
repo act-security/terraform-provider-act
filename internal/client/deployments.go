@@ -9,26 +9,31 @@ import (
 	"github.com/act-security/terraform-provider-act/internal/apigen"
 )
 
-type AwsDeploymentResult struct {
-	Deployment apigen.AwsDeployment
+type DeploymentResult[T any] struct {
+	Deployment T
 	ETag       string
 }
 
-type AwsDeploymentPatch map[string]any
+type (
+	AwsDeploymentResult   = DeploymentResult[apigen.AwsDeployment]
+	AzureDeploymentResult = DeploymentResult[apigen.AzureDeployment]
+)
 
-type AwsDeploymentCreateRequest struct {
-	Body           apigen.AwsDeploymentCreate
+type DeploymentPatch map[string]any
+
+type DeploymentCreateRequest[B any] struct {
+	Body           B
 	IdempotencyKey string
 }
 
-type AwsDeploymentRef struct {
+type DeploymentRef struct {
 	ID   string
 	ETag string
 }
 
-type AwsDeploymentUpdateRequest struct {
-	AwsDeploymentRef
-	Patch AwsDeploymentPatch
+type DeploymentUpdateRequest struct {
+	DeploymentRef
+	Patch DeploymentPatch
 }
 
 type DeploymentAccountsQuery struct {
@@ -84,24 +89,18 @@ func (c *Client) GetAwsDeployment(ctx context.Context, id string) (*AwsDeploymen
 	if resp.StatusCode() == http.StatusNotFound {
 		return nil, nil
 	}
-	if resp.JSON200 == nil {
-		return nil, newAPIError(resp.StatusCode(), resp.Body)
-	}
-	return &AwsDeploymentResult{Deployment: *resp.JSON200, ETag: resp.HTTPResponse.Header.Get("ETag")}, nil
+	return deploymentResult(resp.JSON200, resp.HTTPResponse, resp.Body)
 }
 
-func (c *Client) CreateAwsDeployment(ctx context.Context, req AwsDeploymentCreateRequest) (*AwsDeploymentResult, error) {
+func (c *Client) CreateAwsDeployment(ctx context.Context, req DeploymentCreateRequest[apigen.AwsDeploymentCreate]) (*AwsDeploymentResult, error) {
 	resp, err := c.api.CreateAwsDeploymentWithResponse(ctx, &apigen.CreateAwsDeploymentParams{IdempotencyKey: req.IdempotencyKey}, req.Body)
 	if err != nil {
 		return nil, err
 	}
-	if resp.JSON201 == nil {
-		return nil, newAPIError(resp.StatusCode(), resp.Body)
-	}
-	return &AwsDeploymentResult{Deployment: *resp.JSON201, ETag: resp.HTTPResponse.Header.Get("ETag")}, nil
+	return deploymentResult(resp.JSON201, resp.HTTPResponse, resp.Body)
 }
 
-func (c *Client) UpdateAwsDeployment(ctx context.Context, req AwsDeploymentUpdateRequest) (*AwsDeploymentResult, error) {
+func (c *Client) UpdateAwsDeployment(ctx context.Context, req DeploymentUpdateRequest) (*AwsDeploymentResult, error) {
 	body, err := json.Marshal(req.Patch)
 	if err != nil {
 		return nil, err
@@ -110,32 +109,23 @@ func (c *Client) UpdateAwsDeployment(ctx context.Context, req AwsDeploymentUpdat
 	if err != nil {
 		return nil, err
 	}
-	if resp.JSON200 == nil {
-		return nil, newAPIError(resp.StatusCode(), resp.Body)
-	}
-	return &AwsDeploymentResult{Deployment: *resp.JSON200, ETag: resp.HTTPResponse.Header.Get("ETag")}, nil
+	return deploymentResult(resp.JSON200, resp.HTTPResponse, resp.Body)
 }
 
-func (c *Client) VerifyAwsDeployment(ctx context.Context, ref AwsDeploymentRef) (*AwsDeploymentResult, error) {
+func (c *Client) VerifyAwsDeployment(ctx context.Context, ref DeploymentRef) (*AwsDeploymentResult, error) {
 	resp, err := c.api.VerifyAwsDeploymentWithResponse(ctx, ref.ID, &apigen.VerifyAwsDeploymentParams{IfMatch: ref.ETag})
 	if err != nil {
 		return nil, err
 	}
-	if resp.JSON200 == nil {
-		return nil, newAPIError(resp.StatusCode(), resp.Body)
-	}
-	return &AwsDeploymentResult{Deployment: *resp.JSON200, ETag: resp.HTTPResponse.Header.Get("ETag")}, nil
+	return deploymentResult(resp.JSON200, resp.HTTPResponse, resp.Body)
 }
 
-func (c *Client) RotateAwsExternalID(ctx context.Context, ref AwsDeploymentRef) (*AwsDeploymentResult, error) {
+func (c *Client) RotateAwsExternalID(ctx context.Context, ref DeploymentRef) (*AwsDeploymentResult, error) {
 	resp, err := c.api.RotateAwsExternalIDWithResponse(ctx, ref.ID, &apigen.RotateAwsExternalIDParams{IfMatch: ref.ETag})
 	if err != nil {
 		return nil, err
 	}
-	if resp.JSON200 == nil {
-		return nil, newAPIError(resp.StatusCode(), resp.Body)
-	}
-	return &AwsDeploymentResult{Deployment: *resp.JSON200, ETag: resp.HTTPResponse.Header.Get("ETag")}, nil
+	return deploymentResult(resp.JSON200, resp.HTTPResponse, resp.Body)
 }
 
 func (c *Client) DeleteAwsDeployment(ctx context.Context, id string) ([]apigen.CleanupItem, error) {
@@ -181,4 +171,11 @@ func (c *Client) ListDeploymentAccounts(ctx context.Context, query DeploymentAcc
 		}
 		params.PageToken = resp.JSON200.NextPageToken
 	}
+}
+
+func deploymentResult[T any](body *T, httpResp *http.Response, raw []byte) (*DeploymentResult[T], error) {
+	if body == nil {
+		return nil, newAPIError(httpResp.StatusCode, raw)
+	}
+	return &DeploymentResult[T]{Deployment: *body, ETag: httpResp.Header.Get("ETag")}, nil
 }
