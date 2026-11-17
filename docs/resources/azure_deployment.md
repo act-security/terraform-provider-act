@@ -55,7 +55,25 @@ Terraform never creates or owns Act's service principal: an Entra admin's approv
 
 The Act module for Azure, `act-security/act/azurerm`, creates the custom role, puts `binding_marker` in its description and assigns the custom role and the built-in roles to the service principal at the subscription. Its `deployment_id`, `azure_tenant_id`, `subscription_id` and `service_principal_id` outputs depend on those role resources, so passing them to the resource makes Terraform finish the role assignments before Act checks them.
 
-To connect a management group, set `management_group_id` instead of `subscription_id` on the data source and on the resource, and pass the management group to the module. It covers every subscription under the group, and `deletion_protection` defaults to `true`.
+To connect a management group, set `management_group_id` instead of `subscription_id` on the data source and on the module, which takes exactly one of the two, and pass `module.act.management_group_id` to the resource. It covers every subscription under the group, and `deletion_protection` defaults to `true`:
+
+```terraform
+module "act" {
+  source = "act-security/act/azurerm"
+
+  deployment_id        = data.act_azure_onboarding_parameters.this.deployment_id
+  binding_marker       = data.act_azure_onboarding_parameters.this.binding_marker
+  service_principal_id = module.act_tenant.service_principal_id
+  management_group_id  = "mg-platform"
+}
+
+resource "act_azure_deployment" "this" {
+  deployment_id        = module.act.deployment_id
+  azure_tenant_id      = module.act.azure_tenant_id
+  management_group_id  = module.act.management_group_id
+  service_principal_id = module.act.service_principal_id
+}
+```
 
 ## Entra admin approval
 
