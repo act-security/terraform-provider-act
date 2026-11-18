@@ -157,7 +157,7 @@ func (m *awsAccountDeploymentModel) setTarget(_ context.Context, body *apigen.Aw
 	body.AccountID = &account
 }
 
-func (m *awsAccountDeploymentModel) patchTarget(context.Context, awsDeploymentModel, client.AwsDeploymentPatch, *diag.Diagnostics) {
+func (m *awsAccountDeploymentModel) patchTarget(context.Context, awsDeploymentModel, client.DeploymentPatch, *diag.Diagnostics) {
 }
 
 func (m *awsAccountDeploymentModel) readTarget(_ context.Context, item apigen.AwsDeployment, _ *diag.Diagnostics) {
@@ -199,7 +199,7 @@ func (m *awsOrganizationDeploymentModel) setTarget(ctx context.Context, body *ap
 	body.Organization = org
 }
 
-func (m *awsOrganizationDeploymentModel) patchTarget(ctx context.Context, prior awsDeploymentModel, patch client.AwsDeploymentPatch, diags *diag.Diagnostics) {
+func (m *awsOrganizationDeploymentModel) patchTarget(ctx context.Context, prior awsDeploymentModel, patch client.DeploymentPatch, diags *diag.Diagnostics) {
 	current, ok := prior.(*awsOrganizationDeploymentModel)
 	if !ok {
 		return

@@ -29,16 +29,28 @@ type verificationPolicy struct {
 	now    func() time.Time
 }
 
-var awsVerification = verificationPolicy{
-	budget: 2 * time.Minute,
-	settle: 30 * time.Second,
-	base:   5 * time.Second,
-	max:    30 * time.Second,
-	factor: 1.5,
-	sleep:  sleepContext,
-	jitter: fullJitter,
-	now:    time.Now,
-}
+var (
+	awsVerification = verificationPolicy{
+		budget: 2 * time.Minute,
+		settle: 30 * time.Second,
+		base:   5 * time.Second,
+		max:    30 * time.Second,
+		factor: 1.5,
+		sleep:  sleepContext,
+		jitter: fullJitter,
+		now:    time.Now,
+	}
+	azureVerification = verificationPolicy{
+		budget: 10 * time.Minute,
+		settle: 30 * time.Second,
+		base:   5 * time.Second,
+		max:    30 * time.Second,
+		factor: 1.5,
+		sleep:  sleepContext,
+		jitter: fullJitter,
+		now:    time.Now,
+	}
+)
 
 type verificationDetails struct {
 	RetryClass     retryClass `json:"retryClass"`

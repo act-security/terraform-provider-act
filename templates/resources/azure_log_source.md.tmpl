@@ -1,0 +1,46 @@
+---
+page_title: "{{ .Name }} {{ .Type }} - {{ .ProviderName }}"
+subcategory: ""
+description: |-
+{{ .Description | plainmarkdown | trimspace | prefixlines "  " }}
+---
+
+# {{ .Name }} ({{ .Type }})
+
+{{ .Description | trimspace }}
+
+## Example Usage
+
+This continues the `act_azure_deployment` example. The `modules/activity-logs` submodule of the Act module for Azure creates an Event Hub namespace and streams the activity logs of the subscriptions to it; `modules/entra-logs` streams the Entra ID logs to the same namespace. Then the log source tells Act to collect them:
+
+{{ tffile .ExampleFile }}
+
+`events_subscription_id` is the subscription that holds the Event Hub namespace, here the one the azurerm provider creates it in. `depends_on` makes Terraform finish the diagnostic settings and the Event Hubs before Act checks them. For a management group, pass `management_group_id` to `modules/activity-logs` instead of `subscription_ids`.
+
+The deployment must be `active`. While it is `pending_consent` or `failed`, Act refuses the log source and the apply fails with the reason; approve Act or fix the deployment, then apply again.
+
+## Streams
+
+Set `activity_logs`, `entra_id_logs` or both to `true`. Each apply sends the whole log source, so setting a stream to `false` stops Act collecting it in place; its Event Hub stays in `event_hubs` with `enabled = false`. To stop collecting both streams, remove the resource.
+
+## Verification
+
+Act checks that it can read the Event Hubs before it registers them. New access to Event Hubs can take several minutes to work everywhere in Azure, so while Act reports that it has not propagated yet, the provider asks again, backing off up to 30 seconds between attempts, for up to 10 minutes. A failure that cannot fix itself stops once the same answer has come back for 30 seconds. Use `timeouts` to cap the whole operation; the defaults are 12 minutes for create and update.
+
+## Reading the log source
+
+Act does not return `events_subscription_id` when it reads the log source, so Terraform keeps the value from your configuration. After an import the state has none, so the first apply updates the log source in place once to send it. When the log source is removed in Act, or collects no stream anymore, the next plan creates it again.
+
+To move collection to an Event Hub in another subscription, change `events_subscription_id` and remove the old `modules/activity-logs` instance in the same change. Act registers the new Event Hubs, but the old subscription's diagnostic settings keep sending logs until they are removed, and Act keeps reading the old Event Hubs while they exist.
+
+## Destroy
+
+Destroying the resource stops Act collecting the logs. The diagnostic settings and the Event Hub namespace stay in Azure, and the apply lists them in a warning. The modules that created them remove them when you destroy them.
+
+{{ .SchemaMarkdown | trimspace }}
+
+## Import
+
+Import by the ID of the Azure deployment:
+
+{{ codefile "shell" .ImportFile }}

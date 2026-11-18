@@ -204,17 +204,7 @@ func (d *awsOnboardingDataSource) Read(ctx context.Context, req datasource.ReadR
 
 func (m *awsOnboardingModel) fillFrom(values apigen.AwsOnboarding) {
 	m.DeploymentID = types.StringValue(values.DeploymentID)
-	m.ExistingDeployment = nil
-	if existing := values.ExistingDeployment; existing != nil {
-		m.ExistingDeployment = &existingDeploymentModel{
-			ID:         types.StringValue(existing.ID),
-			Status:     types.StringValue(string(existing.Status)),
-			CreatedVia: types.StringNull(),
-		}
-		if existing.CreatedVia != nil {
-			m.ExistingDeployment.CreatedVia = types.StringValue(string(*existing.CreatedVia))
-		}
-	}
+	m.ExistingDeployment = existingDeployment(values.ExistingDeployment)
 	m.ActPrincipalArn = types.StringValue(values.ActPrincipalArn)
 	m.DeprecatedPrincipalArns = []types.String{}
 	for _, principal := range values.DeprecatedPrincipals {
@@ -245,6 +235,21 @@ func (m *awsOnboardingModel) fillFrom(values apigen.AwsOnboarding) {
 	m.PermissionsHash = types.StringPointerValue(values.PermissionsHash)
 	m.DeploymentVersion = types.StringValue(values.DeploymentVersion)
 	m.ModuleVersions = moduleVersions(values.ModuleVersions)
+}
+
+func existingDeployment(existing *apigen.ExistingDeployment) *existingDeploymentModel {
+	if existing == nil {
+		return nil
+	}
+	model := &existingDeploymentModel{
+		ID:         types.StringValue(existing.ID),
+		Status:     types.StringValue(string(existing.Status)),
+		CreatedVia: types.StringNull(),
+	}
+	if existing.CreatedVia != nil {
+		model.CreatedVia = types.StringValue(string(*existing.CreatedVia))
+	}
+	return model
 }
 
 func moduleVersions(values *[]apigen.ModuleVersion) []moduleVersionModel {
@@ -282,7 +287,7 @@ func summaryAttributes(idDescription string) map[string]schema.Attribute {
 		"cloud":   computedString("`aws`, `azure` or `gcp`."),
 		"name":    computedString("The name Act shows."),
 		"scope":   computedString("`account`, `organization`, `subscription`, `management_group` or `project`."),
-		"targets": computedStrings("What the deployment covers: an account ID, or an organization ID with its root or organizational unit IDs."),
+		"targets": computedStrings("What the deployment covers: an AWS account ID, an AWS organization ID with its root or organizational unit IDs, or an Azure subscription or management group ID."),
 		"status":  computedString("`active`, `failed` or `pending_consent`."),
 		"update_available": schema.BoolAttribute{
 			MarkdownDescription: "True when the cloud side is older than the version Act recommends.",
@@ -337,7 +342,7 @@ func (d *deploymentDataSource) Schema(_ context.Context, _ datasource.SchemaRequ
 		Validators:          []validator.String{stringvalidator.RegexMatches(uuidPattern, "must be a lowercase UUID")},
 	}
 	attributes["target"] = schema.StringAttribute{
-		MarkdownDescription: "Find the deployment that covers this target instead, such as a 12-digit AWS account ID or an organization ID. Set this or `id`. Exactly one deployment must match.",
+		MarkdownDescription: "Find the deployment that covers this target instead, such as a 12-digit AWS account ID, an organization ID or an Azure subscription ID. Set this or `id`. Exactly one deployment must match.",
 		Optional:            true,
 		Validators:          []validator.String{stringvalidator.LengthBetween(1, maxTargetLength)},
 	}
@@ -443,7 +448,7 @@ func (d *deploymentsDataSource) Schema(_ context.Context, _ datasource.SchemaReq
 				Validators:          []validator.String{stringvalidator.OneOf(deploymentStatusNames...)},
 			},
 			"target": schema.StringAttribute{
-				MarkdownDescription: "Only deployments that cover this target, such as an AWS account ID.",
+				MarkdownDescription: "Only deployments that cover this target, such as an AWS account ID or an Azure subscription ID.",
 				Optional:            true,
 				Validators:          []validator.String{stringvalidator.LengthBetween(1, maxTargetLength)},
 			},

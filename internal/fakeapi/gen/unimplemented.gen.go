@@ -55,6 +55,18 @@ func (UnimplementedStrictServer) UpdateAzureDeployment(context.Context, UpdateAz
 	return nil, ErrNotImplemented
 }
 
+func (UnimplementedStrictServer) DeleteAzureLogSource(context.Context, DeleteAzureLogSourceRequestObject) (DeleteAzureLogSourceResponseObject, error) {
+	return nil, ErrNotImplemented
+}
+
+func (UnimplementedStrictServer) GetAzureLogSource(context.Context, GetAzureLogSourceRequestObject) (GetAzureLogSourceResponseObject, error) {
+	return nil, ErrNotImplemented
+}
+
+func (UnimplementedStrictServer) PutAzureLogSource(context.Context, PutAzureLogSourceRequestObject) (PutAzureLogSourceResponseObject, error) {
+	return nil, ErrNotImplemented
+}
+
 func (UnimplementedStrictServer) VerifyAzureDeployment(context.Context, VerifyAzureDeploymentRequestObject) (VerifyAzureDeploymentResponseObject, error) {
 	return nil, ErrNotImplemented
 }

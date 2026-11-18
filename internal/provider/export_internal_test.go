@@ -8,10 +8,12 @@ import (
 
 func FastVerification(t testing.TB) {
 	t.Helper()
-	previous := awsVerification
-	awsVerification.settle = 0
-	awsVerification.base = time.Millisecond
-	awsVerification.max = 5 * time.Millisecond
-	awsVerification.sleep = func(context.Context, time.Duration) error { return nil }
-	t.Cleanup(func() { awsVerification = previous })
+	for _, policy := range []*verificationPolicy{&awsVerification, &azureVerification} {
+		previous := *policy
+		policy.settle = 0
+		policy.base = time.Millisecond
+		policy.max = 5 * time.Millisecond
+		policy.sleep = func(context.Context, time.Duration) error { return nil }
+		t.Cleanup(func() { *policy = previous })
+	}
 }

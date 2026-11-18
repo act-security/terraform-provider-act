@@ -69,32 +69,8 @@ func (s *apiServer) GetWhoami(ctx context.Context, _ gen.GetWhoamiRequestObject)
 	}, nil
 }
 
-func (s *apiServer) GetAzureOnboarding(context.Context, gen.GetAzureOnboardingRequestObject) (gen.GetAzureOnboardingResponseObject, error) {
-	return gen.GetAzureOnboarding403JSONResponse{Body: featureDisabled()}, nil
-}
-
 func (s *apiServer) GetGcpOnboarding(context.Context, gen.GetGcpOnboardingRequestObject) (gen.GetGcpOnboardingResponseObject, error) {
 	return gen.GetGcpOnboarding403JSONResponse{Body: featureDisabled()}, nil
-}
-
-func (s *apiServer) GetAzureDeployment(context.Context, gen.GetAzureDeploymentRequestObject) (gen.GetAzureDeploymentResponseObject, error) {
-	return gen.GetAzureDeployment403JSONResponse{Body: featureDisabled()}, nil
-}
-
-func (s *apiServer) CreateAzureDeployment(context.Context, gen.CreateAzureDeploymentRequestObject) (gen.CreateAzureDeploymentResponseObject, error) {
-	return gen.CreateAzureDeployment403JSONResponse{Body: featureDisabled()}, nil
-}
-
-func (s *apiServer) UpdateAzureDeployment(context.Context, gen.UpdateAzureDeploymentRequestObject) (gen.UpdateAzureDeploymentResponseObject, error) {
-	return gen.UpdateAzureDeployment403JSONResponse{Body: featureDisabled()}, nil
-}
-
-func (s *apiServer) VerifyAzureDeployment(context.Context, gen.VerifyAzureDeploymentRequestObject) (gen.VerifyAzureDeploymentResponseObject, error) {
-	return gen.VerifyAzureDeployment403JSONResponse{Body: featureDisabled()}, nil
-}
-
-func (s *apiServer) DeleteAzureDeployment(context.Context, gen.DeleteAzureDeploymentRequestObject) (gen.DeleteAzureDeploymentResponseObject, error) {
-	return gen.DeleteAzureDeployment403JSONResponse{Body: featureDisabled()}, nil
 }
 
 func (s *apiServer) GetGcpDeployment(context.Context, gen.GetGcpDeploymentRequestObject) (gen.GetGcpDeploymentResponseObject, error) {

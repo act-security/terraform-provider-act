@@ -135,10 +135,10 @@ func TestAPINeedsTheAPIAudience(t *testing.T) {
 	if status != http.StatusOK || whoami["tenantId"] != s.Config.TenantID {
 		t.Fatalf("whoami = %d %v", status, whoami)
 	}
-	status, envelope := get(t, s.APIOrigin()+"/v1/deployments/azure/00000000-0000-4000-8000-000000000002", apiToken)
+	status, envelope := get(t, s.APIOrigin()+"/v1/deployments/gcp/00000000-0000-4000-8000-000000000002", apiToken)
 	errBody, ok := envelope["error"].(map[string]any)
 	if status != http.StatusForbidden || !ok || errBody["code"] != "feature_disabled" {
-		t.Fatalf("azure deployment = %d %v, want 403 feature_disabled", status, envelope)
+		t.Fatalf("gcp deployment = %d %v, want 403 feature_disabled", status, envelope)
 	}
 }
 
@@ -151,6 +151,7 @@ func TestDeploymentRoutesByIDAndByCloud(t *testing.T) {
 		"/v1/deployments/" + missing + "/coverage": http.StatusNotFound,
 		"/v1/deployments/" + missing + "/accounts": http.StatusNotFound,
 		"/v1/deployments/aws/" + missing:           http.StatusNotFound,
+		"/v1/deployments/azure/" + missing:         http.StatusNotFound,
 	} {
 		status, body := get(t, s.APIOrigin()+path, apiToken)
 		if status != want {

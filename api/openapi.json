@@ -3102,6 +3102,470 @@
         "x-act-scope": "deployments:write"
       }
     },
+    "/v1/deployments/azure/{id}/log-source": {
+      "get": {
+        "operationId": "getAzureLogSource",
+        "summary": "Return the activity and Entra ID log streams Act collects through an Azure deployment",
+        "tags": [
+          "deployments"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AzureLogSource"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error envelope. Codes: invalid_request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error envelope. Codes: unauthenticated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "WWW-Authenticate": {
+                "description": "Bearer challenge",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Error envelope. Codes: insufficient_scope, feature_disabled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "WWW-Authenticate": {
+                "description": "Bearer challenge naming the missing scope",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error envelope. Codes: not_found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Error envelope. Codes: rate_limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error envelope. Codes: internal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Error envelope. Codes: unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "serviceAccount": [
+              "deployments:read"
+            ]
+          }
+        ],
+        "x-act-scope": "deployments:read"
+      },
+      "put": {
+        "operationId": "putAzureLogSource",
+        "summary": "Verify the Event Hubs of the activity and Entra ID log streams, then collect them through an Azure deployment",
+        "tags": [
+          "deployments"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AzureLogSourcePut"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AzureLogSource"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error envelope. Codes: invalid_request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error envelope. Codes: unauthenticated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "WWW-Authenticate": {
+                "description": "Bearer challenge",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Error envelope. Codes: insufficient_scope, feature_disabled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "WWW-Authenticate": {
+                "description": "Bearer challenge naming the missing scope",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error envelope. Codes: not_found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Error envelope. Codes: already_exists, conflict, deletion_protected",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Error envelope. Codes: unsupported_media_type",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Error envelope. Codes: verification_failed, connection_check_failed, integration_not_connected, limit_exceeded, target_not_allowed, idempotency_mismatch",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Error envelope. Codes: rate_limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error envelope. Codes: internal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Error envelope. Codes: unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "serviceAccount": [
+              "act:write",
+              "deployments:write"
+            ]
+          }
+        ],
+        "x-act-scope": "deployments:write"
+      },
+      "delete": {
+        "operationId": "deleteAzureLogSource",
+        "summary": "Stop collecting the activity and Entra ID logs of an Azure deployment, and list what still streams to Act",
+        "tags": [
+          "deployments"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AzureLogSourceDeletion"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error envelope. Codes: invalid_request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error envelope. Codes: unauthenticated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "WWW-Authenticate": {
+                "description": "Bearer challenge",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Error envelope. Codes: insufficient_scope, feature_disabled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "WWW-Authenticate": {
+                "description": "Bearer challenge naming the missing scope",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error envelope. Codes: not_found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Error envelope. Codes: rate_limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error envelope. Codes: internal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Error envelope. Codes: unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "serviceAccount": [
+              "act:write",
+              "deployments:write"
+            ]
+          }
+        ],
+        "x-act-scope": "deployments:write"
+      }
+    },
     "/v1/deployments/gcp/{id}": {
       "get": {
         "operationId": "getGcpDeployment",
@@ -4259,10 +4723,12 @@
         },
         "security": [
           {
-            "serviceAccount": []
+            "serviceAccount": [
+              "integrations:read"
+            ]
           }
         ],
-        "x-act-scope": "none"
+        "x-act-scope": "integrations:read"
       },
       "post": {
         "operationId": "createIntegration",
@@ -4596,10 +5062,12 @@
         },
         "security": [
           {
-            "serviceAccount": []
+            "serviceAccount": [
+              "integrations:read"
+            ]
           }
         ],
-        "x-act-scope": "none"
+        "x-act-scope": "integrations:read"
       },
       "patch": {
         "operationId": "updateIntegration",
@@ -5100,11 +5568,11 @@
         "security": [
           {
             "serviceAccount": [
-              "integrations:read"
+              "notifications:read"
             ]
           }
         ],
-        "x-act-scope": "integrations:read"
+        "x-act-scope": "notifications:read"
       }
     },
     "/v1/users": {
@@ -5234,11 +5702,11 @@
         "security": [
           {
             "serviceAccount": [
-              "integrations:read"
+              "notifications:read"
             ]
           }
         ],
-        "x-act-scope": "integrations:read"
+        "x-act-scope": "notifications:read"
       }
     },
     "/v1/notification-event-types": {
@@ -5356,11 +5824,11 @@
         "security": [
           {
             "serviceAccount": [
-              "integrations:read"
+              "notifications:read"
             ]
           }
         ],
-        "x-act-scope": "integrations:read"
+        "x-act-scope": "notifications:read"
       }
     },
     "/v1/notification-rules": {
@@ -5524,11 +5992,11 @@
         "security": [
           {
             "serviceAccount": [
-              "integrations:read"
+              "notifications:read"
             ]
           }
         ],
-        "x-act-scope": "integrations:read"
+        "x-act-scope": "notifications:read"
       },
       "post": {
         "operationId": "createNotificationRule",
@@ -5704,11 +6172,11 @@
           {
             "serviceAccount": [
               "act:write",
-              "integrations:write"
+              "notifications:write"
             ]
           }
         ],
-        "x-act-scope": "integrations:write"
+        "x-act-scope": "notifications:write"
       }
     },
     "/v1/notification-rules/validate": {
@@ -5857,11 +6325,11 @@
           {
             "serviceAccount": [
               "act:write",
-              "integrations:write"
+              "notifications:write"
             ]
           }
         ],
-        "x-act-scope": "integrations:write"
+        "x-act-scope": "notifications:write"
       }
     },
     "/v1/notification-rules/{id}": {
@@ -6008,11 +6476,11 @@
         "security": [
           {
             "serviceAccount": [
-              "integrations:read"
+              "notifications:read"
             ]
           }
         ],
-        "x-act-scope": "integrations:read"
+        "x-act-scope": "notifications:read"
       },
       "put": {
         "operationId": "replaceNotificationRule",
@@ -6218,11 +6686,11 @@
           {
             "serviceAccount": [
               "act:write",
-              "integrations:write"
+              "notifications:write"
             ]
           }
         ],
-        "x-act-scope": "integrations:write"
+        "x-act-scope": "notifications:write"
       },
       "delete": {
         "operationId": "deleteNotificationRule",
@@ -6372,11 +6840,11 @@
           {
             "serviceAccount": [
               "act:write",
-              "integrations:write"
+              "notifications:write"
             ]
           }
         ],
-        "x-act-scope": "integrations:write"
+        "x-act-scope": "notifications:write"
       }
     },
     "/v1/notification-rules/{id}/activity": {
@@ -6522,11 +6990,11 @@
         "security": [
           {
             "serviceAccount": [
-              "integrations:read"
+              "notifications:read"
             ]
           }
         ],
-        "x-act-scope": "integrations:read"
+        "x-act-scope": "notifications:read"
       }
     },
     "/v1/notification-recipients": {
@@ -6663,11 +7131,11 @@
         "security": [
           {
             "serviceAccount": [
-              "integrations:read"
+              "notifications:read"
             ]
           }
         ],
-        "x-act-scope": "integrations:read"
+        "x-act-scope": "notifications:read"
       },
       "post": {
         "operationId": "createNotificationRecipient",
@@ -6843,11 +7311,11 @@
           {
             "serviceAccount": [
               "act:write",
-              "integrations:write"
+              "notifications:write"
             ]
           }
         ],
-        "x-act-scope": "integrations:write"
+        "x-act-scope": "notifications:write"
       }
     },
     "/v1/notification-recipients/{id}": {
@@ -6994,11 +7462,11 @@
         "security": [
           {
             "serviceAccount": [
-              "integrations:read"
+              "notifications:read"
             ]
           }
         ],
-        "x-act-scope": "integrations:read"
+        "x-act-scope": "notifications:read"
       },
       "put": {
         "operationId": "replaceNotificationRecipient",
@@ -7204,11 +7672,11 @@
           {
             "serviceAccount": [
               "act:write",
-              "integrations:write"
+              "notifications:write"
             ]
           }
         ],
-        "x-act-scope": "integrations:write"
+        "x-act-scope": "notifications:write"
       },
       "delete": {
         "operationId": "deleteNotificationRecipient",
@@ -7368,11 +7836,11 @@
           {
             "serviceAccount": [
               "act:write",
-              "integrations:write"
+              "notifications:write"
             ]
           }
         ],
-        "x-act-scope": "integrations:write"
+        "x-act-scope": "notifications:write"
       }
     }
   },
@@ -7389,8 +7857,10 @@
               "act:write": "Write access ceiling, set on the service account; every write needs it",
               "deployments:read": "Read deployments and their onboarding values",
               "deployments:write": "Create, update and delete deployments",
-              "integrations:read": "Read integrations and notification rules; every token whose role may see integrations carries it",
-              "integrations:write": "Create, update and delete integrations and notification rules"
+              "integrations:read": "Read integrations",
+              "integrations:write": "Create, update and delete integrations",
+              "notifications:read": "Read notification rules, their recipients and activity, and look up users and Slack channels to notify",
+              "notifications:write": "Create, update and delete notification rules and recipients"
             }
           }
         }
@@ -9558,6 +10028,110 @@
           "nextPageToken"
         ]
       },
+      "AzureLogStream": {
+        "enum": [
+          "activity_logs",
+          "entra_id_logs"
+        ],
+        "type": "string"
+      },
+      "AzureLogSourceEventHub": {
+        "type": "object",
+        "properties": {
+          "namespace": {
+            "type": "string",
+            "description": "Fully qualified host of the Event Hub namespace"
+          },
+          "eventHub": {
+            "type": "string"
+          },
+          "dataType": {
+            "$ref": "#/components/schemas/AzureLogStream"
+          },
+          "enabled": {
+            "type": "boolean",
+            "description": "False once the log source was deleted; Act no longer collects from it"
+          }
+        },
+        "required": [
+          "namespace",
+          "eventHub",
+          "dataType",
+          "enabled"
+        ]
+      },
+      "AzureLogSource": {
+        "type": "object",
+        "properties": {
+          "deploymentId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "activityLogs": {
+            "type": "boolean",
+            "description": "True while Act collects the activity logs from an enabled Event Hub"
+          },
+          "entraIdLogs": {
+            "type": "boolean",
+            "description": "True while Act collects the Entra ID logs from an enabled Event Hub"
+          },
+          "eventHubs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AzureLogSourceEventHub"
+            }
+          }
+        },
+        "required": [
+          "deploymentId",
+          "activityLogs",
+          "entraIdLogs",
+          "eventHubs"
+        ]
+      },
+      "AzureLogSourcePut": {
+        "type": "object",
+        "properties": {
+          "eventsSubscriptionId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Subscription that holds the Event Hub namespace Act streams the logs to"
+          },
+          "activityLogs": {
+            "type": "boolean"
+          },
+          "entraIdLogs": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "eventsSubscriptionId",
+          "activityLogs",
+          "entraIdLogs"
+        ],
+        "additionalProperties": false,
+        "description": "The tenant-wide log streams to collect. Act verifies the Event Hubs before it registers them."
+      },
+      "AzureLogSourceDeletion": {
+        "type": "object",
+        "properties": {
+          "deploymentId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "cleanupRequired": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CleanupItem"
+            },
+            "description": "Diagnostic settings and Event Hub namespaces that still stream to Act; remove them"
+          }
+        },
+        "required": [
+          "deploymentId",
+          "cleanupRequired"
+        ]
+      },
       "IntegrationType": {
         "enum": [
           "slack",
@@ -10107,6 +10681,15 @@
               "format": "uuid"
             },
             "description": "Address-book recipients the rule also sends to, each listed once."
+          },
+          "userIds": {
+            "type": "array",
+            "maxItems": 50,
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "description": "Act users the rule also sends to, each listed once. Each person gets the alert the way they chose in Act: email, or a Slack direct message."
           }
         },
         "required": [
@@ -10163,6 +10746,15 @@
               "format": "uuid"
             },
             "description": "Address-book recipients the rule also sends to, each listed once."
+          },
+          "userIds": {
+            "type": "array",
+            "maxItems": 50,
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "description": "Act users the rule also sends to, each listed once. Each person gets the alert the way they chose in Act: email, or a Slack direct message."
           }
         },
         "required": [
@@ -10226,6 +10818,12 @@
               "format": "uuid"
             }
           },
+          "userIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
           "revision": {
             "type": "integer",
             "minimum": -9007199254740991,
@@ -10284,6 +10882,7 @@
           "conditions",
           "actions",
           "recipientIds",
+          "userIds",
           "revision",
           "minClientRevision",
           "createdVia",
@@ -10549,7 +11148,7 @@
                 "type": "null"
               }
             ],
-            "description": "The user's email address. Null for a token without `integrations:write`, and for a user who has left the tenant."
+            "description": "The user's email address. Null for a token without `notifications:write`, and for a user who has left the tenant."
           },
           "inTenant": {
             "type": "boolean",
@@ -10811,6 +11410,11 @@
             "minimum": -9007199254740991,
             "maximum": 9007199254740991
           },
+          "maxPeoplePerRule": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
           "maxEmailRecipients": {
             "type": "integer",
             "minimum": -9007199254740991,
@@ -10847,6 +11451,7 @@
           "maxEventTypesPerRule",
           "maxActionsPerRule",
           "maxRecipientsPerRule",
+          "maxPeoplePerRule",
           "maxEmailRecipients",
           "maxSlackChannels",
           "maxEnabledRulesPerEventType",

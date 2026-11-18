@@ -96,6 +96,24 @@ func (e AzureDeploymentMethod) Valid() bool {
 	}
 }
 
+// Defines values for AzureLogStream.
+const (
+	AzureLogStreamActivityLogs AzureLogStream = "activity_logs"
+	AzureLogStreamEntraIDLogs  AzureLogStream = "entra_id_logs"
+)
+
+// Valid indicates whether the value is a known member of the AzureLogStream enum.
+func (e AzureLogStream) Valid() bool {
+	switch e {
+	case AzureLogStreamActivityLogs:
+		return true
+	case AzureLogStreamEntraIDLogs:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for Cloud.
 const (
 	CloudAws   Cloud = "aws"
@@ -832,6 +850,48 @@ type AzureDeploymentPatch struct {
 	Tags               *map[string]string     `json:"tags,omitempty"`
 }
 
+// AzureLogSource defines model for AzureLogSource.
+type AzureLogSource struct {
+	// ActivityLogs True while Act collects the activity logs from an enabled Event Hub
+	ActivityLogs bool   `json:"activityLogs"`
+	DeploymentID string `json:"deploymentId"`
+
+	// EntraIDLogs True while Act collects the Entra ID logs from an enabled Event Hub
+	EntraIDLogs bool                     `json:"entraIdLogs"`
+	EventHubs   []AzureLogSourceEventHub `json:"eventHubs"`
+}
+
+// AzureLogSourceDeletion defines model for AzureLogSourceDeletion.
+type AzureLogSourceDeletion struct {
+	// CleanupRequired Diagnostic settings and Event Hub namespaces that still stream to Act; remove them
+	CleanupRequired []CleanupItem `json:"cleanupRequired"`
+	DeploymentID    string        `json:"deploymentId"`
+}
+
+// AzureLogSourceEventHub defines model for AzureLogSourceEventHub.
+type AzureLogSourceEventHub struct {
+	DataType AzureLogStream `json:"dataType"`
+
+	// Enabled False once the log source was deleted; Act no longer collects from it
+	Enabled  bool   `json:"enabled"`
+	EventHub string `json:"eventHub"`
+
+	// Namespace Fully qualified host of the Event Hub namespace
+	Namespace string `json:"namespace"`
+}
+
+// AzureLogSourcePut The tenant-wide log streams to collect. Act verifies the Event Hubs before it registers them.
+type AzureLogSourcePut struct {
+	ActivityLogs bool `json:"activityLogs"`
+	EntraIDLogs  bool `json:"entraIdLogs"`
+
+	// EventsSubscriptionID Subscription that holds the Event Hub namespace Act streams the logs to
+	EventsSubscriptionID string `json:"eventsSubscriptionId"`
+}
+
+// AzureLogStream defines model for AzureLogStream.
+type AzureLogStream string
+
 // AzureOnboarding defines model for AzureOnboarding.
 type AzureOnboarding struct {
 	ActAppClientID string `json:"actAppClientId"`
@@ -1354,7 +1414,7 @@ type NotificationRecipientSlackChannelMemberWrite struct {
 
 // NotificationRecipientUserMember defines model for NotificationRecipientUserMember.
 type NotificationRecipientUserMember struct {
-	// Email The user's email address. Null for a token without `integrations:write`, and for a user who has left the tenant.
+	// Email The user's email address. Null for a token without `notifications:write`, and for a user who has left the tenant.
 	Email *string `json:"email"`
 
 	// InTenant False once the user has left the tenant. Such a member stays stored, receives nothing, and may be sent back unchanged.
@@ -1404,6 +1464,7 @@ type NotificationRule struct {
 	// Revision Increases on every change. The `ETag` header carries it in quotes.
 	Revision  int       `json:"revision"`
 	UpdatedAt time.Time `json:"updatedAt"`
+	UserIds   []string  `json:"userIds"`
 
 	// WebURL The rule in the Act app, or null where the app address is not configured.
 	WebURL *string `json:"webUrl"`
@@ -1433,6 +1494,7 @@ type NotificationRuleLimits struct {
 	MaxEnabledRulesPerEventType int `json:"maxEnabledRulesPerEventType"`
 	MaxEventTypesPerRule        int `json:"maxEventTypesPerRule"`
 	MaxNameLength               int `json:"maxNameLength"`
+	MaxPeoplePerRule            int `json:"maxPeoplePerRule"`
 	MaxRecipientMembers         int `json:"maxRecipientMembers"`
 	MaxRecipientNameLength      int `json:"maxRecipientNameLength"`
 	MaxRecipientsPerRule        int `json:"maxRecipientsPerRule"`
@@ -1456,6 +1518,9 @@ type NotificationRuleValidate struct {
 
 	// RecipientIds Address-book recipients the rule also sends to, each listed once.
 	RecipientIds *[]string `json:"recipientIds,omitempty"`
+
+	// UserIds Act users the rule also sends to, each listed once. Each person gets the alert the way they chose in Act: email, or a Slack direct message.
+	UserIds *[]string `json:"userIds,omitempty"`
 }
 
 // NotificationRuleValidation defines model for NotificationRuleValidation.
@@ -1481,6 +1546,9 @@ type NotificationRuleWrite struct {
 
 	// RecipientIds Address-book recipients the rule also sends to, each listed once.
 	RecipientIds *[]string `json:"recipientIds,omitempty"`
+
+	// UserIds Act users the rule also sends to, each listed once. Each person gets the alert the way they chose in Act: email, or a Slack direct message.
+	UserIds *[]string `json:"userIds,omitempty"`
 }
 
 // NotificationSlackAction defines model for NotificationSlackAction.
@@ -1739,6 +1807,9 @@ type CreateAzureDeploymentJSONRequestBody = AzureDeploymentCreate
 // UpdateAzureDeploymentJSONRequestBody defines body for UpdateAzureDeployment for application/json ContentType.
 type UpdateAzureDeploymentJSONRequestBody = AzureDeploymentPatch
 
+// PutAzureLogSourceJSONRequestBody defines body for PutAzureLogSource for application/json ContentType.
+type PutAzureLogSourceJSONRequestBody = AzureLogSourcePut
+
 // CreateGcpDeploymentJSONRequestBody defines body for CreateGcpDeployment for application/json ContentType.
 type CreateGcpDeploymentJSONRequestBody = GcpDeploymentCreate
 
@@ -1930,6 +2001,30 @@ type ClientInterface interface {
 	//
 	// Corresponds with PATCH /v1/deployments/azure/{id} (the `UpdateAzureDeployment` operationId).
 	UpdateAzureDeployment(ctx context.Context, id string, params *UpdateAzureDeploymentParams, body UpdateAzureDeploymentJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// DeleteAzureLogSource Stop collecting the activity and Entra ID logs of an Azure deployment, and list what still streams to Act
+	//
+	// Corresponds with DELETE /v1/deployments/azure/{id}/log-source (the `DeleteAzureLogSource` operationId).
+	DeleteAzureLogSource(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetAzureLogSource Return the activity and Entra ID log streams Act collects through an Azure deployment
+	//
+	// Corresponds with GET /v1/deployments/azure/{id}/log-source (the `GetAzureLogSource` operationId).
+	GetAzureLogSource(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// PutAzureLogSourceWithBody Verify the Event Hubs of the activity and Entra ID log streams, then collect them through an Azure deployment
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with PUT /v1/deployments/azure/{id}/log-source (the `PutAzureLogSource` operationId).
+	PutAzureLogSourceWithBody(ctx context.Context, id string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// PutAzureLogSource Verify the Event Hubs of the activity and Entra ID log streams, then collect them through an Azure deployment
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with PUT /v1/deployments/azure/{id}/log-source (the `PutAzureLogSource` operationId).
+	PutAzureLogSource(ctx context.Context, id string, body PutAzureLogSourceJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// VerifyAzureDeployment Check that Act can use a an Azure subscription or management group deployment again, after its cloud side was fixed
 	//
@@ -2449,6 +2544,70 @@ func (c *Client) UpdateAzureDeploymentWithBody(ctx context.Context, id string, p
 // Corresponds with PATCH /v1/deployments/azure/{id} (the `UpdateAzureDeployment` operationId).
 func (c *Client) UpdateAzureDeployment(ctx context.Context, id string, params *UpdateAzureDeploymentParams, body UpdateAzureDeploymentJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewUpdateAzureDeploymentRequest(c.Server, id, params, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// DeleteAzureLogSource Stop collecting the activity and Entra ID logs of an Azure deployment, and list what still streams to Act
+//
+// Corresponds with DELETE /v1/deployments/azure/{id}/log-source (the `DeleteAzureLogSource` operationId).
+func (c *Client) DeleteAzureLogSource(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewDeleteAzureLogSourceRequest(c.Server, id)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// GetAzureLogSource Return the activity and Entra ID log streams Act collects through an Azure deployment
+//
+// Corresponds with GET /v1/deployments/azure/{id}/log-source (the `GetAzureLogSource` operationId).
+func (c *Client) GetAzureLogSource(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetAzureLogSourceRequest(c.Server, id)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// PutAzureLogSourceWithBody Verify the Event Hubs of the activity and Entra ID log streams, then collect them through an Azure deployment
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with PUT /v1/deployments/azure/{id}/log-source (the `PutAzureLogSource` operationId).
+func (c *Client) PutAzureLogSourceWithBody(ctx context.Context, id string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewPutAzureLogSourceRequestWithBody(c.Server, id, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// PutAzureLogSource Verify the Event Hubs of the activity and Entra ID log streams, then collect them through an Azure deployment
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with PUT /v1/deployments/azure/{id}/log-source (the `PutAzureLogSource` operationId).
+func (c *Client) PutAzureLogSource(ctx context.Context, id string, body PutAzureLogSourceJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewPutAzureLogSourceRequest(c.Server, id, body)
 	if err != nil {
 		return nil, err
 	}
@@ -3761,6 +3920,121 @@ func NewUpdateAzureDeploymentRequestWithBody(server string, id string, params *U
 		req.Header.Set("if-match", headerParam0)
 
 	}
+
+	return req, nil
+}
+
+// NewDeleteAzureLogSourceRequest constructs an http.Request for the DeleteAzureLogSource method
+func NewDeleteAzureLogSourceRequest(server string, id string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "id", id, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: "uuid"})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/deployments/azure/%s/log-source", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodDelete, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewGetAzureLogSourceRequest constructs an http.Request for the GetAzureLogSource method
+func NewGetAzureLogSourceRequest(server string, id string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "id", id, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: "uuid"})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/deployments/azure/%s/log-source", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewPutAzureLogSourceRequest calls the generic PutAzureLogSource builder with application/json body
+func NewPutAzureLogSourceRequest(server string, id string, body PutAzureLogSourceJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewPutAzureLogSourceRequestWithBody(server, id, "application/json", bodyReader)
+}
+
+// NewPutAzureLogSourceRequestWithBody constructs an http.Request for the PutAzureLogSource method, with any body, and a specified content type
+func NewPutAzureLogSourceRequestWithBody(server string, id string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "id", id, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: "uuid"})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/deployments/azure/%s/log-source", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPut, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
 
 	return req, nil
 }
@@ -5735,6 +6009,34 @@ type ClientWithResponsesInterface interface {
 	// Corresponds with PATCH /v1/deployments/azure/{id} (the `UpdateAzureDeployment` operationId).
 	UpdateAzureDeploymentWithResponse(ctx context.Context, id string, params *UpdateAzureDeploymentParams, body UpdateAzureDeploymentJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateAzureDeploymentResponse, error)
 
+	// DeleteAzureLogSourceWithResponse Stop collecting the activity and Entra ID logs of an Azure deployment, and list what still streams to Act
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with DELETE /v1/deployments/azure/{id}/log-source (the `DeleteAzureLogSource` operationId).
+	DeleteAzureLogSourceWithResponse(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*DeleteAzureLogSourceResponse, error)
+
+	// GetAzureLogSourceWithResponse Return the activity and Entra ID log streams Act collects through an Azure deployment
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with GET /v1/deployments/azure/{id}/log-source (the `GetAzureLogSource` operationId).
+	GetAzureLogSourceWithResponse(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*GetAzureLogSourceResponse, error)
+
+	// PutAzureLogSourceWithBodyWithResponse Verify the Event Hubs of the activity and Entra ID log streams, then collect them through an Azure deployment
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with PUT /v1/deployments/azure/{id}/log-source (the `PutAzureLogSource` operationId).
+	PutAzureLogSourceWithBodyWithResponse(ctx context.Context, id string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PutAzureLogSourceResponse, error)
+
+	// PutAzureLogSourceWithResponse Verify the Event Hubs of the activity and Entra ID log streams, then collect them through an Azure deployment
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with PUT /v1/deployments/azure/{id}/log-source (the `PutAzureLogSource` operationId).
+	PutAzureLogSourceWithResponse(ctx context.Context, id string, body PutAzureLogSourceJSONRequestBody, reqEditors ...RequestEditorFn) (*PutAzureLogSourceResponse, error)
+
 	// VerifyAzureDeploymentWithResponse Check that Act can use a an Azure subscription or management group deployment again, after its cloud side was fixed
 	//
 	// Returns a wrapper object for the known response body format(s).
@@ -7551,6 +7853,381 @@ func (r UpdateAzureDeploymentResponse) StatusCode() int {
 
 // ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
 func (r UpdateAzureDeploymentResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+// DeleteAzureLogSourceResponse401Headers the declared response headers of an HTTP 401 response for DeleteAzureLogSource
+type DeleteAzureLogSourceResponse401Headers struct {
+	WWWAuthenticate *string
+}
+
+// DeleteAzureLogSourceResponse403Headers the declared response headers of an HTTP 403 response for DeleteAzureLogSource
+type DeleteAzureLogSourceResponse403Headers struct {
+	WWWAuthenticate *string
+}
+
+// DeleteAzureLogSourceResponse429Headers the declared response headers of an HTTP 429 response for DeleteAzureLogSource
+type DeleteAzureLogSourceResponse429Headers struct {
+	RetryAfter *int
+}
+
+// DeleteAzureLogSourceResponse503Headers the declared response headers of an HTTP 503 response for DeleteAzureLogSource
+type DeleteAzureLogSourceResponse503Headers struct {
+	RetryAfter *int
+}
+
+type DeleteAzureLogSourceResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *AzureLogSourceDeletion
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *ErrorEnvelope
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *ErrorEnvelope
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *ErrorEnvelope
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *ErrorEnvelope
+	// JSON429 the response for an HTTP 429 `application/json` response
+	JSON429 *ErrorEnvelope
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *ErrorEnvelope
+	// JSON503 the response for an HTTP 503 `application/json` response
+	JSON503 *ErrorEnvelope
+	// Headers401 the parsed response headers for an HTTP 401 response
+	Headers401 *DeleteAzureLogSourceResponse401Headers
+	// Headers403 the parsed response headers for an HTTP 403 response
+	Headers403 *DeleteAzureLogSourceResponse403Headers
+	// Headers429 the parsed response headers for an HTTP 429 response
+	Headers429 *DeleteAzureLogSourceResponse429Headers
+	// Headers503 the parsed response headers for an HTTP 503 response
+	Headers503 *DeleteAzureLogSourceResponse503Headers
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r DeleteAzureLogSourceResponse) GetJSON200() *AzureLogSourceDeletion {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r DeleteAzureLogSourceResponse) GetJSON400() *ErrorEnvelope {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r DeleteAzureLogSourceResponse) GetJSON401() *ErrorEnvelope {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r DeleteAzureLogSourceResponse) GetJSON403() *ErrorEnvelope {
+	return r.JSON403
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r DeleteAzureLogSourceResponse) GetJSON404() *ErrorEnvelope {
+	return r.JSON404
+}
+
+// GetJSON429 returns the response for an HTTP 429 `application/json` response
+func (r DeleteAzureLogSourceResponse) GetJSON429() *ErrorEnvelope {
+	return r.JSON429
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r DeleteAzureLogSourceResponse) GetJSON500() *ErrorEnvelope {
+	return r.JSON500
+}
+
+// GetJSON503 returns the response for an HTTP 503 `application/json` response
+func (r DeleteAzureLogSourceResponse) GetJSON503() *ErrorEnvelope {
+	return r.JSON503
+}
+
+// GetBody returns the raw response body bytes
+func (r DeleteAzureLogSourceResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r DeleteAzureLogSourceResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r DeleteAzureLogSourceResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r DeleteAzureLogSourceResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+// GetAzureLogSourceResponse401Headers the declared response headers of an HTTP 401 response for GetAzureLogSource
+type GetAzureLogSourceResponse401Headers struct {
+	WWWAuthenticate *string
+}
+
+// GetAzureLogSourceResponse403Headers the declared response headers of an HTTP 403 response for GetAzureLogSource
+type GetAzureLogSourceResponse403Headers struct {
+	WWWAuthenticate *string
+}
+
+// GetAzureLogSourceResponse429Headers the declared response headers of an HTTP 429 response for GetAzureLogSource
+type GetAzureLogSourceResponse429Headers struct {
+	RetryAfter *int
+}
+
+// GetAzureLogSourceResponse503Headers the declared response headers of an HTTP 503 response for GetAzureLogSource
+type GetAzureLogSourceResponse503Headers struct {
+	RetryAfter *int
+}
+
+type GetAzureLogSourceResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *AzureLogSource
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *ErrorEnvelope
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *ErrorEnvelope
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *ErrorEnvelope
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *ErrorEnvelope
+	// JSON429 the response for an HTTP 429 `application/json` response
+	JSON429 *ErrorEnvelope
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *ErrorEnvelope
+	// JSON503 the response for an HTTP 503 `application/json` response
+	JSON503 *ErrorEnvelope
+	// Headers401 the parsed response headers for an HTTP 401 response
+	Headers401 *GetAzureLogSourceResponse401Headers
+	// Headers403 the parsed response headers for an HTTP 403 response
+	Headers403 *GetAzureLogSourceResponse403Headers
+	// Headers429 the parsed response headers for an HTTP 429 response
+	Headers429 *GetAzureLogSourceResponse429Headers
+	// Headers503 the parsed response headers for an HTTP 503 response
+	Headers503 *GetAzureLogSourceResponse503Headers
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r GetAzureLogSourceResponse) GetJSON200() *AzureLogSource {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r GetAzureLogSourceResponse) GetJSON400() *ErrorEnvelope {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r GetAzureLogSourceResponse) GetJSON401() *ErrorEnvelope {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r GetAzureLogSourceResponse) GetJSON403() *ErrorEnvelope {
+	return r.JSON403
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r GetAzureLogSourceResponse) GetJSON404() *ErrorEnvelope {
+	return r.JSON404
+}
+
+// GetJSON429 returns the response for an HTTP 429 `application/json` response
+func (r GetAzureLogSourceResponse) GetJSON429() *ErrorEnvelope {
+	return r.JSON429
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r GetAzureLogSourceResponse) GetJSON500() *ErrorEnvelope {
+	return r.JSON500
+}
+
+// GetJSON503 returns the response for an HTTP 503 `application/json` response
+func (r GetAzureLogSourceResponse) GetJSON503() *ErrorEnvelope {
+	return r.JSON503
+}
+
+// GetBody returns the raw response body bytes
+func (r GetAzureLogSourceResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r GetAzureLogSourceResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetAzureLogSourceResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetAzureLogSourceResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+// PutAzureLogSourceResponse401Headers the declared response headers of an HTTP 401 response for PutAzureLogSource
+type PutAzureLogSourceResponse401Headers struct {
+	WWWAuthenticate *string
+}
+
+// PutAzureLogSourceResponse403Headers the declared response headers of an HTTP 403 response for PutAzureLogSource
+type PutAzureLogSourceResponse403Headers struct {
+	WWWAuthenticate *string
+}
+
+// PutAzureLogSourceResponse429Headers the declared response headers of an HTTP 429 response for PutAzureLogSource
+type PutAzureLogSourceResponse429Headers struct {
+	RetryAfter *int
+}
+
+// PutAzureLogSourceResponse503Headers the declared response headers of an HTTP 503 response for PutAzureLogSource
+type PutAzureLogSourceResponse503Headers struct {
+	RetryAfter *int
+}
+
+type PutAzureLogSourceResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *AzureLogSource
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *ErrorEnvelope
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *ErrorEnvelope
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *ErrorEnvelope
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *ErrorEnvelope
+	// JSON409 the response for an HTTP 409 `application/json` response
+	JSON409 *ErrorEnvelope
+	// JSON415 the response for an HTTP 415 `application/json` response
+	JSON415 *ErrorEnvelope
+	// JSON422 the response for an HTTP 422 `application/json` response
+	JSON422 *ErrorEnvelope
+	// JSON429 the response for an HTTP 429 `application/json` response
+	JSON429 *ErrorEnvelope
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *ErrorEnvelope
+	// JSON503 the response for an HTTP 503 `application/json` response
+	JSON503 *ErrorEnvelope
+	// Headers401 the parsed response headers for an HTTP 401 response
+	Headers401 *PutAzureLogSourceResponse401Headers
+	// Headers403 the parsed response headers for an HTTP 403 response
+	Headers403 *PutAzureLogSourceResponse403Headers
+	// Headers429 the parsed response headers for an HTTP 429 response
+	Headers429 *PutAzureLogSourceResponse429Headers
+	// Headers503 the parsed response headers for an HTTP 503 response
+	Headers503 *PutAzureLogSourceResponse503Headers
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r PutAzureLogSourceResponse) GetJSON200() *AzureLogSource {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r PutAzureLogSourceResponse) GetJSON400() *ErrorEnvelope {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r PutAzureLogSourceResponse) GetJSON401() *ErrorEnvelope {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r PutAzureLogSourceResponse) GetJSON403() *ErrorEnvelope {
+	return r.JSON403
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r PutAzureLogSourceResponse) GetJSON404() *ErrorEnvelope {
+	return r.JSON404
+}
+
+// GetJSON409 returns the response for an HTTP 409 `application/json` response
+func (r PutAzureLogSourceResponse) GetJSON409() *ErrorEnvelope {
+	return r.JSON409
+}
+
+// GetJSON415 returns the response for an HTTP 415 `application/json` response
+func (r PutAzureLogSourceResponse) GetJSON415() *ErrorEnvelope {
+	return r.JSON415
+}
+
+// GetJSON422 returns the response for an HTTP 422 `application/json` response
+func (r PutAzureLogSourceResponse) GetJSON422() *ErrorEnvelope {
+	return r.JSON422
+}
+
+// GetJSON429 returns the response for an HTTP 429 `application/json` response
+func (r PutAzureLogSourceResponse) GetJSON429() *ErrorEnvelope {
+	return r.JSON429
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r PutAzureLogSourceResponse) GetJSON500() *ErrorEnvelope {
+	return r.JSON500
+}
+
+// GetJSON503 returns the response for an HTTP 503 `application/json` response
+func (r PutAzureLogSourceResponse) GetJSON503() *ErrorEnvelope {
+	return r.JSON503
+}
+
+// GetBody returns the raw response body bytes
+func (r PutAzureLogSourceResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r PutAzureLogSourceResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r PutAzureLogSourceResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r PutAzureLogSourceResponse) ContentType() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Header.Get("Content-Type")
 	}
@@ -11898,6 +12575,58 @@ func (c *ClientWithResponses) UpdateAzureDeploymentWithResponse(ctx context.Cont
 	return ParseUpdateAzureDeploymentResponse(rsp)
 }
 
+// DeleteAzureLogSourceWithResponse Stop collecting the activity and Entra ID logs of an Azure deployment, and list what still streams to Act
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with DELETE /v1/deployments/azure/{id}/log-source (the `DeleteAzureLogSource` operationId).
+func (c *ClientWithResponses) DeleteAzureLogSourceWithResponse(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*DeleteAzureLogSourceResponse, error) {
+	rsp, err := c.DeleteAzureLogSource(ctx, id, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseDeleteAzureLogSourceResponse(rsp)
+}
+
+// GetAzureLogSourceWithResponse Return the activity and Entra ID log streams Act collects through an Azure deployment
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with GET /v1/deployments/azure/{id}/log-source (the `GetAzureLogSource` operationId).
+func (c *ClientWithResponses) GetAzureLogSourceWithResponse(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*GetAzureLogSourceResponse, error) {
+	rsp, err := c.GetAzureLogSource(ctx, id, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetAzureLogSourceResponse(rsp)
+}
+
+// PutAzureLogSourceWithBodyWithResponse Verify the Event Hubs of the activity and Entra ID log streams, then collect them through an Azure deployment
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with PUT /v1/deployments/azure/{id}/log-source (the `PutAzureLogSource` operationId).
+func (c *ClientWithResponses) PutAzureLogSourceWithBodyWithResponse(ctx context.Context, id string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PutAzureLogSourceResponse, error) {
+	rsp, err := c.PutAzureLogSourceWithBody(ctx, id, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParsePutAzureLogSourceResponse(rsp)
+}
+
+// PutAzureLogSourceWithResponse Verify the Event Hubs of the activity and Entra ID log streams, then collect them through an Azure deployment
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with PUT /v1/deployments/azure/{id}/log-source (the `PutAzureLogSource` operationId).
+func (c *ClientWithResponses) PutAzureLogSourceWithResponse(ctx context.Context, id string, body PutAzureLogSourceJSONRequestBody, reqEditors ...RequestEditorFn) (*PutAzureLogSourceResponse, error) {
+	rsp, err := c.PutAzureLogSource(ctx, id, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParsePutAzureLogSourceResponse(rsp)
+}
+
 // VerifyAzureDeploymentWithResponse Check that Act can use a an Azure subscription or management group deployment again, after its cloud side was fixed
 //
 // Returns a wrapper object for the known response body format(s).
@@ -13982,6 +14711,381 @@ func ParseUpdateAzureDeploymentResponse(rsp *http.Response) (*UpdateAzureDeploym
 		response.Headers429 = &headers
 	case rsp.StatusCode == 503:
 		var headers UpdateAzureDeploymentResponse503Headers
+		if values := rsp.Header.Values("Retry-After"); len(values) > 0 {
+			var value int
+			if err := runtime.BindStyledParameterWithOptions("simple", "Retry-After", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.RetryAfter = &value
+		}
+		response.Headers503 = &headers
+	}
+
+	return response, nil
+}
+
+// ParseDeleteAzureLogSourceResponse parses an HTTP response from a DeleteAzureLogSourceWithResponse call
+func ParseDeleteAzureLogSourceResponse(rsp *http.Response) (*DeleteAzureLogSourceResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &DeleteAzureLogSourceResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest AzureLogSourceDeletion
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON429 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON503 = &dest
+
+	}
+
+	switch {
+	case rsp.StatusCode == 401:
+		var headers DeleteAzureLogSourceResponse401Headers
+		if values := rsp.Header.Values("WWW-Authenticate"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "WWW-Authenticate", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.WWWAuthenticate = &value
+		}
+		response.Headers401 = &headers
+	case rsp.StatusCode == 403:
+		var headers DeleteAzureLogSourceResponse403Headers
+		if values := rsp.Header.Values("WWW-Authenticate"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "WWW-Authenticate", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.WWWAuthenticate = &value
+		}
+		response.Headers403 = &headers
+	case rsp.StatusCode == 429:
+		var headers DeleteAzureLogSourceResponse429Headers
+		if values := rsp.Header.Values("Retry-After"); len(values) > 0 {
+			var value int
+			if err := runtime.BindStyledParameterWithOptions("simple", "Retry-After", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.RetryAfter = &value
+		}
+		response.Headers429 = &headers
+	case rsp.StatusCode == 503:
+		var headers DeleteAzureLogSourceResponse503Headers
+		if values := rsp.Header.Values("Retry-After"); len(values) > 0 {
+			var value int
+			if err := runtime.BindStyledParameterWithOptions("simple", "Retry-After", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.RetryAfter = &value
+		}
+		response.Headers503 = &headers
+	}
+
+	return response, nil
+}
+
+// ParseGetAzureLogSourceResponse parses an HTTP response from a GetAzureLogSourceWithResponse call
+func ParseGetAzureLogSourceResponse(rsp *http.Response) (*GetAzureLogSourceResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetAzureLogSourceResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest AzureLogSource
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON429 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON503 = &dest
+
+	}
+
+	switch {
+	case rsp.StatusCode == 401:
+		var headers GetAzureLogSourceResponse401Headers
+		if values := rsp.Header.Values("WWW-Authenticate"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "WWW-Authenticate", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.WWWAuthenticate = &value
+		}
+		response.Headers401 = &headers
+	case rsp.StatusCode == 403:
+		var headers GetAzureLogSourceResponse403Headers
+		if values := rsp.Header.Values("WWW-Authenticate"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "WWW-Authenticate", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.WWWAuthenticate = &value
+		}
+		response.Headers403 = &headers
+	case rsp.StatusCode == 429:
+		var headers GetAzureLogSourceResponse429Headers
+		if values := rsp.Header.Values("Retry-After"); len(values) > 0 {
+			var value int
+			if err := runtime.BindStyledParameterWithOptions("simple", "Retry-After", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.RetryAfter = &value
+		}
+		response.Headers429 = &headers
+	case rsp.StatusCode == 503:
+		var headers GetAzureLogSourceResponse503Headers
+		if values := rsp.Header.Values("Retry-After"); len(values) > 0 {
+			var value int
+			if err := runtime.BindStyledParameterWithOptions("simple", "Retry-After", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.RetryAfter = &value
+		}
+		response.Headers503 = &headers
+	}
+
+	return response, nil
+}
+
+// ParsePutAzureLogSourceResponse parses an HTTP response from a PutAzureLogSourceWithResponse call
+func ParsePutAzureLogSourceResponse(rsp *http.Response) (*PutAzureLogSourceResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &PutAzureLogSourceResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest AzureLogSource
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 415:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON415 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 422:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON422 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON429 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
+		var dest ErrorEnvelope
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON503 = &dest
+
+	}
+
+	switch {
+	case rsp.StatusCode == 401:
+		var headers PutAzureLogSourceResponse401Headers
+		if values := rsp.Header.Values("WWW-Authenticate"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "WWW-Authenticate", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.WWWAuthenticate = &value
+		}
+		response.Headers401 = &headers
+	case rsp.StatusCode == 403:
+		var headers PutAzureLogSourceResponse403Headers
+		if values := rsp.Header.Values("WWW-Authenticate"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "WWW-Authenticate", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.WWWAuthenticate = &value
+		}
+		response.Headers403 = &headers
+	case rsp.StatusCode == 429:
+		var headers PutAzureLogSourceResponse429Headers
+		if values := rsp.Header.Values("Retry-After"); len(values) > 0 {
+			var value int
+			if err := runtime.BindStyledParameterWithOptions("simple", "Retry-After", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.RetryAfter = &value
+		}
+		response.Headers429 = &headers
+	case rsp.StatusCode == 503:
+		var headers PutAzureLogSourceResponse503Headers
 		if values := rsp.Header.Values("Retry-After"); len(values) > 0 {
 			var value int
 			if err := runtime.BindStyledParameterWithOptions("simple", "Retry-After", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {
