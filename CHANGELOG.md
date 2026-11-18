@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.1](https://github.com/act-security/terraform-provider-act/compare/v0.3.0...v0.3.1) (2026-11-18)
+
+
+### Features
+
+* add Azure deployment, onboarding and log source support ([#20](https://github.com/act-security/terraform-provider-act/issues/20)) ([4c7ffa3](https://github.com/act-security/terraform-provider-act/commit/4c7ffa3aff4946480a41c7724b905dd9583cafbd))
+
 ## [0.3.0](https://github.com/act-security/terraform-provider-act/compare/v0.2.1...v0.3.0) (2026-11-16)
 
 
