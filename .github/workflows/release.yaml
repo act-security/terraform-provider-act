@@ -38,8 +38,15 @@ jobs:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
 
-      - name: Checkout the trusted scripts from main
+      - name: Read the release pull request branch
+        id: release-pr
         if: steps.release.outputs.pr != ''
+        env:
+          RELEASE_PR: ${{ steps.release.outputs.pr }}
+        run: echo "branch=$(jq -er .headBranchName <<< "$RELEASE_PR")" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout the trusted scripts from main
+        if: steps.release-pr.outputs.branch != ''
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.sha }}
@@ -47,16 +54,16 @@ jobs:
           persist-credentials: false
 
       - name: Checkout the release pull request
-        if: steps.release.outputs.pr != ''
+        if: steps.release-pr.outputs.branch != ''
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ fromJSON(steps.release.outputs.pr).headBranchName }}
+          ref: ${{ steps.release-pr.outputs.branch }}
           path: release
           persist-credentials: false
 
       - name: Pin the release minor version in the examples and docs
         id: pin
-        if: steps.release.outputs.pr != ''
+        if: steps.release-pr.outputs.branch != ''
         working-directory: release
         run: |
           "${GITHUB_WORKSPACE}/trusted/scripts/pin-release-minor.sh"
@@ -72,7 +79,7 @@ jobs:
         env:
           GH_TOKEN: ${{ steps.app.outputs.token }}
           APP_SLUG: ${{ steps.app.outputs.app-slug }}
-          BRANCH: ${{ fromJSON(steps.release.outputs.pr).headBranchName }}
+          BRANCH: ${{ steps.release-pr.outputs.branch }}
           REPO: ${{ github.repository }}
         run: |
           bot_id="$(gh api "users/${APP_SLUG}%5Bbot%5D" --jq .id)"
