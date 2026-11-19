@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.2](https://github.com/act-security/terraform-provider-act/compare/v0.3.1...v0.3.2) (2026-11-19)
+
+
+### Bug Fixes
+
+* publish the ~&gt; 0.3 version constraint in the registry docs ([#23](https://github.com/act-security/terraform-provider-act/issues/23)) ([896d8cf](https://github.com/act-security/terraform-provider-act/commit/896d8cfc282f304c09a30661de8d93fd6d8b5f5e))
+
 ## [0.3.1](https://github.com/act-security/terraform-provider-act/compare/v0.3.0...v0.3.1) (2026-11-18)
 
 
