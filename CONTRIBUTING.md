@@ -70,4 +70,6 @@ CI builds the release candidate on every pull request and runs the full suite on
 
 Maintainers merge the release pull request that release-please opens, then approve the `release` environment. The environment must define the `RELEASE_GUARD_FORBIDDEN` secret (space-separated strings no release binary may contain, such as non-production hostnames; a secret, so the strings never show in the public run logs); the release stops before building if it is empty. The publish job installs only Go and GoReleaser, from `mise.lock`, with a pinned and checksummed mise. It builds, signs and uploads a draft release. The end-to-end suite then runs against those exact signed zips on Linux, macOS and Windows, in jobs that hold no secrets, and only then does the promote job check that the draft holds the tested checksums and publish it.
 
+Every `version = "~> MAJOR.MINOR"` pin in `README.md`, `examples/`, `templates/` and `docs/` must match the minor version in `.release-please-manifest.json`; `TestPinnedVersionsMatchTheCurrentRelease` fails otherwise. The release workflow keeps the release pull request in line: after release-please updates it, `scripts/pin-release-minor.sh` rewrites every pin to the new minor version and the release App pushes that commit to the release branch.
+
 See also [SECURITY.md](SECURITY.md) and [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
