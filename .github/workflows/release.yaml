@@ -38,6 +38,31 @@ jobs:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
 
+      - name: Checkout the release pull request
+        if: steps.release.outputs.pr != ''
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ fromJSON(steps.release.outputs.pr).headBranchName }}
+          token: ${{ steps.app.outputs.token }}
+          persist-credentials: false
+
+      - name: Pin the release minor version in the examples and docs
+        if: steps.release.outputs.pr != ''
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+          APP_SLUG: ${{ steps.app.outputs.app-slug }}
+          BRANCH: ${{ fromJSON(steps.release.outputs.pr).headBranchName }}
+          REPO: ${{ github.repository }}
+        run: |
+          scripts/pin-release-minor.sh
+          if git diff --quiet; then
+            exit 0
+          fi
+          bot_id="$(gh api "users/${APP_SLUG}%5Bbot%5D" --jq .id)"
+          git -c user.name="${APP_SLUG}[bot]" -c user.email="${bot_id}+${APP_SLUG}[bot]@users.noreply.github.com" \
+            commit --quiet --all --message "docs: pin the release minor version"
+          git push "https://x-access-token:${GH_TOKEN}@github.com/${REPO}.git" "HEAD:${BRANCH}"
+
   publish:
     name: Build, sign and attest the draft
     needs: release-please
