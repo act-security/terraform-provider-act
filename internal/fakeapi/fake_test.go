@@ -186,3 +186,38 @@ func TestLoadScript(t *testing.T) {
 		}
 	}
 }
+
+func TestAwsOrganizationCreateRejectsAMemberRoleLikeTheRealAPI(t *testing.T) {
+	s := fakeapi.Start(t)
+	apiToken := token(t, s, s.APIOrigin())
+	for attribute, field := range map[string]string{
+		"organization.memberRoleName": `"memberRoleName": "AWSAFTExecution"`,
+		"organization.memberRolePath": `"memberRolePath": "/"`,
+	} {
+		body := `{"deploymentId": "00000000-0000-4000-8000-0000000000c1", "roleArn": "arn:aws:iam::222222222222:role/act", "organization": {"organizationId": "o-abcdefghij", "rootId": "r-ab12", ` + field + `}}`
+		req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, s.APIOrigin()+"/v1/deployments/aws", strings.NewReader(body))
+		if err != nil {
+			t.Fatal(err)
+		}
+		req.Header.Set("Authorization", "Bearer "+apiToken)
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Idempotency-Key", attribute)
+		status, answer := doJSON(t, req)
+		var rejection struct {
+			Error struct {
+				Code    string            `json:"code"`
+				Details map[string]string `json:"details"`
+			} `json:"error"`
+		}
+		raw, err := json.Marshal(answer)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := json.Unmarshal(raw, &rejection); err != nil {
+			t.Fatal(err)
+		}
+		if status != http.StatusBadRequest || rejection.Error.Code != "invalid_request" || rejection.Error.Details["attribute"] != attribute || rejection.Error.Details["reason"] != "not_supported" {
+			t.Errorf("POST with %s = %d %v, want 400 invalid_request not_supported", attribute, status, answer)
+		}
+	}
+}

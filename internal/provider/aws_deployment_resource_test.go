@@ -4,6 +4,7 @@ package provider_test
 
 import (
 	"fmt"
+	"net/http"
 	"regexp"
 	"strings"
 	"testing"
@@ -679,4 +680,73 @@ resource "act_aws_organization_deployment" "this" {
 			},
 		},
 	})
+}
+
+func TestAwsOrganizationDeploymentAcceptsActsMemberRoleWithoutSendingIt(t *testing.T) {
+	s := fakeapi.Start(t)
+	s.Setenv(t)
+	provider.FastVerification(t)
+	id := s.AwsOrganizationDeploymentID(testOrg)
+	root := `  root_id = "` + testRoot + `"`
+	actRole := "  member_role_name = data.act_aws_onboarding_parameters.this.member_role_name\n  member_role_path = data.act_aws_onboarding_parameters.this.member_role_path\n"
+
+	resource.UnitTest(t, resource.TestCase{
+		ProtoV6ProviderFactories: factories(),
+		Steps: []resource.TestStep{
+			{
+				Config: orgConfig(root, actRole),
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownValue(orgAddress, tfjsonpath.New("member_role_name"), knownvalue.StringExact("ActSecurityRole-"+id)),
+					statecheck.ExpectKnownValue(orgAddress, tfjsonpath.New("member_role_path"), knownvalue.StringExact("/")),
+				},
+			},
+			{
+				Config:   orgConfig(root, actRole),
+				PlanOnly: true,
+			},
+			{
+				Config: orgConfig(fmt.Sprintf("  organizational_unit_ids = [%q]", testOU), actRole+"  deletion_protection = false"),
+				ConfigPlanChecks: resource.ConfigPlanChecks{PreApply: []plancheck.PlanCheck{
+					plancheck.ExpectResourceAction(orgAddress, plancheck.ResourceActionUpdate),
+				}},
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownValue(orgAddress, tfjsonpath.New("organizational_unit_ids"), knownvalue.SetSizeExact(1)),
+					statecheck.ExpectKnownValue(orgAddress, tfjsonpath.New("member_role_name"), knownvalue.StringExact("ActSecurityRole-"+id)),
+				},
+			},
+		},
+	})
+}
+
+func TestAwsOrganizationDeploymentRefusesACustomMemberRoleAtPlan(t *testing.T) {
+	s := fakeapi.Start(t)
+	s.Setenv(t)
+	provider.FastVerification(t)
+	root := `  root_id = "` + testRoot + `"`
+
+	resource.UnitTest(t, resource.TestCase{
+		ProtoV6ProviderFactories: factories(),
+		Steps: []resource.TestStep{
+			{
+				Config:      orgConfig(root, `  member_role_name = "AWSAFTExecution"`),
+				PlanOnly:    true,
+				ExpectError: regexp.MustCompile(`(?s)Act does not support a custom member role name yet.*"AWSAFTExecution"`),
+			},
+			{
+				Config:      orgConfig(root, `  member_role_path = "/act/"`),
+				PlanOnly:    true,
+				ExpectError: regexp.MustCompile(`Act does not support a custom member role path yet`),
+			},
+			{
+				Config: orgConfig(root, "  deletion_protection = false"),
+			},
+			{
+				Config:      orgConfig(root, "  deletion_protection = false\n  member_role_name = \"AWSAFTExecution\""),
+				ExpectError: regexp.MustCompile(`Act does not support a custom member role name yet`),
+			},
+		},
+	})
+	if patches := countRequests(s, http.MethodPatch, "/v1/deployments/aws/"+s.AwsOrganizationDeploymentID(testOrg)); patches != 0 {
+		t.Fatalf("the provider sent %d updates, want none", patches)
+	}
 }
