@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.3.3](https://github.com/act-security/terraform-provider-act/compare/v0.3.2...v0.3.3) (2026-11-22)
+
+
+### Features
+
+* manage Cortex Cloud integrations and Splunk TLS pinning ([#25](https://github.com/act-security/terraform-provider-act/issues/25)) ([92c5380](https://github.com/act-security/terraform-provider-act/commit/92c53805058b888357c485bb0aa2fc9c24125df8))
+
+
+### Bug Fixes
+
+* refuse custom member role names and paths on AWS organization deployments ([#26](https://github.com/act-security/terraform-provider-act/issues/26)) ([7f69554](https://github.com/act-security/terraform-provider-act/commit/7f69554bfbe51d37f9190ee670873ebf6dbcde68))
+
 ## [0.3.2](https://github.com/act-security/terraform-provider-act/compare/v0.3.1...v0.3.2) (2026-11-19)
 
 
