@@ -29,7 +29,7 @@ output "email_integration_id" {
 ### Optional
 
 - `id` (String) The integration ID. Set this or `type`.
-- `type` (String) The integration type: `slack`, `jira`, `wiz`, `splunk` or `email`. A tenant has at most one integration per type. Set this or `id`.
+- `type` (String) The integration type: `slack`, `jira`, `wiz`, `splunk`, `cloudflare`, `cortex-cloud` or `email`. A tenant has at most one integration per type. Set this or `id`.
 
 ### Read-Only
 

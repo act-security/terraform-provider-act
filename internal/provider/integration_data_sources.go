@@ -16,7 +16,7 @@ import (
 	"github.com/act-security/terraform-provider-act/internal/apigen"
 )
 
-var integrationTypeNames = []string{"slack", "jira", "wiz", "splunk", "email"}
+var integrationTypeNames = []string{"slack", "jira", "wiz", "splunk", "cloudflare", "cortex-cloud", "email"}
 
 type integrationDataSource struct {
 	data *ProviderData
@@ -53,7 +53,7 @@ func (d *integrationDataSource) Schema(_ context.Context, _ datasource.SchemaReq
 				Computed:            true,
 			},
 			"type": schema.StringAttribute{
-				MarkdownDescription: "The integration type: `slack`, `jira`, `wiz`, `splunk` or `email`. A tenant has at most one integration per type. Set this or `id`.",
+				MarkdownDescription: "The integration type: `slack`, `jira`, `wiz`, `splunk`, `cloudflare`, `cortex-cloud` or `email`. A tenant has at most one integration per type. Set this or `id`.",
 				Optional:            true,
 				Computed:            true,
 				Validators:          []validator.String{stringvalidator.OneOf(integrationTypeNames...)},

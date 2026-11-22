@@ -135,6 +135,24 @@ func (e Cloud) Valid() bool {
 	}
 }
 
+// Defines values for CortexCloudSecurityLevel.
+const (
+	CortexCloudSecurityLevelAdvanced CortexCloudSecurityLevel = "advanced"
+	CortexCloudSecurityLevelStandard CortexCloudSecurityLevel = "standard"
+)
+
+// Valid indicates whether the value is a known member of the CortexCloudSecurityLevel enum.
+func (e CortexCloudSecurityLevel) Valid() bool {
+	switch e {
+	case CortexCloudSecurityLevelAdvanced:
+		return true
+	case CortexCloudSecurityLevelStandard:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for DeploymentChangeSource.
 const (
 	DeploymentChangeSourceAPI DeploymentChangeSource = "api"
@@ -329,15 +347,21 @@ func (e GcpDeploymentMethod) Valid() bool {
 
 // Defines values for InstallableIntegrationType.
 const (
-	InstallableIntegrationTypeJira   InstallableIntegrationType = "jira"
-	InstallableIntegrationTypeSlack  InstallableIntegrationType = "slack"
-	InstallableIntegrationTypeSplunk InstallableIntegrationType = "splunk"
-	InstallableIntegrationTypeWiz    InstallableIntegrationType = "wiz"
+	InstallableIntegrationTypeCloudflare  InstallableIntegrationType = "cloudflare"
+	InstallableIntegrationTypeCortexCloud InstallableIntegrationType = "cortex-cloud"
+	InstallableIntegrationTypeJira        InstallableIntegrationType = "jira"
+	InstallableIntegrationTypeSlack       InstallableIntegrationType = "slack"
+	InstallableIntegrationTypeSplunk      InstallableIntegrationType = "splunk"
+	InstallableIntegrationTypeWiz         InstallableIntegrationType = "wiz"
 )
 
 // Valid indicates whether the value is a known member of the InstallableIntegrationType enum.
 func (e InstallableIntegrationType) Valid() bool {
 	switch e {
+	case InstallableIntegrationTypeCloudflare:
+		return true
+	case InstallableIntegrationTypeCortexCloud:
+		return true
 	case InstallableIntegrationTypeJira:
 		return true
 	case InstallableIntegrationTypeSlack:
@@ -395,16 +419,22 @@ func (e IntegrationStatus) Valid() bool {
 
 // Defines values for IntegrationType.
 const (
-	IntegrationTypeEmail  IntegrationType = "email"
-	IntegrationTypeJira   IntegrationType = "jira"
-	IntegrationTypeSlack  IntegrationType = "slack"
-	IntegrationTypeSplunk IntegrationType = "splunk"
-	IntegrationTypeWiz    IntegrationType = "wiz"
+	IntegrationTypeCloudflare  IntegrationType = "cloudflare"
+	IntegrationTypeCortexCloud IntegrationType = "cortex-cloud"
+	IntegrationTypeEmail       IntegrationType = "email"
+	IntegrationTypeJira        IntegrationType = "jira"
+	IntegrationTypeSlack       IntegrationType = "slack"
+	IntegrationTypeSplunk      IntegrationType = "splunk"
+	IntegrationTypeWiz         IntegrationType = "wiz"
 )
 
 // Valid indicates whether the value is a known member of the IntegrationType enum.
 func (e IntegrationType) Valid() bool {
 	switch e {
+	case IntegrationTypeCloudflare:
+		return true
+	case IntegrationTypeCortexCloud:
+		return true
 	case IntegrationTypeEmail:
 		return true
 	case IntegrationTypeJira:
@@ -573,6 +603,24 @@ func (e PrincipalKind) Valid() bool {
 	}
 }
 
+// Defines values for SplunkTLSHostnameCheck.
+const (
+	SplunkTLSHostnameCheckCheck SplunkTLSHostnameCheck = "check"
+	SplunkTLSHostnameCheckSkip  SplunkTLSHostnameCheck = "skip"
+)
+
+// Valid indicates whether the value is a known member of the SplunkTLSHostnameCheck enum.
+func (e SplunkTLSHostnameCheck) Valid() bool {
+	switch e {
+	case SplunkTLSHostnameCheckCheck:
+		return true
+	case SplunkTLSHostnameCheckSkip:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for SplunkTLSVerification.
 const (
 	SplunkTLSVerificationNone            SplunkTLSVerification = "none"
@@ -690,7 +738,9 @@ type AwsDeploymentCreate struct {
 	Name                 *string               `json:"name,omitempty"`
 	Organization         *AwsOrganizationInput `json:"organization,omitempty"`
 	RoleArn              string                `json:"roleArn"`
-	Tags                 *map[string]string    `json:"tags,omitempty"`
+
+	// Tags Up to 50 tags; keys 1-64 chars, values up to 256
+	Tags *map[string]string `json:"tags,omitempty"`
 }
 
 // AwsDeploymentMethod defines model for AwsDeploymentMethod.
@@ -705,7 +755,9 @@ type AwsDeploymentPatch struct {
 	Name                 *string               `json:"name,omitempty"`
 	Organization         *AwsOrganizationPatch `json:"organization,omitempty"`
 	RoleArn              *string               `json:"roleArn,omitempty"`
-	Tags                 *map[string]string    `json:"tags,omitempty"`
+
+	// Tags Up to 50 tags; keys 1-64 chars, values up to 256
+	Tags *map[string]string `json:"tags,omitempty"`
 }
 
 // AwsOnboarding defines model for AwsOnboarding.
@@ -823,7 +875,7 @@ type AzureDeployment struct {
 	Warnings        []DeploymentWarning `json:"warnings"`
 }
 
-// AzureDeploymentCreate An Azure subscription or management group to connect through Act's app. Before consent the deployment is created as pending_consent.
+// AzureDeploymentCreate An Azure subscription or management group to connect through Act's app; set exactly one of subscriptionId, managementGroupId. Before consent the deployment is created as pending_consent.
 type AzureDeploymentCreate struct {
 	AzureTenantID      string                 `json:"azureTenantId"`
 	DeletionProtection *bool                  `json:"deletionProtection,omitempty"`
@@ -834,20 +886,24 @@ type AzureDeploymentCreate struct {
 	Name               *string                `json:"name,omitempty"`
 	ServicePrincipalID string                 `json:"servicePrincipalId"`
 	SubscriptionID     *string                `json:"subscriptionId,omitempty"`
-	Tags               *map[string]string     `json:"tags,omitempty"`
+
+	// Tags Up to 50 tags; keys 1-64 chars, values up to 256
+	Tags *map[string]string `json:"tags,omitempty"`
 }
 
 // AzureDeploymentMethod defines model for AzureDeploymentMethod.
 type AzureDeploymentMethod string
 
-// AzureDeploymentPatch Merge patch. A member left out keeps its value. Identity changes re-verify.
+// AzureDeploymentPatch Partial update: omitted members keep their value; given tags replace the map. Identity changes re-verify.
 type AzureDeploymentPatch struct {
 	DeletionProtection *bool                  `json:"deletionProtection,omitempty"`
 	DeploymentMethod   *AzureDeploymentMethod `json:"deploymentMethod,omitempty"`
 	IncludeEntraID     *bool                  `json:"includeEntraId,omitempty"`
 	Name               *string                `json:"name,omitempty"`
 	ServicePrincipalID *string                `json:"servicePrincipalId,omitempty"`
-	Tags               *map[string]string     `json:"tags,omitempty"`
+
+	// Tags Up to 50 tags; keys 1-64 chars, values up to 256
+	Tags *map[string]string `json:"tags,omitempty"`
 }
 
 // AzureLogSource defines model for AzureLogSource.
@@ -863,7 +919,7 @@ type AzureLogSource struct {
 
 // AzureLogSourceDeletion defines model for AzureLogSourceDeletion.
 type AzureLogSourceDeletion struct {
-	// CleanupRequired Diagnostic settings and Event Hub namespaces that still stream to Act; remove them
+	// CleanupRequired Diagnostic settings that still stream to Act, and the Event Hub namespaces they stream to. Remove the settings; delete a namespace only once no other resource logs stream to it.
 	CleanupRequired []CleanupItem `json:"cleanupRequired"`
 	DeploymentID    string        `json:"deploymentId"`
 }
@@ -880,7 +936,7 @@ type AzureLogSourceEventHub struct {
 	Namespace string `json:"namespace"`
 }
 
-// AzureLogSourcePut The tenant-wide log streams to collect. Act verifies the Event Hubs before it registers them.
+// AzureLogSourcePut The tenant-wide log streams to collect; at least one of activityLogs, entraIdLogs must be true. To stop collecting entirely, DELETE the log source. Act verifies the Event Hubs before it registers them.
 type AzureLogSourcePut struct {
 	ActivityLogs bool `json:"activityLogs"`
 	EntraIDLogs  bool `json:"entraIdLogs"`
@@ -946,6 +1002,9 @@ type CleanupItem struct {
 
 // Cloud defines model for Cloud.
 type Cloud string
+
+// CortexCloudSecurityLevel defines model for CortexCloudSecurityLevel.
+type CortexCloudSecurityLevel string
 
 // DeploymentChangeSource defines model for DeploymentChangeSource.
 type DeploymentChangeSource string
@@ -1088,7 +1147,9 @@ type GcpDeploymentCreate struct {
 	ProjectID                   *string              `json:"projectId,omitempty"`
 	ServiceAccountProjectID     *string              `json:"serviceAccountProjectId,omitempty"`
 	ServiceAccountProjectNumber string               `json:"serviceAccountProjectNumber"`
-	Tags                        *map[string]string   `json:"tags,omitempty"`
+
+	// Tags Up to 50 tags; keys 1-64 chars, values up to 256
+	Tags *map[string]string `json:"tags,omitempty"`
 }
 
 // GcpDeploymentMethod defines model for GcpDeploymentMethod.
@@ -1099,7 +1160,9 @@ type GcpDeploymentPatch struct {
 	DeletionProtection *bool                `json:"deletionProtection,omitempty"`
 	DeploymentMethod   *GcpDeploymentMethod `json:"deploymentMethod,omitempty"`
 	Name               *string              `json:"name,omitempty"`
-	Tags               *map[string]string   `json:"tags,omitempty"`
+
+	// Tags Up to 50 tags; keys 1-64 chars, values up to 256
+	Tags *map[string]string `json:"tags,omitempty"`
 }
 
 // GcpOnboarding defines model for GcpOnboarding.
@@ -1167,12 +1230,18 @@ type IntegrationChangeSource string
 
 // IntegrationConfig defines model for IntegrationConfig.
 type IntegrationConfig struct {
-	APIEndpointURL  *string                `json:"apiEndpointUrl,omitempty"`
-	BaseURL         *string                `json:"baseUrl,omitempty"`
-	ClientID        *string                `json:"clientId,omitempty"`
-	Email           *openapi_types.Email   `json:"email,omitempty"`
-	HecURL          *string                `json:"hecUrl,omitempty"`
-	TLSVerification *SplunkTLSVerification `json:"tlsVerification,omitempty"`
+	AccountID        *string                   `json:"accountId,omitempty"`
+	APIEndpointURL   *string                   `json:"apiEndpointUrl,omitempty"`
+	APIKeyID         *string                   `json:"apiKeyId,omitempty"`
+	APIURL           *string                   `json:"apiUrl,omitempty"`
+	BaseURL          *string                   `json:"baseUrl,omitempty"`
+	ClientID         *string                   `json:"clientId,omitempty"`
+	Email            *openapi_types.Email      `json:"email,omitempty"`
+	HecURL           *string                   `json:"hecUrl,omitempty"`
+	SecurityLevel    *CortexCloudSecurityLevel `json:"securityLevel,omitempty"`
+	TLSCaCertificate *string                   `json:"tlsCaCertificate,omitempty"`
+	TLSHostnameCheck *SplunkTLSHostnameCheck   `json:"tlsHostnameCheck,omitempty"`
+	TLSVerification  *SplunkTLSVerification    `json:"tlsVerification,omitempty"`
 }
 
 // IntegrationCreate An integration to install. Each type takes its own config and secrets fields, all of them required.
@@ -1209,6 +1278,7 @@ type IntegrationSecretState struct {
 
 // IntegrationSecrets defines model for IntegrationSecrets.
 type IntegrationSecrets struct {
+	APIKey       *string `json:"apiKey,omitempty"`
 	APIToken     *string `json:"apiToken,omitempty"`
 	BotToken     *string `json:"botToken,omitempty"`
 	ClientSecret *string `json:"clientSecret,omitempty"`
@@ -1581,6 +1651,9 @@ type SlackChannel struct {
 type SlackChannelList struct {
 	Items []SlackChannel `json:"items"`
 }
+
+// SplunkTLSHostnameCheck defines model for SplunkTlsHostnameCheck.
+type SplunkTLSHostnameCheck string
 
 // SplunkTLSVerification defines model for SplunkTlsVerification.
 type SplunkTLSVerification string

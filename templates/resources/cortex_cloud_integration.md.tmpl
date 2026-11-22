@@ -1,0 +1,54 @@
+---
+page_title: "{{ .Name }} {{ .Type }} - {{ .ProviderName }}"
+subcategory: ""
+description: |-
+{{ .Description | plainmarkdown | trimspace | prefixlines "  " }}
+---
+
+# {{ .Name }} ({{ .Type }})
+
+{{ .Description | trimspace }}
+
+In Cortex Cloud, open Settings > Configurations > Integrations > API Keys and generate a key with the Viewer role, or with a custom role that has View on Public API, Asset Inventory and Cases and Issues. If your tenant uses scope-based access control, scope the key to all assets, all cases and issues and all endpoints. Act checks the connection before it saves anything, so an apply with a key Cortex Cloud rejects fails and changes nothing.
+
+## Example Usage
+
+{{ tffile .ExampleFile }}
+
+The integration `id` stays the same when you rotate the secret or change a setting.
+
+## Secrets
+
+Act never returns the API key. Set it one of two ways, never both:
+
+| Argument | Terraform | Stored in the state |
+|---|---|---|
+| `api_key_wo` with `api_key_wo_version` | 1.11 and later | No. The value lives only in the configuration, so it can come from an ephemeral variable or an ephemeral resource. |
+| `api_key` | 1.5.7 and later | Yes, marked sensitive. Anyone who can read the state can read it. |
+
+To rotate a write-only secret, change the value and increase `api_key_wo_version`. The integration is updated in place. With `api_key`, changing the value is enough.
+
+On Terraform before 1.11, use `api_key` with a sensitive variable:
+
+```terraform
+resource "act_cortex_cloud_integration" "this" {
+  api_url        = "https://api-acme.xdr.us.paloaltonetworks.com"
+  api_key_id     = "7"
+  security_level = "standard"
+  api_key        = var.cortex_cloud_api_key
+}
+```
+
+Changing `api_url`, `api_key_id` or `security_level` also sends the API key again: Act checks the new settings with the secret you configure and never reuses the stored one for them.
+
+`api_key_updated_at` records when Act last stored a new value. If it moves without Terraform, for example after someone rotates the secret in the Act console, the next plan updates the integration in place and sends the configured value again, with a warning.
+
+{{ .SchemaMarkdown | trimspace }}
+
+## Import
+
+Import by integration ID, or by `cortex-cloud`, since a tenant has at most one Cortex Cloud integration:
+
+{{ codefile "shell" .ImportFile }}
+
+Import cannot read the secret. Set `api_key` or `api_key_wo` in the configuration; the first apply sends it once.

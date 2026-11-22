@@ -29,6 +29,19 @@ resource "act_splunk_integration" "this" {
 
 Reference the integration from a notification rule with its `id`. The ID stays the same when you rotate the secret or change a setting.
 
+If a private CA signed your HEC certificate, pin it with `tls_ca_certificate`, and set `tls_hostname_check = "skip"` only when the certificate doesn't name the host in `hec_url`:
+
+```terraform
+resource "act_splunk_integration" "this" {
+  hec_url              = "https://splunk.acme.example:8088"
+  tls_ca_certificate   = file("${path.module}/splunk-ca.pem")
+  hec_token_wo         = var.splunk_hec_token
+  hec_token_wo_version = 1
+}
+```
+
+Leaving `tls_ca_certificate` or `tls_hostname_check` out keeps whatever Act holds. To stop pinning a CA, set `tls_ca_certificate = ""`.
+
 ## Secrets
 
 Act never returns the HEC token. Set it one of two ways, never both:
@@ -49,7 +62,7 @@ resource "act_splunk_integration" "this" {
 }
 ```
 
-Changing `hec_url` or `tls_verification` also sends the HEC token again: Act checks the new settings with the secret you configure and never reuses the stored one for them.
+Changing `hec_url`, `tls_verification`, `tls_ca_certificate` or `tls_hostname_check` also sends the HEC token again: Act checks the new settings with the secret you configure and never reuses the stored one for them.
 
 `hec_token_updated_at` records when Act last stored a new value. If it moves without Terraform, for example after someone rotates the secret in the Act console, the next plan updates the integration in place and sends the configured value again, with a warning.
 
@@ -67,6 +80,8 @@ Changing `hec_url` or `tls_verification` also sends the HEC token again: Act che
 - `hec_token` (String, Sensitive) The HEC token, allowed to write to the index your notification rules name. Stored in the Terraform state. Set exactly one of `hec_token` and `hec_token_wo`; prefer `hec_token_wo` on Terraform 1.11 and later.
 - `hec_token_wo` (String, Sensitive, [Write-only](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments)) The HEC token, allowed to write to the index your notification rules name. Write-only: never stored in the plan or the state. Needs Terraform 1.11 or later. Change `hec_token_wo_version` to send a new value.
 - `hec_token_wo_version` (Number) Any number you choose. Changing it sends `hec_token_wo` to Act again, in place.
+- `tls_ca_certificate` (String) The PEM certificate of the private CA that signed your HEC certificate. Act then trusts only that CA, unless `tls_verification` is `none`. Leave it out to keep the value Act holds; set it to `""` to stop pinning a CA. Changing it sends the HEC token again.
+- `tls_hostname_check` (String) Whether Act checks that the HEC certificate names the host in `hec_url`, when `tls_ca_certificate` is set: `check` (what Act does when it is not set) or `skip`. Leave it out to keep the value Act holds. Changing it sends the HEC token again.
 - `tls_verification` (String) How Act checks the HEC certificate: `verify` (default), `splunk_default_ca` for Splunk's default certificate, or `none`, which lets anyone between Act and Splunk read the token. Changing it sends the HEC token again.
 
 ### Read-Only

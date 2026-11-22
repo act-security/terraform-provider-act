@@ -3,7 +3,10 @@ package fakeapi
 import (
 	"context"
 	"crypto/rand"
+	"encoding/json"
 	"fmt"
+	"maps"
+	"slices"
 	"sort"
 	"sync"
 	"time"
@@ -17,23 +20,41 @@ const (
 )
 
 type integrationFields struct {
-	config []string
-	secret string
+	config   []string
+	optional []string
+	secret   string
+}
+
+var installableIntegrationTypes = []gen.InstallableIntegrationType{
+	gen.InstallableIntegrationTypeSlack,
+	gen.InstallableIntegrationTypeJira,
+	gen.InstallableIntegrationTypeWiz,
+	gen.InstallableIntegrationTypeSplunk,
+	gen.InstallableIntegrationTypeCloudflare,
+	gen.InstallableIntegrationTypeCortexCloud,
 }
 
 var integrationTypeFields = map[gen.InstallableIntegrationType]integrationFields{
-	gen.InstallableIntegrationTypeSlack:  {secret: "botToken"},
-	gen.InstallableIntegrationTypeJira:   {config: []string{"baseUrl", "email"}, secret: "apiToken"},
-	gen.InstallableIntegrationTypeWiz:    {config: []string{"clientId", "apiEndpointUrl"}, secret: "clientSecret"},
-	gen.InstallableIntegrationTypeSplunk: {config: []string{"hecUrl", "tlsVerification"}, secret: "hecToken"},
+	gen.InstallableIntegrationTypeSlack: {secret: "botToken"},
+	gen.InstallableIntegrationTypeJira:  {config: []string{"baseUrl", "email"}, secret: "apiToken"},
+	gen.InstallableIntegrationTypeWiz:   {config: []string{"clientId", "apiEndpointUrl"}, secret: "clientSecret"},
+	gen.InstallableIntegrationTypeSplunk: {
+		config:   []string{"hecUrl", "tlsVerification"},
+		optional: []string{"tlsCaCertificate", "tlsHostnameCheck"},
+		secret:   "hecToken",
+	},
+	gen.InstallableIntegrationTypeCloudflare:  {config: []string{"accountId"}, secret: "apiToken"},
+	gen.InstallableIntegrationTypeCortexCloud: {config: []string{"apiUrl", "apiKeyId", "securityLevel"}, secret: "apiKey"},
 }
 
 var integrationDisplayNames = map[gen.IntegrationType]string{
-	gen.IntegrationTypeSlack:  "Slack",
-	gen.IntegrationTypeJira:   "Jira",
-	gen.IntegrationTypeWiz:    "Wiz",
-	gen.IntegrationTypeSplunk: "Splunk",
-	gen.IntegrationTypeEmail:  "Email",
+	gen.IntegrationTypeSlack:       "Slack",
+	gen.IntegrationTypeJira:        "Jira",
+	gen.IntegrationTypeWiz:         "Wiz",
+	gen.IntegrationTypeSplunk:      "Splunk",
+	gen.IntegrationTypeCloudflare:  "Cloudflare",
+	gen.IntegrationTypeCortexCloud: "Cortex Cloud",
+	gen.IntegrationTypeEmail:       "Email",
 }
 
 type storedIntegration struct {
@@ -86,6 +107,16 @@ func (f *Fake) IntegrationSecret(id string) (string, bool) {
 	return stored.secret, true
 }
 
+func (f *Fake) IntegrationConfig(id string) (map[string]string, bool) {
+	f.integrations.mu.Lock()
+	defer f.integrations.mu.Unlock()
+	stored, ok := f.integrations.byID[id]
+	if !ok {
+		return nil, false
+	}
+	return maps.Clone(stored.item.Config), true
+}
+
 func (f *Fake) RotateIntegrationSecretOutOfBand(id, secret string) bool {
 	f.integrations.mu.Lock()
 	defer f.integrations.mu.Unlock()
@@ -119,15 +150,10 @@ func (s *apiServer) ListIntegrationTypes(context.Context, gen.ListIntegrationTyp
 		installed[stored.item.Type] = true
 	}
 	items := []gen.IntegrationTypeInfo{}
-	for _, kind := range []gen.InstallableIntegrationType{
-		gen.InstallableIntegrationTypeSlack,
-		gen.InstallableIntegrationTypeJira,
-		gen.InstallableIntegrationTypeWiz,
-		gen.InstallableIntegrationTypeSplunk,
-	} {
+	for _, kind := range installableIntegrationTypes {
 		fields := integrationTypeFields[kind]
 		described := []gen.IntegrationTypeField{}
-		for _, name := range fields.config {
+		for _, name := range slices.Concat(fields.config, fields.optional) {
 			described = append(described, gen.IntegrationTypeField{Name: name})
 		}
 		described = append(described, gen.IntegrationTypeField{Name: fields.secret, Sensitive: true})
@@ -300,42 +326,23 @@ func (s *apiServer) DeleteIntegration(_ context.Context, req gen.DeleteIntegrati
 }
 
 func configMap(config *gen.IntegrationConfig) map[string]string {
-	out := map[string]string{}
-	if config == nil {
-		return out
-	}
-	set := func(name string, value *string) {
-		if value != nil {
-			out[name] = *value
-		}
-	}
-	set("baseUrl", config.BaseURL)
-	set("clientId", config.ClientID)
-	set("apiEndpointUrl", config.APIEndpointURL)
-	set("hecUrl", config.HecURL)
-	if config.Email != nil {
-		out["email"] = string(*config.Email)
-	}
-	if config.TLSVerification != nil {
-		out["tlsVerification"] = string(*config.TLSVerification)
-	}
-	return out
+	return wireValues(config)
 }
 
 func secretOf(secrets *gen.IntegrationSecrets, name string) string {
-	if secrets == nil {
-		return ""
+	return wireValues(secrets)[name]
+}
+
+func wireValues(body any) map[string]string {
+	out := map[string]string{}
+	raw, err := json.Marshal(body)
+	if err == nil && string(raw) != "null" {
+		err = json.Unmarshal(raw, &out)
 	}
-	values := map[string]*string{
-		"botToken":     secrets.BotToken,
-		"apiToken":     secrets.APIToken,
-		"clientSecret": secrets.ClientSecret,
-		"hecToken":     secrets.HecToken,
+	if err != nil {
+		panic(err)
 	}
-	if value := values[name]; value != nil {
-		return *value
-	}
-	return ""
+	return out
 }
 
 func changeSource(source gen.IntegrationChangeSource) *gen.IntegrationChangeSource {

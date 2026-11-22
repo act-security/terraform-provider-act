@@ -1,6 +1,7 @@
 package provider
 
 import (
+	"bytes"
 	"context"
 	"crypto/rand"
 	"encoding/json"
@@ -41,6 +42,7 @@ type integrationConfigField struct {
 	description  string
 	validators   []validator.String
 	defaultValue string
+	optional     bool
 }
 
 type integrationSecretField struct {
@@ -132,12 +134,17 @@ func (r *integrationResource) Schema(_ context.Context, _ resource.SchemaRequest
 			MarkdownDescription: field.description,
 			Validators:          field.validators,
 		}
-		if field.defaultValue == "" {
-			attribute.Required = true
-		} else {
+		switch {
+		case field.defaultValue != "":
 			attribute.Optional = true
 			attribute.Computed = true
 			attribute.Default = stringdefault.StaticString(field.defaultValue)
+		case field.optional:
+			attribute.Optional = true
+			attribute.Computed = true
+			attribute.PlanModifiers = []planmodifier.String{stringplanmodifier.UseStateForUnknown()}
+		default:
+			attribute.Required = true
 		}
 		attributes[field.attr] = attribute
 	}
@@ -226,46 +233,31 @@ func (r *integrationResource) secretValue(ctx context.Context, config, plan attr
 	return stringAt(ctx, plan, r.kind.secret.attr, diags).ValueString()
 }
 
-func apiConfig(values map[string]string) *apigen.IntegrationConfig {
+func apiConfig(values map[string]string, diags *diag.Diagnostics) *apigen.IntegrationConfig {
 	if len(values) == 0 {
 		return nil
 	}
-	config := &apigen.IntegrationConfig{}
-	for wire, value := range values {
-		v := value
-		switch wire {
-		case "baseUrl":
-			config.BaseURL = &v
-		case "email":
-			email := apigenEmail(v)
-			config.Email = &email
-		case "clientId":
-			config.ClientID = &v
-		case "apiEndpointUrl":
-			config.APIEndpointURL = &v
-		case "hecUrl":
-			config.HecURL = &v
-		case "tlsVerification":
-			tls := apigen.SplunkTLSVerification(v)
-			config.TLSVerification = &tls
-		}
-	}
-	return config
+	var config apigen.IntegrationConfig
+	decodeWire(values, &config, diags)
+	return &config
 }
 
-func apiSecrets(wire, value string) apigen.IntegrationSecrets {
-	secrets := apigen.IntegrationSecrets{}
-	switch wire {
-	case "botToken":
-		secrets.BotToken = &value
-	case "apiToken":
-		secrets.APIToken = &value
-	case "clientSecret":
-		secrets.ClientSecret = &value
-	case "hecToken":
-		secrets.HecToken = &value
-	}
+func apiSecrets(wire, value string, diags *diag.Diagnostics) apigen.IntegrationSecrets {
+	var secrets apigen.IntegrationSecrets
+	decodeWire(map[string]string{wire: value}, &secrets, diags)
 	return secrets
+}
+
+func decodeWire(values map[string]string, target any, diags *diag.Diagnostics) {
+	raw, err := json.Marshal(values)
+	if err == nil {
+		decoder := json.NewDecoder(bytes.NewReader(raw))
+		decoder.DisallowUnknownFields()
+		err = decoder.Decode(target)
+	}
+	if err != nil {
+		diags.AddError("Encoding the integration request failed", err.Error())
+	}
 }
 
 func (r *integrationResource) writeComputed(ctx context.Context, target attributeSetter, item apigen.Integration, diags *diag.Diagnostics) {
@@ -287,8 +279,12 @@ func (r *integrationResource) writeComputed(ctx context.Context, target attribut
 	}
 	set(r.kind.secretUpdatedAt(), updatedAt)
 	for _, field := range r.kind.config {
-		if value, ok := item.Config[field.wire]; ok {
+		value, ok := item.Config[field.wire]
+		switch {
+		case ok:
 			set(field.attr, types.StringValue(value))
+		case field.optional:
+			set(field.attr, types.StringNull())
 		}
 	}
 }
@@ -311,13 +307,13 @@ func (r *integrationResource) Create(ctx context.Context, req resource.CreateReq
 	diags := &resp.Diagnostics
 	values := r.configValues(ctx, req.Plan, diags)
 	secret := r.secretValue(ctx, req.Config, req.Plan, diags)
-	if diags.HasError() {
-		return
-	}
 	body := apigen.IntegrationCreate{
 		Type:    r.kind.apiType,
-		Config:  apiConfig(values),
-		Secrets: apiSecrets(r.kind.secret.wire, secret),
+		Config:  apiConfig(values, diags),
+		Secrets: apiSecrets(r.kind.secret.wire, secret, diags),
+	}
+	if diags.HasError() {
+		return
 	}
 	result, err := r.data.Client.CreateIntegration(ctx, body, idempotencyKey())
 	if err != nil {
@@ -398,13 +394,13 @@ func (r *integrationResource) Update(ctx context.Context, req resource.UpdateReq
 	plaintextChanged := !stringAt(ctx, req.Plan, r.kind.secret.attr, diags).Equal(stringAt(ctx, req.State, r.kind.secret.attr, diags))
 	versionChanged := !int64At(ctx, req.Plan, r.kind.secretWOVersion(), diags).Equal(int64At(ctx, req.State, r.kind.secretWOVersion(), diags))
 	drifted := stringAt(ctx, req.Plan, r.kind.secretUpdatedAt(), diags).IsUnknown()
+	patch := apigen.IntegrationPatch{Type: r.kind.apiType, Config: apiConfig(changed, diags)}
+	if len(changed) > 0 || plaintextChanged || versionChanged || drifted {
+		secrets := apiSecrets(r.kind.secret.wire, r.secretValue(ctx, req.Config, req.Plan, diags), diags)
+		patch.Secrets = &secrets
+	}
 	if diags.HasError() {
 		return
-	}
-	patch := apigen.IntegrationPatch{Type: r.kind.apiType, Config: apiConfig(changed)}
-	if len(changed) > 0 || plaintextChanged || versionChanged || drifted {
-		secrets := apiSecrets(r.kind.secret.wire, r.secretValue(ctx, req.Config, req.Plan, diags))
-		patch.Secrets = &secrets
 	}
 	result, err := r.data.Client.UpdateIntegration(ctx, id.ValueString(), privateString(ctx, req.Private, privateETag), patch)
 	if err != nil {
@@ -432,7 +428,7 @@ func (r *integrationResource) Delete(ctx context.Context, req resource.DeleteReq
 
 func (r *integrationResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	id := strings.TrimSpace(req.ID)
-	if id == r.kind.name {
+	if id == string(r.kind.apiType) {
 		kind := apigen.IntegrationType(r.kind.apiType)
 		items, err := r.data.Client.ListIntegrations(ctx, &kind)
 		if err != nil {
@@ -446,7 +442,7 @@ func (r *integrationResource) ImportState(ctx context.Context, req resource.Impo
 		id = items[0].ID
 	}
 	if !uuidPattern.MatchString(id) {
-		resp.Diagnostics.AddError("Invalid import ID", fmt.Sprintf("Use the integration ID, a lowercase UUID, or %q.", r.kind.name))
+		resp.Diagnostics.AddError("Invalid import ID", fmt.Sprintf("Use the integration ID, a lowercase UUID, or %q.", r.kind.apiType))
 		return
 	}
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("id"), id)...)

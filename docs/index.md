@@ -104,7 +104,7 @@ terraform apply
 | Resources | Scope a change needs |
 |---|---|
 | `act_aws_account_deployment`, `act_aws_organization_deployment` | `deployments:write` |
-| `act_slack_integration`, `act_jira_integration`, `act_wiz_integration`, `act_splunk_integration`, `act_notification_rule`, `act_notification_recipient` | `integrations:write` |
+| `act_slack_integration`, `act_jira_integration`, `act_wiz_integration`, `act_splunk_integration`, `act_cloudflare_integration`, `act_cortex_cloud_integration`, `act_notification_rule`, `act_notification_recipient` | `integrations:write` |
 
 The [`act_current_identity`](https://registry.terraform.io/providers/act-security/act/latest/docs/data-sources/current_identity) data source lists the scopes the key holds.
 
