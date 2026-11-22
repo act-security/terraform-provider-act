@@ -10147,8 +10147,7 @@
           "wiz",
           "splunk",
           "email",
-          "cortex-cloud",
-          "cloudflare"
+          "cortex-cloud"
         ],
         "type": "string"
       },
@@ -10158,8 +10157,7 @@
           "jira",
           "wiz",
           "splunk",
-          "cortex-cloud",
-          "cloudflare"
+          "cortex-cloud"
         ],
         "type": "string"
       },
@@ -10251,10 +10249,6 @@
           },
           "securityLevel": {
             "$ref": "#/components/schemas/CortexCloudSecurityLevel"
-          },
-          "accountId": {
-            "type": "string",
-            "pattern": "^[0-9a-f]{32}$"
           }
         },
         "additionalProperties": false

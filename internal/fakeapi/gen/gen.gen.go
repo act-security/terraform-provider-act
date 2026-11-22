@@ -347,7 +347,6 @@ func (e GcpDeploymentMethod) Valid() bool {
 
 // Defines values for InstallableIntegrationType.
 const (
-	InstallableIntegrationTypeCloudflare  InstallableIntegrationType = "cloudflare"
 	InstallableIntegrationTypeCortexCloud InstallableIntegrationType = "cortex-cloud"
 	InstallableIntegrationTypeJira        InstallableIntegrationType = "jira"
 	InstallableIntegrationTypeSlack       InstallableIntegrationType = "slack"
@@ -358,8 +357,6 @@ const (
 // Valid indicates whether the value is a known member of the InstallableIntegrationType enum.
 func (e InstallableIntegrationType) Valid() bool {
 	switch e {
-	case InstallableIntegrationTypeCloudflare:
-		return true
 	case InstallableIntegrationTypeCortexCloud:
 		return true
 	case InstallableIntegrationTypeJira:
@@ -419,7 +416,6 @@ func (e IntegrationStatus) Valid() bool {
 
 // Defines values for IntegrationType.
 const (
-	IntegrationTypeCloudflare  IntegrationType = "cloudflare"
 	IntegrationTypeCortexCloud IntegrationType = "cortex-cloud"
 	IntegrationTypeEmail       IntegrationType = "email"
 	IntegrationTypeJira        IntegrationType = "jira"
@@ -431,8 +427,6 @@ const (
 // Valid indicates whether the value is a known member of the IntegrationType enum.
 func (e IntegrationType) Valid() bool {
 	switch e {
-	case IntegrationTypeCloudflare:
-		return true
 	case IntegrationTypeCortexCloud:
 		return true
 	case IntegrationTypeEmail:
@@ -1230,7 +1224,6 @@ type IntegrationChangeSource string
 
 // IntegrationConfig defines model for IntegrationConfig.
 type IntegrationConfig struct {
-	AccountID        *string                   `json:"accountId,omitempty"`
 	APIEndpointURL   *string                   `json:"apiEndpointUrl,omitempty"`
 	APIKeyID         *string                   `json:"apiKeyId,omitempty"`
 	APIURL           *string                   `json:"apiUrl,omitempty"`

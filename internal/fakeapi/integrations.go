@@ -30,7 +30,6 @@ var installableIntegrationTypes = []gen.InstallableIntegrationType{
 	gen.InstallableIntegrationTypeJira,
 	gen.InstallableIntegrationTypeWiz,
 	gen.InstallableIntegrationTypeSplunk,
-	gen.InstallableIntegrationTypeCloudflare,
 	gen.InstallableIntegrationTypeCortexCloud,
 }
 
@@ -43,7 +42,6 @@ var integrationTypeFields = map[gen.InstallableIntegrationType]integrationFields
 		optional: []string{"tlsCaCertificate", "tlsHostnameCheck"},
 		secret:   "hecToken",
 	},
-	gen.InstallableIntegrationTypeCloudflare:  {config: []string{"accountId"}, secret: "apiToken"},
 	gen.InstallableIntegrationTypeCortexCloud: {config: []string{"apiUrl", "apiKeyId", "securityLevel"}, secret: "apiKey"},
 }
 
@@ -52,7 +50,6 @@ var integrationDisplayNames = map[gen.IntegrationType]string{
 	gen.IntegrationTypeJira:        "Jira",
 	gen.IntegrationTypeWiz:         "Wiz",
 	gen.IntegrationTypeSplunk:      "Splunk",
-	gen.IntegrationTypeCloudflare:  "Cloudflare",
 	gen.IntegrationTypeCortexCloud: "Cortex Cloud",
 	gen.IntegrationTypeEmail:       "Email",
 }

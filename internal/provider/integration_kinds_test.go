@@ -31,14 +31,6 @@ type pastedKeyKind struct {
 
 var pastedKeyKinds = []pastedKeyKind{
 	{
-		resourceType: "act_cloudflare_integration",
-		importID:     "cloudflare",
-		secretAttr:   "api_token",
-		first:        map[string]string{"account_id": "0123456789abcdef0123456789abcdef"},
-		changed:      map[string]string{"account_id": "fedcba9876543210fedcba9876543210"},
-		wantConfig:   map[string]string{"accountId": "fedcba9876543210fedcba9876543210"},
-	},
-	{
 		resourceType: "act_cortex_cloud_integration",
 		importID:     "cortex-cloud",
 		secretAttr:   "api_key",
@@ -212,17 +204,12 @@ func TestSplunkIntegrationSendsTLSPinningOnlyWhenConfigured(t *testing.T) {
 }
 
 func TestNewIntegrationSettingsAreCheckedAtPlan(t *testing.T) {
-	cloudflare, cortex := pastedKeyKinds[0], pastedKeyKinds[1]
+	cortex := pastedKeyKinds[0]
 	tests := []struct {
 		name   string
 		config string
 		want   string
 	}{
-		{
-			name:   "cloudflare account ID that is not 32 hex characters",
-			config: cloudflare.writeOnly(map[string]string{"account_id": "ACME-account"}, "token", 1),
-			want:   `Cloudflare account ID`,
-		},
 		{
 			name: "cortex cloud API URL outside paloaltonetworks.com",
 			config: cortex.writeOnly(map[string]string{
@@ -256,17 +243,19 @@ func TestNewIntegrationSettingsAreCheckedAtPlan(t *testing.T) {
 			want:   `value must be one of`,
 		},
 		{
-			name: "cloudflare token set both ways",
+			name: "cortex cloud key set both ways",
 			config: requiredProviders + `
 provider "act" {}
-resource "act_cloudflare_integration" "this" {
-  account_id           = "0123456789abcdef0123456789abcdef"
-  api_token            = "a"
-  api_token_wo         = "b"
-  api_token_wo_version = 1
+resource "act_cortex_cloud_integration" "this" {
+  api_url            = "https://api-acme.xdr.us.paloaltonetworks.com"
+  api_key_id         = "7"
+  security_level     = "standard"
+  api_key            = "a"
+  api_key_wo         = "b"
+  api_key_wo_version = 1
 }
 `,
-			want: `api_token`,
+			want: `api_key`,
 		},
 	}
 	for _, test := range tests {

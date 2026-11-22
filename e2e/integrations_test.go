@@ -31,13 +31,6 @@ var integrationsUnderTest = []integrationUnderTest{
 		second:       "xoxb-e2e-second-token",
 	},
 	{
-		resourceType: "act_cloudflare_integration",
-		secretAttr:   "api_token",
-		settings:     "  account_id = \"0123456789abcdef0123456789abcdef\"\n",
-		first:        "e2e-first-cloudflare-token",
-		second:       "e2e-second-cloudflare-token",
-	},
-	{
 		resourceType: "act_cortex_cloud_integration",
 		secretAttr:   "api_key",
 		settings:     "  api_url        = \"https://api-acme.xdr.us.paloaltonetworks.com\"\n  api_key_id     = \"7\"\n  security_level = \"advanced\"\n",

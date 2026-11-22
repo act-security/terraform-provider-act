@@ -1,7 +1,5 @@
 {
   "items": [
-    "integration-field:cloudflare.accountId",
-    "integration-field:cloudflare.apiToken",
     "integration-field:cortex-cloud.apiKey",
     "integration-field:cortex-cloud.apiKeyId",
     "integration-field:cortex-cloud.apiUrl",
@@ -18,7 +16,6 @@
     "integration-field:wiz.apiEndpointUrl",
     "integration-field:wiz.clientId",
     "integration-field:wiz.clientSecret",
-    "integration-type:cloudflare",
     "integration-type:cortex-cloud",
     "integration-type:jira",
     "integration-type:slack",

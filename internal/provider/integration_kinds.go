@@ -19,7 +19,6 @@ var (
 	emailPattern       = regexp.MustCompile(`^[^@\s]+@[^@\s]+\.[^@\s]+$`)
 	wizEndpointPattern = regexp.MustCompile(`^https://api\.[a-z0-9][a-z0-9-]*\.(app\.wiz\.io|app\.wiz\.us|gov\.wiz\.io)(/.*)?$`)
 	httpsPattern       = regexp.MustCompile(`^https://`)
-	cloudflareAccount  = regexp.MustCompile(`^[0-9a-f]{32}$`)
 	cortexAPIPattern   = regexp.MustCompile(`^https://api-[a-z0-9][a-z0-9-]*(\.[a-z0-9][a-z0-9-]*)*\.paloaltonetworks\.com/?$`)
 	digitsPattern      = regexp.MustCompile(`^[0-9]+$`)
 )
@@ -139,27 +138,6 @@ var splunkIntegration = integrationKind{
 	},
 }
 
-var cloudflareIntegration = integrationKind{
-	name:        "cloudflare",
-	apiType:     apigen.InstallableIntegrationTypeCloudflare,
-	title:       "Cloudflare",
-	description: "A Cloudflare integration, connected with a read-only account API token so Act can read your Cloudflare account. One per tenant. The Act console can also connect Cloudflare in one click through a browser sign-in; that has no Terraform equivalent, so use an account API token here.",
-	config: []integrationConfigField{
-		{
-			attr:        "account_id",
-			wire:        "accountId",
-			description: "The 32-character account ID that follows `dash.cloudflare.com/` in your dashboard URL. Changing it sends the API token again.",
-			validators:  []validator.String{stringvalidator.RegexMatches(cloudflareAccount, "must be the 32 lowercase letters and digits of a Cloudflare account ID")},
-		},
-	},
-	secret: integrationSecretField{
-		attr:        "api_token",
-		wire:        "apiToken",
-		description: "An account API token, owned by the account rather than a person, with the read permissions the Act console lists for Cloudflare. User API tokens and the Global API Key are not supported.",
-		validators:  []validator.String{stringvalidator.LengthBetween(1, maxSecretLength)},
-	},
-}
-
 var cortexCloudIntegration = integrationKind{
 	name:        "cortex_cloud",
 	apiType:     apigen.InstallableIntegrationTypeCortexCloud,
@@ -208,10 +186,6 @@ func NewWizIntegrationResource() resource.Resource { return &integrationResource
 
 func NewSplunkIntegrationResource() resource.Resource {
 	return &integrationResource{kind: splunkIntegration}
-}
-
-func NewCloudflareIntegrationResource() resource.Resource {
-	return &integrationResource{kind: cloudflareIntegration}
 }
 
 func NewCortexCloudIntegrationResource() resource.Resource {
