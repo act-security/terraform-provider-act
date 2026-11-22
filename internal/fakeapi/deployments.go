@@ -420,6 +420,9 @@ func (s *apiServer) CreateAwsDeployment(_ context.Context, req gen.CreateAwsDepl
 		if (body.Organization.RootID == nil) == (body.Organization.OrganizationalUnitIds == nil) {
 			return gen.CreateAwsDeployment400JSONResponse(invalid("organization.rootId", "exactly_one_scope")), nil
 		}
+		if attribute, ok := customMemberRole(body.Organization.MemberRoleName, body.Organization.MemberRolePath); ok {
+			return gen.CreateAwsDeployment400JSONResponse(invalid(attribute, notSupported)), nil
+		}
 	}
 	if existing := store.byNaturalKey(target.naturalKey); existing != nil {
 		e := envelope(gen.ErrorEnvelopeErrorCodeAlreadyExists, "A deployment for this target already exists")
@@ -496,12 +499,6 @@ func (f *Fake) newAwsDeployment(body gen.AwsDeploymentCreate, roleAccount string
 			ManagementAccountID:   &roleAccount,
 			MemberRoleName:        &roleName,
 			MemberRolePath:        &rolePath,
-		}
-		if org.MemberRoleName != nil {
-			item.Organization.MemberRoleName = org.MemberRoleName
-		}
-		if org.MemberRolePath != nil {
-			item.Organization.MemberRolePath = org.MemberRolePath
 		}
 	}
 	if body.Name != nil {
@@ -637,6 +634,9 @@ func applyDeploymentPatch(ctx context.Context, current gen.AwsDeployment, body g
 	if rejection := rejectRetarget(*current.Organization, *body.Organization); rejection != nil {
 		return patched, rejection
 	}
+	if attribute, ok := customMemberRole(body.Organization.MemberRoleName, body.Organization.MemberRolePath); ok {
+		return patched, gen.UpdateAwsDeployment400JSONResponse(invalid(attribute, notSupported))
+	}
 	org, retargeted := applyOrganizationPatch(ctx, *current.Organization, *body.Organization)
 	patched.item.Organization, patched.reverify = &org, patched.reverify || retargeted
 	return patched, nil
@@ -703,13 +703,20 @@ func applyOrganizationPatch(ctx context.Context, org gen.AwsOrganization, patch 
 	if _, ok := presentFields(ctx, "organization")["excludedAccountIds"]; ok {
 		org.ExcludedAccountIds = patch.ExcludedAccountIds
 	}
-	if patch.MemberRoleName != nil {
-		org.MemberRoleName = patch.MemberRoleName
-	}
-	if patch.MemberRolePath != nil {
-		org.MemberRolePath = patch.MemberRolePath
-	}
 	return org, retargeted
+}
+
+const notSupported = "not_supported"
+
+func customMemberRole(name, path *string) (string, bool) {
+	switch {
+	case name != nil:
+		return "organization.memberRoleName", true
+	case path != nil:
+		return "organization.memberRolePath", true
+	default:
+		return "", false
+	}
 }
 
 func (s *apiServer) VerifyAwsDeployment(_ context.Context, req gen.VerifyAwsDeploymentRequestObject) (gen.VerifyAwsDeploymentResponseObject, error) {

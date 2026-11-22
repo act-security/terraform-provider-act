@@ -84,6 +84,12 @@ type awsDeploymentModel interface {
 	readTarget(ctx context.Context, item apigen.AwsDeployment, diags *diag.Diagnostics)
 	sameTarget(other awsDeploymentModel) bool
 	validate(diags *diag.Diagnostics)
+	refuseUnsupportedTarget(ctx context.Context, in targetPlan, diags *diag.Diagnostics)
+}
+
+type targetPlan struct {
+	config tfsdk.Config
+	prior  awsDeploymentModel
 }
 
 type awsDeploymentKind struct {
@@ -269,7 +275,7 @@ func (r *awsDeploymentResource[M, P]) ModifyPlan(ctx context.Context, req resour
 	case req.State.Raw.IsNull() && req.Plan.Raw.IsNull():
 		return
 	case req.State.Raw.IsNull():
-		r.planCreate(ctx, req.Plan, &resp.Diagnostics)
+		r.planCreate(ctx, req, &resp.Diagnostics)
 	case req.Plan.Raw.IsNull():
 		r.planDestroy(ctx, req.State, &resp.Diagnostics)
 	default:
@@ -407,14 +413,15 @@ func (r *awsDeploymentResource[M, P]) ImportState(ctx context.Context, req resou
 	}
 }
 
-func (r *awsDeploymentResource[M, P]) planCreate(ctx context.Context, plan tfsdk.Plan, diags *diag.Diagnostics) {
+func (r *awsDeploymentResource[M, P]) planCreate(ctx context.Context, req resource.ModifyPlanRequest, diags *diag.Diagnostics) {
 	var model M
-	if diags.Append(plan.Get(ctx, &model)...); diags.HasError() {
+	if diags.Append(req.Plan.Get(ctx, &model)...); diags.HasError() {
 		return
 	}
 	if P(&model).common().ExternalIDSource.ValueString() == externalIDLegacy {
 		diags.AddAttributeError(path.Root("external_id_source"), "A new deployment cannot use a legacy external ID", "Act gives every new deployment a derived external ID. Leave external_id_source out, or set it to \"derived\".")
 	}
+	P(&model).refuseUnsupportedTarget(ctx, targetPlan{config: req.Config}, diags)
 }
 
 func (r *awsDeploymentResource[M, P]) planDestroy(ctx context.Context, state tfsdk.State, diags *diag.Diagnostics) {
@@ -438,6 +445,7 @@ func (r *awsDeploymentResource[M, P]) planUpdate(ctx context.Context, req resour
 	if change.refuseProtectedReplacement() || change.refuseLegacyExternalID() {
 		return
 	}
+	change.next.refuseUnsupportedTarget(ctx, targetPlan{config: req.Config, prior: change.prior}, diags)
 	change.planExternalIDRotation(ctx)
 	change.planHeal(ctx)
 }

@@ -15,13 +15,18 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
+	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	"github.com/act-security/terraform-provider-act/internal/apigen"
 	"github.com/act-security/terraform-provider-act/internal/client"
 )
 
-const stackSetTargetLimit = 850
+const (
+	stackSetTargetLimit = 850
+	actMemberRolePrefix = "ActSecurityRole-"
+	actMemberRolePath   = "/"
+)
 
 type awsAccountDeploymentModel struct {
 	awsDeploymentCommon
@@ -123,14 +128,14 @@ func organizationAttributes() map[string]schema.Attribute {
 			},
 		},
 		"member_role_name": schema.StringAttribute{
-			MarkdownDescription: "The name of the role in each member account. Defaults to `ActSecurityRole-<deployment_id>`. Set it when another system, such as Account Factory for Terraform or Control Tower, creates the member roles.",
+			MarkdownDescription: "The name of the role in each member account, `ActSecurityRole-<deployment_id>`. Act does not support custom member role names yet, so the plan fails when this is set to another value. Leave it out, or pass the module's `member_role_name` output.",
 			Optional:            true,
 			Computed:            true,
 			Validators:          []validator.String{stringvalidator.RegexMatches(awsRoleNamePattern, "must be an IAM role name")},
 			PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 		},
 		"member_role_path": schema.StringAttribute{
-			MarkdownDescription: "The IAM path of the member roles. Defaults to `/`.",
+			MarkdownDescription: "The IAM path of the member roles, `/`. Act does not support custom member role paths yet, so the plan fails when this is set to another value.",
 			Optional:            true,
 			Computed:            true,
 			Validators:          []validator.String{stringvalidator.RegexMatches(awsRolePathPattern, "must be an IAM path that starts and ends with /")},
@@ -179,6 +184,9 @@ func (m *awsAccountDeploymentModel) validate(diags *diag.Diagnostics) {
 	}
 }
 
+func (m *awsAccountDeploymentModel) refuseUnsupportedTarget(context.Context, targetPlan, *diag.Diagnostics) {
+}
+
 func (m *awsOrganizationDeploymentModel) common() *awsDeploymentCommon { return &m.awsDeploymentCommon }
 
 func (m *awsOrganizationDeploymentModel) targetLabel() string {
@@ -193,8 +201,6 @@ func (m *awsOrganizationDeploymentModel) setTarget(ctx context.Context, body *ap
 		RootID:                knownString(m.RootID),
 		OrganizationalUnitIds: stringSlice(ctx, m.OrganizationalUnitIDs, diags),
 		ExcludedAccountIds:    stringSlice(ctx, m.ExcludedAccountIDs, diags),
-		MemberRoleName:        knownString(m.MemberRoleName),
-		MemberRolePath:        knownString(m.MemberRolePath),
 	}
 	body.Organization = org
 }
@@ -213,12 +219,6 @@ func (m *awsOrganizationDeploymentModel) patchTarget(ctx context.Context, prior 
 	}
 	if !m.ExcludedAccountIDs.Equal(current.ExcludedAccountIDs) {
 		org["excludedAccountIds"] = sliceOrNil(stringSlice(ctx, m.ExcludedAccountIDs, diags))
-	}
-	if !m.MemberRoleName.IsUnknown() && !m.MemberRoleName.Equal(current.MemberRoleName) {
-		org["memberRoleName"] = m.MemberRoleName.ValueString()
-	}
-	if !m.MemberRolePath.IsUnknown() && !m.MemberRolePath.Equal(current.MemberRolePath) {
-		org["memberRolePath"] = m.MemberRolePath.ValueString()
 	}
 	if len(org) > 0 {
 		patch["organization"] = org
@@ -262,6 +262,53 @@ func (m *awsOrganizationDeploymentModel) sameTarget(other awsDeploymentModel) bo
 }
 
 func (m *awsOrganizationDeploymentModel) validate(*diag.Diagnostics) {}
+
+func (m *awsOrganizationDeploymentModel) refuseUnsupportedTarget(ctx context.Context, in targetPlan, diags *diag.Diagnostics) {
+	actRole := m.actMemberRole(in.prior)
+	for _, check := range []memberRoleCheck{
+		{attribute: "member_role_name", setting: "role name", act: actRole.name},
+		{attribute: "member_role_path", setting: "role path", act: actRole.path},
+	} {
+		refuseCustomMemberRole(ctx, in.config, check, diags)
+	}
+}
+
+type memberRole struct {
+	name types.String
+	path types.String
+}
+
+func (m *awsOrganizationDeploymentModel) actMemberRole(prior awsDeploymentModel) memberRole {
+	if current, ok := prior.(*awsOrganizationDeploymentModel); ok && current.DeploymentID.Equal(m.DeploymentID) && !current.MemberRoleName.IsNull() {
+		return memberRole{name: current.MemberRoleName, path: current.MemberRolePath}
+	}
+	name := types.StringUnknown()
+	if !m.DeploymentID.IsUnknown() {
+		name = types.StringValue(actMemberRolePrefix + m.DeploymentID.ValueString())
+	}
+	return memberRole{name: name, path: types.StringValue(actMemberRolePath)}
+}
+
+type memberRoleCheck struct {
+	attribute string
+	setting   string
+	act       types.String
+}
+
+func refuseCustomMemberRole(ctx context.Context, config tfsdk.Config, check memberRoleCheck, diags *diag.Diagnostics) {
+	var configured types.String
+	if diags.Append(config.GetAttribute(ctx, path.Root(check.attribute), &configured)...); diags.HasError() {
+		return
+	}
+	if configured.IsNull() || configured.IsUnknown() || check.act.IsUnknown() || configured.Equal(check.act) {
+		return
+	}
+	diags.AddAttributeError(
+		path.Root(check.attribute),
+		"Act does not support a custom member "+check.setting+" yet",
+		fmt.Sprintf("%s is %q, but Act uses %q for this deployment and rejects any other member %s. Leave %s out, or set it to %q.", check.attribute, configured.ValueString(), check.act.ValueString(), check.setting, check.attribute, check.act.ValueString()),
+	)
+}
 
 type stackSetTargetValidator struct{}
 

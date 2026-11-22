@@ -116,8 +116,8 @@ Act assumes the role, checks that its account belongs to the organization and is
 - `excluded_account_ids` (Set of String) Member accounts Act leaves out, as 12-digit IDs.
 - `external_id_key_version` (Number) The key version of the external ID, from `data.act_aws_onboarding_parameters`. Passing it pins the external ID the role trusts, so a key rotation between plan and apply cannot change it. It only changes when `external_id_source` moves from `legacy` to `derived`. Null for a legacy external ID.
 - `external_id_source` (String) `derived` for an external ID Act derives from the deployment, or `legacy` for one stored by an older onboarding. Changing `legacy` to `derived` rotates it: Act checks that the role trusts the derived value first. `derived` cannot go back to `legacy`.
-- `member_role_name` (String) The name of the role in each member account. Defaults to `ActSecurityRole-<deployment_id>`. Set it when another system, such as Account Factory for Terraform or Control Tower, creates the member roles.
-- `member_role_path` (String) The IAM path of the member roles. Defaults to `/`.
+- `member_role_name` (String) The name of the role in each member account, `ActSecurityRole-<deployment_id>`. Act does not support custom member role names yet, so the plan fails when this is set to another value. Leave it out, or pass the module's `member_role_name` output.
+- `member_role_path` (String) The IAM path of the member roles, `/`. Act does not support custom member role paths yet, so the plan fails when this is set to another value.
 - `name` (String) The name Act shows for the deployment, 1 to 64 characters. Act picks one when you leave it out. Changing it updates the deployment in place.
 - `organizational_unit_ids` (Set of String) The organizational units to cover, `ou-...`. Set this or `root_id`. To leave a sandbox OU out, list the other OUs. Changing them updates the deployment in place once the StackSet targets them, and Act verifies it again.
 - `reverify_on_failure` (Boolean) When the deployment is `failed`, plan a verification so the next apply makes it active again once the role is fixed. Defaults to `true`. Only the provider uses it.
