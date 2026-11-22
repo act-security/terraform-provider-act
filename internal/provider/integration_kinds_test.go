@@ -5,6 +5,7 @@ package provider_test
 import (
 	"fmt"
 	"maps"
+	"regexp"
 	"slices"
 	"testing"
 
@@ -208,4 +209,79 @@ func TestSplunkIntegrationSendsTLSPinningOnlyWhenConfigured(t *testing.T) {
 			},
 		},
 	})
+}
+
+func TestNewIntegrationSettingsAreCheckedAtPlan(t *testing.T) {
+	cloudflare, cortex := pastedKeyKinds[0], pastedKeyKinds[1]
+	tests := []struct {
+		name   string
+		config string
+		want   string
+	}{
+		{
+			name:   "cloudflare account ID that is not 32 hex characters",
+			config: cloudflare.writeOnly(map[string]string{"account_id": "ACME-account"}, "token", 1),
+			want:   `Cloudflare account ID`,
+		},
+		{
+			name: "cortex cloud API URL outside paloaltonetworks.com",
+			config: cortex.writeOnly(map[string]string{
+				"api_url":        "https://api-acme.example.com",
+				"api_key_id":     "7",
+				"security_level": "standard",
+			}, "key", 1),
+			want: `Cortex Cloud API URL`,
+		},
+		{
+			name: "cortex cloud key ID that is not a number",
+			config: cortex.writeOnly(map[string]string{
+				"api_url":        "https://api-acme.xdr.us.paloaltonetworks.com",
+				"api_key_id":     "seven",
+				"security_level": "standard",
+			}, "key", 1),
+			want: `numeric key ID`,
+		},
+		{
+			name: "cortex cloud security level outside the closed list",
+			config: cortex.writeOnly(map[string]string{
+				"api_url":        "https://api-acme.xdr.us.paloaltonetworks.com",
+				"api_key_id":     "7",
+				"security_level": "Standard",
+			}, "key", 1),
+			want: `value must be one of`,
+		},
+		{
+			name:   "splunk hostname check outside the closed list",
+			config: splunkWithTLS("  tls_hostname_check = \"off\"\n"),
+			want:   `value must be one of`,
+		},
+		{
+			name: "cloudflare token set both ways",
+			config: requiredProviders + `
+provider "act" {}
+resource "act_cloudflare_integration" "this" {
+  account_id           = "0123456789abcdef0123456789abcdef"
+  api_token            = "a"
+  api_token_wo         = "b"
+  api_token_wo_version = 1
+}
+`,
+			want: `api_token`,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			s := fakeapi.Start(t)
+			s.Setenv(t)
+			resource.UnitTest(t, resource.TestCase{
+				ProtoV6ProviderFactories: factories(),
+				TerraformVersionChecks:   []tfversion.TerraformVersionCheck{tfversion.SkipBelow(tfversion.Version1_11_0)},
+				Steps: []resource.TestStep{{
+					Config:      test.config,
+					PlanOnly:    true,
+					ExpectError: regexp.MustCompile(test.want),
+				}},
+			})
+		})
+	}
 }
