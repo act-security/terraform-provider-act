@@ -1,0 +1,1 @@
+terraform import act_cortex_cloud_integration.this cortex-cloud

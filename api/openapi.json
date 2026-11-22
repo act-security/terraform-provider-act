@@ -344,7 +344,8 @@
             "required": false,
             "schema": {
               "type": "string",
-              "format": "uuid"
+              "format": "uuid",
+              "description": "Set exactly one of this and managementGroupId"
             }
           },
           {
@@ -353,7 +354,8 @@
             "required": false,
             "schema": {
               "type": "string",
-              "pattern": "^[A-Za-z0-9_().-]{1,90}$"
+              "pattern": "^[A-Za-z0-9_().-]{1,90}$",
+              "description": "Set exactly one of this and subscriptionId"
             }
           },
           {
@@ -365,7 +367,7 @@
               "minLength": 1,
               "maxLength": 32,
               "pattern": "^[a-z0-9-]+$",
-              "description": "Distinguishes a second deployment over the same target; leave out for the usual single deployment"
+              "description": "Not supported for Azure yet; setting it answers 400 invalid_request"
             }
           }
         ],
@@ -9547,7 +9549,8 @@
             "additionalProperties": {
               "type": "string",
               "maxLength": 256
-            }
+            },
+            "description": "Up to 50 tags; keys 1-64 chars, values up to 256"
           },
           "deletionProtection": {
             "type": "boolean"
@@ -9653,7 +9656,8 @@
             "additionalProperties": {
               "type": "string",
               "maxLength": 256
-            }
+            },
+            "description": "Up to 50 tags; keys 1-64 chars, values up to 256"
           },
           "deletionProtection": {
             "type": "boolean"
@@ -9706,7 +9710,8 @@
             "additionalProperties": {
               "type": "string",
               "maxLength": 256
-            }
+            },
+            "description": "Up to 50 tags; keys 1-64 chars, values up to 256"
           },
           "deletionProtection": {
             "type": "boolean"
@@ -9718,7 +9723,7 @@
           "servicePrincipalId"
         ],
         "additionalProperties": false,
-        "description": "An Azure subscription or management group to connect through Act's app. Before consent the deployment is created as pending_consent."
+        "description": "An Azure subscription or management group to connect through Act's app; set exactly one of subscriptionId, managementGroupId. Before consent the deployment is created as pending_consent."
       },
       "AzureDeploymentPatch": {
         "type": "object",
@@ -9748,14 +9753,15 @@
             "additionalProperties": {
               "type": "string",
               "maxLength": 256
-            }
+            },
+            "description": "Up to 50 tags; keys 1-64 chars, values up to 256"
           },
           "deletionProtection": {
             "type": "boolean"
           }
         },
         "additionalProperties": false,
-        "description": "Merge patch. A member left out keeps its value. Identity changes re-verify."
+        "description": "Partial update: omitted members keep their value; given tags replace the map. Identity changes re-verify."
       },
       "GcpDeploymentCreate": {
         "type": "object",
@@ -9798,7 +9804,8 @@
             "additionalProperties": {
               "type": "string",
               "maxLength": 256
-            }
+            },
+            "description": "Up to 50 tags; keys 1-64 chars, values up to 256"
           },
           "deletionProtection": {
             "type": "boolean"
@@ -9832,7 +9839,8 @@
             "additionalProperties": {
               "type": "string",
               "maxLength": 256
-            }
+            },
+            "description": "Up to 50 tags; keys 1-64 chars, values up to 256"
           },
           "deletionProtection": {
             "type": "boolean"
@@ -10110,7 +10118,7 @@
           "entraIdLogs"
         ],
         "additionalProperties": false,
-        "description": "The tenant-wide log streams to collect. Act verifies the Event Hubs before it registers them."
+        "description": "The tenant-wide log streams to collect; at least one of activityLogs, entraIdLogs must be true. To stop collecting entirely, DELETE the log source. Act verifies the Event Hubs before it registers them."
       },
       "AzureLogSourceDeletion": {
         "type": "object",
@@ -10124,7 +10132,7 @@
             "items": {
               "$ref": "#/components/schemas/CleanupItem"
             },
-            "description": "Diagnostic settings and Event Hub namespaces that still stream to Act; remove them"
+            "description": "Diagnostic settings that still stream to Act, and the Event Hub namespaces they stream to. Remove the settings; delete a namespace only once no other resource logs stream to it."
           }
         },
         "required": [
@@ -10138,7 +10146,8 @@
           "jira",
           "wiz",
           "splunk",
-          "email"
+          "email",
+          "cortex-cloud"
         ],
         "type": "string"
       },
@@ -10147,7 +10156,8 @@
           "slack",
           "jira",
           "wiz",
-          "splunk"
+          "splunk",
+          "cortex-cloud"
         ],
         "type": "string"
       },
@@ -10172,6 +10182,20 @@
           "verify",
           "splunk_default_ca",
           "none"
+        ],
+        "type": "string"
+      },
+      "SplunkTlsHostnameCheck": {
+        "enum": [
+          "check",
+          "skip"
+        ],
+        "type": "string"
+      },
+      "CortexCloudSecurityLevel": {
+        "enum": [
+          "standard",
+          "advanced"
         ],
         "type": "string"
       },
@@ -10205,6 +10229,26 @@
           },
           "tlsVerification": {
             "$ref": "#/components/schemas/SplunkTlsVerification"
+          },
+          "tlsCaCertificate": {
+            "type": "string",
+            "maxLength": 32768
+          },
+          "tlsHostnameCheck": {
+            "$ref": "#/components/schemas/SplunkTlsHostnameCheck"
+          },
+          "apiUrl": {
+            "type": "string",
+            "maxLength": 2048,
+            "format": "uri"
+          },
+          "apiKeyId": {
+            "type": "string",
+            "maxLength": 64,
+            "pattern": "^\\d+$"
+          },
+          "securityLevel": {
+            "$ref": "#/components/schemas/CortexCloudSecurityLevel"
           }
         },
         "additionalProperties": false
@@ -10229,6 +10273,11 @@
             "maxLength": 4096
           },
           "hecToken": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096
+          },
+          "apiKey": {
             "type": "string",
             "minLength": 1,
             "maxLength": 4096

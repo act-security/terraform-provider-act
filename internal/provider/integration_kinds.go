@@ -19,6 +19,14 @@ var (
 	emailPattern       = regexp.MustCompile(`^[^@\s]+@[^@\s]+\.[^@\s]+$`)
 	wizEndpointPattern = regexp.MustCompile(`^https://api\.[a-z0-9][a-z0-9-]*\.(app\.wiz\.io|app\.wiz\.us|gov\.wiz\.io)(/.*)?$`)
 	httpsPattern       = regexp.MustCompile(`^https://`)
+	cortexAPIPattern   = regexp.MustCompile(`^https://api-[a-z0-9][a-z0-9-]*(\.[a-z0-9][a-z0-9-]*)*\.paloaltonetworks\.com/?$`)
+	digitsPattern      = regexp.MustCompile(`^[0-9]+$`)
+)
+
+const (
+	maxSecretLength         = 4096
+	maxCertificateLength    = 32 * 1024
+	maxCortexAPIKeyIDDigits = 64
 )
 
 var slackIntegration = integrationKind{
@@ -107,12 +115,62 @@ var splunkIntegration = integrationKind{
 			validators:   []validator.String{stringvalidator.OneOf("verify", "splunk_default_ca", "none")},
 			defaultValue: "verify",
 		},
+		{
+			attr:        "tls_ca_certificate",
+			wire:        "tlsCaCertificate",
+			description: "The PEM certificate of the private CA that signed your HEC certificate. Act then trusts only that CA, unless `tls_verification` is `none`. Leave it out to keep the value Act holds; set it to `\"\"` to stop pinning a CA. Changing it sends the HEC token again.",
+			validators:  []validator.String{stringvalidator.LengthAtMost(maxCertificateLength)},
+			optional:    true,
+		},
+		{
+			attr:        "tls_hostname_check",
+			wire:        "tlsHostnameCheck",
+			description: "Whether Act checks that the HEC certificate names the host in `hec_url`, when `tls_ca_certificate` is set: `check` (what Act does when it is not set) or `skip`. Leave it out to keep the value Act holds. Changing it sends the HEC token again.",
+			validators:  []validator.String{stringvalidator.OneOf("check", "skip")},
+			optional:    true,
+		},
 	},
 	secret: integrationSecretField{
 		attr:        "hec_token",
 		wire:        "hecToken",
 		description: "The HEC token, allowed to write to the index your notification rules name.",
 		validators:  []validator.String{stringvalidator.LengthAtLeast(1)},
+	},
+}
+
+var cortexCloudIntegration = integrationKind{
+	name:        "cortex_cloud",
+	apiType:     apigen.InstallableIntegrationTypeCortexCloud,
+	title:       "Cortex Cloud",
+	description: "A Palo Alto Networks Cortex Cloud integration, connected with a Cortex API key so Act can read your assets and issues. One per tenant.",
+	config: []integrationConfigField{
+		{
+			attr:        "api_url",
+			wire:        "apiUrl",
+			description: "Your Cortex Cloud API URL, such as `https://api-acme.xdr.us.paloaltonetworks.com`. In Cortex Cloud, open Settings > Configurations > API Keys and select Copy API URL. Changing it sends the API key again.",
+			validators:  []validator.String{stringvalidator.RegexMatches(cortexAPIPattern, "must be a Cortex Cloud API URL starting with https://api-")},
+		},
+		{
+			attr:        "api_key_id",
+			wire:        "apiKeyId",
+			description: "The number in the ID column of the key on the API Keys page. Changing it sends the API key again.",
+			validators: []validator.String{
+				stringvalidator.RegexMatches(digitsPattern, "must be the numeric key ID"),
+				stringvalidator.LengthAtMost(maxCortexAPIKeyIDDigits),
+			},
+		},
+		{
+			attr:        "security_level",
+			wire:        "securityLevel",
+			description: "The security level you chose when you generated the key: `standard` or `advanced`. Changing it sends the API key again.",
+			validators:  []validator.String{stringvalidator.OneOf("standard", "advanced")},
+		},
+	},
+	secret: integrationSecretField{
+		attr:        "api_key",
+		wire:        "apiKey",
+		description: "The Cortex Cloud API key, assigned the Viewer role or a custom role with View on Public API, Asset Inventory and Cases and Issues.",
+		validators:  []validator.String{stringvalidator.LengthBetween(1, maxSecretLength)},
 	},
 }
 
@@ -128,6 +186,10 @@ func NewWizIntegrationResource() resource.Resource { return &integrationResource
 
 func NewSplunkIntegrationResource() resource.Resource {
 	return &integrationResource{kind: splunkIntegration}
+}
+
+func NewCortexCloudIntegrationResource() resource.Resource {
+	return &integrationResource{kind: cortexCloudIntegration}
 }
 
 func apigenEmail(value string) openapi_types.Email {

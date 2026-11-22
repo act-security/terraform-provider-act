@@ -17,6 +17,19 @@ Create an index for Act events and an HTTP Event Collector token allowed to writ
 
 Reference the integration from a notification rule with its `id`. The ID stays the same when you rotate the secret or change a setting.
 
+If a private CA signed your HEC certificate, pin it with `tls_ca_certificate`, and set `tls_hostname_check = "skip"` only when the certificate doesn't name the host in `hec_url`:
+
+```terraform
+resource "act_splunk_integration" "this" {
+  hec_url              = "https://splunk.acme.example:8088"
+  tls_ca_certificate   = file("${path.module}/splunk-ca.pem")
+  hec_token_wo         = var.splunk_hec_token
+  hec_token_wo_version = 1
+}
+```
+
+Leaving `tls_ca_certificate` or `tls_hostname_check` out keeps whatever Act holds. To stop pinning a CA, set `tls_ca_certificate = ""`.
+
 ## Secrets
 
 Act never returns the HEC token. Set it one of two ways, never both:
@@ -37,7 +50,7 @@ resource "act_splunk_integration" "this" {
 }
 ```
 
-Changing `hec_url` or `tls_verification` also sends the HEC token again: Act checks the new settings with the secret you configure and never reuses the stored one for them.
+Changing `hec_url`, `tls_verification`, `tls_ca_certificate` or `tls_hostname_check` also sends the HEC token again: Act checks the new settings with the secret you configure and never reuses the stored one for them.
 
 `hec_token_updated_at` records when Act last stored a new value. If it moves without Terraform, for example after someone rotates the secret in the Act console, the next plan updates the integration in place and sends the configured value again, with a warning.
 

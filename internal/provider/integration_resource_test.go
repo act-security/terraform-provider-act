@@ -299,7 +299,7 @@ data "act_integration_types" "all" {}
 			ConfigStateChecks: []statecheck.StateCheck{
 				statecheck.ExpectKnownValue("data.act_integration.email", tfjsonpath.New("id"), knownvalue.StringExact(fakeapi.EmailIntegrationID)),
 				statecheck.ExpectKnownValue("data.act_integration.email", tfjsonpath.New("status"), knownvalue.StringExact("connected")),
-				statecheck.ExpectKnownValue("data.act_integration_types.all", tfjsonpath.New("types"), knownvalue.ListSizeExact(5)),
+				statecheck.ExpectKnownValue("data.act_integration_types.all", tfjsonpath.New("types"), knownvalue.ListSizeExact(6)),
 				statecheck.ExpectKnownValue("data.act_integration_types.all", tfjsonpath.New("types").AtSliceIndex(0).AtMapKey("fields").AtSliceIndex(0), knownvalue.ObjectExact(map[string]knownvalue.Check{
 					"name":      knownvalue.StringExact("botToken"),
 					"sensitive": knownvalue.Bool(true),

@@ -151,6 +151,7 @@ func (p *actProvider) Resources(context.Context) []func() resource.Resource {
 		NewJiraIntegrationResource,
 		NewWizIntegrationResource,
 		NewSplunkIntegrationResource,
+		NewCortexCloudIntegrationResource,
 		NewAwsAccountDeploymentResource,
 		NewAwsOrganizationDeploymentResource,
 		NewAzureDeploymentResource,
