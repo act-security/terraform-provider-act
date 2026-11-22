@@ -24,7 +24,7 @@ const (
 
 var clientCallDirs = []string{".", "../client"}
 
-var acknowledgedItems = []string{}
+var acknowledgedItems = []string{"integration-type:email"}
 
 type supportManifest struct {
 	Items        []string `json:"items"`

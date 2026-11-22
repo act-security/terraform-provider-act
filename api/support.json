@@ -64,5 +64,7 @@
     "operation:verifyAwsDeployment",
     "operation:verifyAzureDeployment"
   ],
-  "acknowledged": []
+  "acknowledged": [
+    "integration-type:email"
+  ]
 }
