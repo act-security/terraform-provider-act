@@ -263,6 +263,18 @@ resource "act_slack_integration" "this" {
 			config: slackWriteOnly("xoxp-user-token", 1),
 			want:   `must start with xoxb-`,
 		},
+		{
+			name: "the retired Splunk TLS choice",
+			config: requiredProviders + `
+provider "act" {}
+resource "act_splunk_integration" "this" {
+  hec_url          = "https://http-inputs-acme.splunkcloud.com"
+  hec_token        = "hec-token"
+  tls_verification = "splunk_default_ca"
+}
+`,
+			want: `value must be one of`,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

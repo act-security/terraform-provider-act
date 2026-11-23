@@ -111,8 +111,8 @@ var splunkIntegration = integrationKind{
 		{
 			attr:         "tls_verification",
 			wire:         "tlsVerification",
-			description:  "How Act checks the HEC certificate: `verify` (default), `splunk_default_ca` for Splunk's default certificate, or `none`, which lets anyone between Act and Splunk read the token. Changing it sends the HEC token again.",
-			validators:   []validator.String{stringvalidator.OneOf("verify", "splunk_default_ca", "none")},
+			description:  "How Act checks the HEC certificate: `verify` (default) or `none`, which lets anyone between Act and Splunk read the token. Changing it sends the HEC token again.",
+			validators:   []validator.String{stringvalidator.OneOf("verify", "none")},
 			defaultValue: "verify",
 		},
 		{
