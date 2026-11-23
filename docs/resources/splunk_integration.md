@@ -82,7 +82,7 @@ Changing `hec_url`, `tls_verification`, `tls_ca_certificate` or `tls_hostname_ch
 - `hec_token_wo_version` (Number) Any number you choose. Changing it sends `hec_token_wo` to Act again, in place.
 - `tls_ca_certificate` (String) The PEM certificate of the private CA that signed your HEC certificate. Act then trusts only that CA, unless `tls_verification` is `none`. Leave it out to keep the value Act holds; set it to `""` to stop pinning a CA. Changing it sends the HEC token again.
 - `tls_hostname_check` (String) Whether Act checks that the HEC certificate names the host in `hec_url`, when `tls_ca_certificate` is set: `check` (what Act does when it is not set) or `skip`. Leave it out to keep the value Act holds. Changing it sends the HEC token again.
-- `tls_verification` (String) How Act checks the HEC certificate: `verify` (default), `splunk_default_ca` for Splunk's default certificate, or `none`, which lets anyone between Act and Splunk read the token. Changing it sends the HEC token again.
+- `tls_verification` (String) How Act checks the HEC certificate: `verify` (default) or `none`, which lets anyone between Act and Splunk read the token. Changing it sends the HEC token again.
 
 ### Read-Only
 
