@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.4](https://github.com/act-security/terraform-provider-act/compare/v0.3.3...v0.3.4) (2026-11-23)
+
+
+### Bug Fixes
+
+* stop offering the retired Splunk TLS choice splunk_default_ca ([#28](https://github.com/act-security/terraform-provider-act/issues/28)) ([694a63f](https://github.com/act-security/terraform-provider-act/commit/694a63f228668bb278fb18adb086fce5d78a758f))
+
 ## [0.3.3](https://github.com/act-security/terraform-provider-act/compare/v0.3.2...v0.3.3) (2026-11-22)
 
 
